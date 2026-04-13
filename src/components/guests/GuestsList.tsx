@@ -84,7 +84,56 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
       </div>
 
       <Card className="border-none shadow-xl overflow-hidden rounded-3xl">
-        <div className="overflow-x-auto">
+        {/* Mobile List View */}
+        <div className="md:hidden divide-y divide-border">
+          {filteredGuests.map((guest) => (
+            <div key={guest.id} className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-lg">{guest.nome}</p>
+                  <p className="text-xs font-bold text-primary uppercase">{guest.categoria}</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    const statusMap: Record<string, "confirmado" | "pendente" | "recusado"> = {
+                      'pendente': 'confirmado',
+                      'confirmado': 'recusado',
+                      'recusado': 'pendente'
+                    };
+                    onUpdate(guest.id, { status: statusMap[guest.status] });
+                  }}
+                >
+                  {guest.status === 'confirmado' ? <Badge variant="success">Confirmado</Badge> :
+                   guest.status === 'pendente' ? <Badge variant="warning">Pendente</Badge> :
+                   <Badge variant="error">Recusado</Badge>}
+                </button>
+              </div>
+              
+              <div className="flex justify-between items-end">
+                <div className="space-y-1">
+                  <div className="flex gap-2 text-sm font-bold">
+                     <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.adultos} Adultos</span>
+                     {guest.criancas > 0 && <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.criancas} Crianças</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{guest.telefone || 'Sem telefone'}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="outline" className="h-10 w-10 p-0 text-primary border-primary/20" onClick={() => onEdit(guest)}>
+                    <Edit2 size={16} />
+                  </Button>
+                  <Button variant="outline" className="h-10 w-10 p-0 text-destructive border-destructive/20" onClick={() => {
+                     if(window.confirm('Excluir convidado?')) onDelete(guest.id);
+                  }}>
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -127,7 +176,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-muted-foreground">{guest.telefone || '-'}</td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" className="h-8 w-8 p-0 text-primary" onClick={() => onEdit(guest)}>
                         <Edit2 size={14} />
                       </Button>

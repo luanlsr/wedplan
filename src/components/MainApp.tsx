@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { cn } from '../lib/utils';
 import confetti from 'canvas-confetti';
-import { Sidebar, Header } from './layout';
+import { Sidebar, Header, BottomNav } from './layout';
 import { Dashboard } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { FinancialView } from './suppliers/FinancialView';
@@ -576,8 +576,9 @@ export function MainApp() {
     }
   };
 
+
   return (
-    <div className={cn("min-h-screen transition-colors duration-500 flex", isDark ? "dark bg-background text-foreground" : "bg-slate-50 text-slate-900")}>
+    <div className={cn("min-h-screen transition-colors duration-500 flex flex-col lg:flex-row", isDark ? "dark bg-background text-foreground" : "bg-slate-50 text-slate-900")}>
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={(tab) => { setActiveTab(tab); setSelectedSupplier(null); }} 
@@ -585,8 +586,8 @@ export function MainApp() {
         toggleTheme={toggleTheme}
       />
       
-      <main className="flex-1 ml-72 min-h-screen">
-        <div className="max-w-7xl mx-auto p-10">
+      <main className="flex-1 lg:ml-72 min-h-screen pb-24 lg:pb-10">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10">
           <Header title={selectedSupplier ? "Detalhes do Fornecedor" : 
                         activeTab === 'dashboard' ? "Visão Geral" : 
                         activeTab === 'suppliers' ? "Lista de Fornecedores" : 
@@ -596,6 +597,8 @@ export function MainApp() {
           {renderContent()}
         </div>
       </main>
+
+      <BottomNav activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSelectedSupplier(null); }} />
 
       {isModalOpen && (
         <SupplierModal

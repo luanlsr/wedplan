@@ -24,7 +24,7 @@ export const useWeddingData = () => {
       }, { onConflict: 'id' });
 
       // 1. Buscar casamento vinculado
-      const { data: membership, error: mError } = await supabase
+      const { data: membership } = await supabase
         .from('wedding_members')
         .select('wedding_id')
         .eq('user_id', userId)
