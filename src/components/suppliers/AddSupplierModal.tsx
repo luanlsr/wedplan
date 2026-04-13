@@ -27,6 +27,8 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     entryInInstallments: "1",
     dataContrato: new Date().toISOString().split("T")[0],
     finalPaymentDaysBeforeWedding: "15",
+    observacoes: "",
+    regraPagamento: "",
   });
 
   useEffect(() => {
@@ -42,7 +44,9 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
         entryValue: "",
         entryInInstallments: "1",
         dataContrato: editSupplier.dataContrato,
-        finalPaymentDaysBeforeWedding: "15",
+        finalPaymentDaysBeforeWedding: editSupplier.diasPagamentoFinalAntesCasamento?.toString() || "15",
+        observacoes: editSupplier.observacoes || "",
+        regraPagamento: editSupplier.regraPagamento || "",
       });
     }
   }, [editSupplier]);
@@ -142,7 +146,14 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
       tipoPagamento: formData.tipoPagamento,
       dataContrato: formData.dataContrato,
       parcelas: installments,
-      status: editSupplier?.status || "pendente"
+      status: editSupplier?.status || "pendente",
+      observacoes: formData.observacoes,
+      regraPagamento: formData.regraPagamento,
+      numeroParcelas: parseInt(formData.numParcelas),
+      valorEntrada: parseFloat(formData.entryValue) || 0,
+      porcentagemEntrada: parseFloat(formData.entryPercentage) || 0,
+      entradaEmParcelas: parseInt(formData.entryInInstallments) || 1,
+      diasPagamentoFinalAntesCasamento: parseInt(formData.finalPaymentDaysBeforeWedding) || 15
     };
 
     if (isEditing && onUpdate) {
@@ -355,6 +366,26 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                 )}
               </>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-muted-foreground">Regra de Pagamento / Negociação</label>
+            <Input 
+              placeholder="Ex: 30% entrada, restante 15 dias antes" 
+              className="bg-secondary/50 border-none focus:bg-card transition-all"
+              value={formData.regraPagamento}
+              onChange={e => setFormData({...formData, regraPagamento: (e.target as HTMLInputElement).value})}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-muted-foreground">Observações Adicionais</label>
+            <textarea 
+              placeholder="Notas importantes sobre o contrato..." 
+              className="w-full min-h-[100px] p-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground resize-none"
+              value={formData.observacoes}
+              onChange={e => setFormData({...formData, observacoes: e.target.value})}
+            />
           </div>
 
           {/* Real-time Preview Section */}

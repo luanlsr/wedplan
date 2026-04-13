@@ -1,5 +1,7 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, Bell, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut } from "lucide-react";
 import { cn } from "../ui";
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   activeTab: string;
@@ -9,6 +11,14 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: SidebarProps) => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "suppliers", label: "Fornecedores", icon: Briefcase },
@@ -21,10 +31,10 @@ export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: Sideba
     <div className="w-72 h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex flex-col z-50">
       <div className="flex items-center gap-3 mb-10 px-2 group cursor-pointer">
         <div className="w-12 h-12 rounded-2xl bg-white overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-500">
-          <img src="/logo-eternal.png" alt="Eternal Planner Logo" className="w-full h-full object-cover" />
+          <img src="/logo-wedplan.png" alt="WedPlan Logo" className="w-full h-full object-cover" />
         </div>
         <div>
-          <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Eternal<br/><span className="text-primary not-italic">Planner</span></h1>
+          <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Wed<br/><span className="text-primary not-italic">Plan</span></h1>
         </div>
       </div>
 
@@ -58,15 +68,13 @@ export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: Sideba
           <span className="font-medium">{isDark ? "Modo Claro" : "Modo Escuro"}</span>
         </button>
         
-        <div className="p-4 rounded-2xl bg-primary/20 border border-primary/20">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-primary uppercase">Status</span>
-            <Bell size={14} className="text-primary" />
-          </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Faltam <span className="text-primary font-bold">212 dias</span> para o grande dia!
-          </p>
-        </div>
+        <button 
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+        >
+          <LogOut size={20} />
+          <span className="font-medium">Sair</span>
+        </button>
       </div>
     </div>
   );
@@ -77,12 +85,12 @@ export const Header = ({ title }: { title: string }) => (
     <h2 className="text-3xl font-extrabold tracking-tight pt-2">{title}</h2>
     <div className="flex items-center gap-6">
       <div className="text-right">
-        <p className="text-sm font-black uppercase tracking-tighter">Eternal Planner</p>
+        <p className="text-sm font-black uppercase tracking-tighter">WedPlan</p>
         <p className="text-[10px] text-primary uppercase tracking-widest font-black italic">Wedding Management Suite</p>
       </div>
       <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-lg shadow-primary/20 transition-transform hover:rotate-3 duration-300">
         <div className="w-full h-full rounded-[0.9rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black italic text-lg shadow-inner">
-          EP
+          WP
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ export type PaymentType = "parcelado_fixo" | "entrada_parcelas" | "entrada_quita
 
 export interface Installment {
   id: string;
+  supplier_id?: string;
   numero: number;
   valor: number;
   dataVencimento: string;
@@ -13,6 +14,7 @@ export interface Installment {
 
 export interface Supplier {
   id: string;
+  wedding_id?: string;
   categoria: string;
   servico: string;
   fornecedor: string;
@@ -24,14 +26,45 @@ export interface Supplier {
   status: PaymentStatus;
   observacoes?: string;
   order?: number;
+  // Expanded fields for editing/logic
+  numeroParcelas?: number;
+  valorEntrada?: number;
+  porcentagemEntrada?: number;
+  entradaEmParcelas?: number;
+  diasPagamentoFinalAntesCasamento?: number;
+}
+
+export interface Guest {
+  id: string;
+  nome: string;
+  categoria: string;
+  status: "confirmado" | "pendente" | "recusado";
+  adultos: number;
+  criancas: number;
+  telefone?: string;
+  observacoes?: string;
+}
+
+export interface Task {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  categoria: string;
+  dataLimite?: string;
+  status: "pendente" | "em_progresso" | "concluido";
+  ordem: number;
 }
 
 export interface WeddingData {
+  id?: string;
   casal: {
-    nome: string;
+    nome1: string;
+    nome2: string;
     data: string;
   };
   fornecedores: Supplier[];
+  convidados?: Guest[];
+  tarefas?: Task[];
   configuracoes: {
     orcamentoTotal: number;
     tema: "light" | "dark";
