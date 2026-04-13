@@ -1,5 +1,5 @@
 import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2 } from 'lucide-react';
-import { Card, Button, Badge } from '../ui';
+import { Card, Button } from '../ui';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';

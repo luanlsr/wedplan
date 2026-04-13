@@ -107,7 +107,7 @@ export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimul
     }
     
     if (simulacaoIndex < simulationTimeline.length - 1) {
-        setSimulacaoIndex(prev => prev + 1);
+        setSimulacaoIndex((prev: number) => prev + 1);
         // We don't clear currentInputValue here because the useEffect above handles it
     } else {
         setStep('final');
@@ -116,7 +116,7 @@ export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimul
 
   const handleBackSimulation = () => {
     if (simulacaoIndex > 0) {
-        setSimulacaoIndex(prev => prev - 1);
+        setSimulacaoIndex((prev: number) => prev - 1);
     } else {
         setStep('intro');
     }

@@ -1,9 +1,9 @@
 import { cn } from '../../lib/utils';
-import { useMemo, useState } from 'react';
+
 import { Button } from '../ui';
 import { ArrowRight, Calculator, Users, Star, Heart, Music } from "lucide-react";
 
-export const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
+export const LandingPage = ({ onLogin, onGetStarted }: { onLogin: () => void, onGetStarted: () => void }) => {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
       {/* Background Decor */}
@@ -22,7 +22,7 @@ export const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRe
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={onLogin} className="font-bold uppercase text-xs tracking-widest hover:text-primary">Entrar</Button>
-          <Button onClick={onRegister} className="bg-primary text-white font-black uppercase text-xs tracking-widest px-8 rounded-full shadow-xl shadow-primary/20">Criar Conta</Button>
+          <Button onClick={onGetStarted} className="bg-primary text-white font-black uppercase text-xs tracking-widest px-8 rounded-full shadow-xl shadow-primary/20">Criar Conta</Button>
         </div>
       </header>
 
@@ -39,7 +39,7 @@ export const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRe
         </div>
 
         <div className="flex flex-col md:flex-row gap-6 w-full max-w-xl">
-           <Button onClick={onRegister} className="flex-1 h-20 rounded-[2.5rem] bg-primary text-white text-xl font-black uppercase shadow-2xl shadow-primary/30 group">
+           <Button onClick={onGetStarted} className="flex-1 h-20 rounded-[2.5rem] bg-primary text-white text-xl font-black uppercase shadow-2xl shadow-primary/30 group">
              Começar agora <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
            </Button>
            <Button variant="outline" onClick={onLogin} className="flex-1 h-20 rounded-[2.5rem] border-2 border-white/10 bg-secondary/20 text-xl font-black uppercase hover:bg-white/5">
