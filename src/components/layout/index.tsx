@@ -1,4 +1,4 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2 } from "lucide-react";
 import { cn } from "../ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,8 @@ export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: Sideba
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "suppliers", label: "Fornecedores", icon: Briefcase },
+    { id: "guests", label: "Convidados", icon: Heart },
+    { id: "tasks", label: "Tarefas", icon: CheckCircle2 },
     { id: "financial", label: "Financeiro", icon: DollarSign },
     { id: "planning", label: "Planejamento", icon: TrendingUp },
     { id: "settings", label: "Configurações", icon: Settings },

@@ -10,40 +10,41 @@ import type { Supplier } from '../../types';
 interface PlanningViewProps {
   suppliers: Supplier[];
   weddingDate: string;
+  simulation?: any;
+  onUpdateSimulation: (simulation: any) => void;
 }
 
 type Step = 'intro' | 'simulacao' | 'final';
 
-const STORAGE_KEY = 'wedding_planning_simulation_v1';
 
-export const PlanningView = ({ suppliers, weddingDate }: PlanningViewProps) => {
-  // Load initial state from simulation storage
-  const [step, setStep] = useState<Step>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_step`);
-    return (saved as Step) || 'intro';
-  });
-  
-  const [simulacaoIndex, setSimulacaoIndex] = useState(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_index`);
-    return saved ? Number(saved) : 0;
-  });
-  
-  const [simulatedAportes, setSimulatedAportes] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_aportes`);
-    return saved ? JSON.parse(saved) : {};
-  });
 
+export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimulation }: PlanningViewProps) => {
+  // Load initial state from simulation storage/props
+  const [step, setStep] = useState<Step>(simulation?.step || 'intro');
+  const [simulacaoIndex, setSimulacaoIndex] = useState(simulation?.index || 0);
+  const [simulatedAportes, setSimulatedAportes] = useState<Record<string, number>>(simulation?.aportes || {});
   const [currentInputValue, setCurrentInputValue] = useState<number | "">("");
 
   const today = new Date();
   const wedding = parseISO(weddingDate);
   const monthsRemaining = Math.max(1, differenceInMonths(wedding, today));
 
-  // Persistence Effects
+  // Sync with prop if it changes and we are not in the middle of editing
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_step`, step);
-    localStorage.setItem(`${STORAGE_KEY}_index`, String(simulacaoIndex));
-    localStorage.setItem(`${STORAGE_KEY}_aportes`, JSON.stringify(simulatedAportes));
+    if (simulation) {
+      if (simulation.step) setStep(simulation.step);
+      if (simulation.index !== undefined) setSimulacaoIndex(simulation.index);
+      if (simulation.aportes) setSimulatedAportes(simulation.aportes);
+    }
+  }, [simulation]);
+
+  // Persistence Effect to Supabase
+  useEffect(() => {
+    onUpdateSimulation({
+      step,
+      index: simulacaoIndex,
+      aportes: simulatedAportes
+    });
   }, [step, simulacaoIndex, simulatedAportes]);
 
   // Months with installments or quitações
@@ -126,9 +127,7 @@ export const PlanningView = ({ suppliers, weddingDate }: PlanningViewProps) => {
     setSimulacaoIndex(0);
     setSimulatedAportes({});
     setCurrentInputValue("");
-    localStorage.removeItem(`${STORAGE_KEY}_step`);
-    localStorage.removeItem(`${STORAGE_KEY}_index`);
-    localStorage.removeItem(`${STORAGE_KEY}_aportes`);
+    onUpdateSimulation({ step: 'intro', index: 0, aportes: {} });
   };
 
   const renderIntro = () => (

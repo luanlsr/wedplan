@@ -1,21 +1,11 @@
 -- Unified Migration for WedPlan
--- Date: 2024-04-13
--- Author: Database Architect & Backend Specialist
+-- Sequence: 0001
+-- Description: Base database structure with RLS and Auth triggers
 
 -- 1. Setup Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Cleanup (DANGER: Drops all data for a clean start as requested)
-DROP TABLE IF EXISTS installments CASCADE;
-DROP TABLE IF EXISTS suppliers CASCADE;
-DROP TABLE IF EXISTS planning_simulations CASCADE;
-DROP TABLE IF EXISTS wedding_members CASCADE;
-DROP TABLE IF EXISTS guests CASCADE;
-DROP TABLE IF EXISTS tasks CASCADE;
-DROP TABLE IF EXISTS weddings CASCADE;
-DROP TABLE IF EXISTS profiles CASCADE;
-
--- 3. Profiles Table (extending auth.users)
+-- 2. Profiles Table (extending auth.users)
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
@@ -25,7 +15,7 @@ CREATE TABLE profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Weddings Table
+-- 3. Weddings Table
 CREATE TABLE weddings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     couple_name1 TEXT,
@@ -37,7 +27,7 @@ CREATE TABLE weddings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Wedding Members (Linking users to weddings)
+-- 4. Wedding Members (Linking users to weddings)
 CREATE TABLE wedding_members (
     wedding_id UUID REFERENCES weddings(id) ON DELETE CASCADE,
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -46,7 +36,7 @@ CREATE TABLE wedding_members (
     PRIMARY KEY (wedding_id, user_id)
 );
 
--- 6. Suppliers Table
+-- 5. Suppliers Table
 CREATE TABLE suppliers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     wedding_id UUID REFERENCES weddings(id) ON DELETE CASCADE,
@@ -54,37 +44,34 @@ CREATE TABLE suppliers (
     service TEXT,
     category TEXT,
     total_value NUMERIC(12, 2) DEFAULT 0.00,
-    payment_type TEXT, -- 'parcelado_fixo', 'entrada_parcelas', etc.
-    status TEXT DEFAULT 'pendente', -- 'pago', 'parcial', 'pendente', 'atrasado'
+    payment_type TEXT, 
+    status TEXT DEFAULT 'pendente',
     contract_date DATE,
     payment_rule TEXT,
     notes TEXT,
-    
-    -- Planning logic fields
     entry_value NUMERIC(12, 2) DEFAULT 0.00,
     entry_percentage NUMERIC(5, 2) DEFAULT 0.00,
     entry_installments INTEGER DEFAULT 0,
     num_installments INTEGER DEFAULT 0,
     final_payment_days_before INTEGER DEFAULT 15,
     order_index INTEGER DEFAULT 0,
-    
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. Installments Table
+-- 6. Installments Table
 CREATE TABLE installments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     supplier_id UUID REFERENCES suppliers(id) ON DELETE CASCADE,
     number INTEGER NOT NULL,
     value NUMERIC(12, 2) NOT NULL,
     due_date DATE NOT NULL,
-    status TEXT DEFAULT 'pendente', -- 'pago', 'pendente'
+    status TEXT DEFAULT 'pendente',
     payment_date DATE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. Planning Simulations (Stores the state of the PlanningView)
+-- 7. Planning Simulations
 CREATE TABLE planning_simulations (
     wedding_id UUID PRIMARY KEY REFERENCES weddings(id) ON DELETE CASCADE,
     current_step TEXT DEFAULT 'intro',
@@ -93,13 +80,13 @@ CREATE TABLE planning_simulations (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 9. Guests Table (Expansion for future/consistency)
+-- 8. Guests Table
 CREATE TABLE guests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     wedding_id UUID REFERENCES weddings(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    category TEXT, -- 'Família', 'Amigos', etc.
-    status TEXT DEFAULT 'pendente', -- 'confirmado', 'pendente', 'recusado'
+    category TEXT,
+    status TEXT DEFAULT 'pendente',
     adults_count INTEGER DEFAULT 1,
     children_count INTEGER DEFAULT 0,
     phone TEXT,
@@ -107,7 +94,7 @@ CREATE TABLE guests (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 10. Tasks Table (Checklist)
+-- 9. Tasks Table
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     wedding_id UUID REFERENCES weddings(id) ON DELETE CASCADE,
@@ -115,12 +102,12 @@ CREATE TABLE tasks (
     description TEXT,
     category TEXT,
     due_date DATE,
-    status TEXT DEFAULT 'pendente', -- 'pendente', 'em_progresso', 'concluido'
+    status TEXT DEFAULT 'pendente',
     order_index INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 11. Enable Row Level Security (RLS)
+-- 10. Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE weddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wedding_members ENABLE ROW LEVEL SECURITY;
@@ -130,93 +117,63 @@ ALTER TABLE planning_simulations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 
--- 12. RLS Policies
+-- 11. RLS Policies
 
--- Profiles: Users can only see and update their own profile
-CREATE POLICY "Users can view own profile" ON profiles
-    FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles
-    FOR UPDATE USING (auth.uid() = id);
+-- Profiles
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
--- Wedding Members: Users can see memberships for weddings they belong to
-CREATE POLICY "Users can see their wedding memberships" ON wedding_members
-    FOR SELECT USING (auth.uid() = user_id);
-
--- Weddings: Users can see weddings they are members of
+-- Weddings
 CREATE POLICY "Users can see their own weddings" ON weddings
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM wedding_members
-            WHERE wedding_members.wedding_id = weddings.id
-            AND wedding_members.user_id = auth.uid()
-        )
-    );
+    FOR SELECT USING (EXISTS (SELECT 1 FROM wedding_members WHERE wedding_id = id AND user_id = auth.uid()));
+CREATE POLICY "Users can create weddings" ON weddings
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update their own weddings" ON weddings
+    FOR UPDATE USING (EXISTS (SELECT 1 FROM wedding_members WHERE wedding_id = id AND user_id = auth.uid()));
 
--- Suppliers: Linked to weddings
+-- Wedding Members
+CREATE POLICY "Users can see their wedding memberships" ON wedding_members FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can join weddings" ON wedding_members FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Suppliers
 CREATE POLICY "Users can manage suppliers of their weddings" ON suppliers
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM wedding_members
-            WHERE wedding_members.wedding_id = suppliers.wedding_id
-            AND wedding_members.user_id = auth.uid()
-        )
-    );
+    FOR ALL USING (EXISTS (SELECT 1 FROM wedding_members WHERE wedding_id = suppliers.wedding_id AND user_id = auth.uid()));
 
--- Installments: Linked to suppliers
+-- Installments
 CREATE POLICY "Users can manage installments of their suppliers" ON installments
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM suppliers
-            JOIN wedding_members ON suppliers.wedding_id = wedding_members.wedding_id
-            WHERE suppliers.id = installments.supplier_id
-            AND wedding_members.user_id = auth.uid()
-        )
-    );
+    FOR ALL USING (EXISTS (SELECT 1 FROM suppliers JOIN wedding_members ON suppliers.wedding_id = wedding_members.wedding_id WHERE suppliers.id = installments.supplier_id AND wedding_members.user_id = auth.uid()));
 
--- Simulations: Linked to weddings
+-- Simulations
 CREATE POLICY "Users can manage simulations of their weddings" ON planning_simulations
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM wedding_members
-            WHERE wedding_members.wedding_id = planning_simulations.wedding_id
-            AND wedding_members.user_id = auth.uid()
-        )
-    );
+    FOR ALL USING (EXISTS (SELECT 1 FROM wedding_members WHERE wedding_id = planning_simulations.wedding_id AND user_id = auth.uid()));
 
--- 13. Functions and Triggers
+-- Guests
+CREATE POLICY "Users can manage guests of their weddings" ON guests
+    FOR ALL USING (EXISTS (SELECT 1 FROM wedding_members WHERE wedding_id = guests.wedding_id AND user_id = auth.uid()));
 
--- Function to handle new user registration
+-- Tasks
+CREATE POLICY "Users can manage tasks of their weddings" ON tasks
+    FOR ALL USING (EXISTS (SELECT 1 FROM wedding_members WHERE wedding_id = tasks.wedding_id AND user_id = auth.uid()));
+
+-- 12. Functions and Triggers
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO public.profiles (id, email, full_name, avatar_url)
-    VALUES (
-        new.id,
-        new.email,
-        new.raw_user_meta_data->>'full_name',
-        new.raw_user_meta_data->>'avatar_url'
-    );
+    VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to create profile on signup
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 14. Helper Views for Calculations
-CREATE VIEW wedding_financial_overview AS
+-- 13. Financial View
+CREATE OR REPLACE VIEW wedding_financial_overview AS
 SELECT 
     w.id AS wedding_id,
     w.total_budget,
     COALESCE(SUM(s.total_value), 0) AS total_contracted,
-    COALESCE((
-        SELECT SUM(i.value) 
-        FROM installments i 
-        JOIN suppliers s2 ON i.supplier_id = s2.id 
-        WHERE s2.wedding_id = w.id AND i.status = 'pago'
-    ), 0) AS total_paid
+    COALESCE((SELECT SUM(i.value) FROM installments i JOIN suppliers s2 ON i.supplier_id = s2.id WHERE s2.wedding_id = w.id AND i.status = 'pago'), 0) AS total_paid
 FROM weddings w
 LEFT JOIN suppliers s ON s.wedding_id = w.id
 GROUP BY w.id, w.total_budget;

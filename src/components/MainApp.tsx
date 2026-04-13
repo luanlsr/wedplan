@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { cn } from '../lib/utils';
 import confetti from 'canvas-confetti';
 import { Sidebar, Header } from './layout';
 import { Dashboard } from './dashboard';
@@ -6,24 +7,37 @@ import { SuppliersList } from './suppliers';
 import { FinancialView } from './suppliers/FinancialView';
 import { PlanningView } from './suppliers/PlanningView';
 import { SupplierModal } from './suppliers/AddSupplierModal';
+import { GuestsList } from './guests/GuestsList';
+import { AddGuestModal } from './guests/AddGuestModal';
+import { TasksList } from './tasks/TasksList';
+import { AddTaskModal } from './tasks/AddTaskModal';
 import { useWeddingData } from '../hooks/useWeddingData';
 import { calculateStats, formatCurrency, formatDate } from '../utils/calculations';
-import type { Supplier, Installment } from '../types';
+import type { Supplier, Installment, Guest, Task } from '../types';
 import { Card, Button, Badge, Input } from './ui';
 import { ChevronLeft, CheckCircle2, Circle, Calendar, Printer, Download, Share2, Heart, DollarSign, FileText, Edit2, Clock, AlertTriangle, Info } from 'lucide-react';
-import { cn } from './ui';
 import { useAuth } from '../hooks/useAuth';
 import { parseISO, differenceInDays } from "date-fns";
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { data, loading, addSupplier, updateSupplier, deleteSupplier, updateInstallment, updateConfig, updateWeddingInfo, reorderSuppliers } = useWeddingData();
+  const { 
+    data, loading, 
+    addSupplier, updateSupplier, deleteSupplier, updateInstallment, 
+    addGuest, updateGuest, deleteGuest,
+    addTask, updateTask, deleteTask,
+    updateConfig, updateWeddingInfo, updateSimulation, reorderSuppliers 
+  } = useWeddingData();
   const { user } = useAuth();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [editingInstallmentId, setEditingInstallmentId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
+  const [guestToEdit, setGuestToEdit] = useState<Guest | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   const stats = useMemo(() => calculateStats(data), [data]);
   const isDark = data.configuracoes.tema === 'dark';
@@ -51,6 +65,27 @@ export function MainApp() {
     }
   };
 
+  const notifications = useMemo(() => {
+    const today = new Date();
+    const alerts: { type: 'warning' | 'info', message: string, supplier: string }[] = [];
+
+    data.fornecedores.forEach(s => {
+      if (s.status === 'pago') return;
+      const lastInstallment = s.parcelas[s.parcelas.length - 1];
+      if (!lastInstallment) return;
+      const dueDate = parseISO(lastInstallment.dataVencimento);
+      const daysDiff = differenceInDays(dueDate, today);
+
+      if (daysDiff > 0 && daysDiff <= 15) {
+        alerts.push({ type: 'warning', message: `Quitação final em ${daysDiff} dias (${formatDate(lastInstallment.dataVencimento)})!`, supplier: s.fornecedor });
+      } else if (daysDiff > 15 && daysDiff <= 30) {
+        alerts.push({ type: 'info', message: `Quitação final em aproximadamente 1 mês (${formatDate(lastInstallment.dataVencimento)}).`, supplier: s.fornecedor });
+      }
+    });
+
+    return alerts;
+  }, [data]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -70,6 +105,20 @@ export function MainApp() {
   const clearModal = () => {
     setIsModalOpen(false);
     setSupplierToEdit(null);
+    setIsGuestModalOpen(false);
+    setGuestToEdit(null);
+    setIsTaskModalOpen(false);
+    setTaskToEdit(null);
+  };
+
+  const handleEditGuest = (guest: Guest) => {
+    setGuestToEdit(guest);
+    setIsGuestModalOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
+    setIsTaskModalOpen(true);
   };
 
   const handleToggleStatus = (supplierId: string, p: Installment) => {
@@ -99,26 +148,6 @@ export function MainApp() {
       }
     }
   };
-
-  const notifications = useMemo(() => {
-    const today = new Date();
-    const alerts: { type: 'warning' | 'info', message: string, supplier: string }[] = [];
-
-    data.fornecedores.forEach(s => {
-      if (s.status === 'pago') return;
-      const lastInstallment = s.parcelas[s.parcelas.length - 1];
-      const dueDate = parseISO(lastInstallment.dataVencimento);
-      const daysDiff = differenceInDays(dueDate, today);
-
-      if (daysDiff > 0 && daysDiff <= 15) {
-        alerts.push({ type: 'warning', message: `Quitação final em ${daysDiff} dias (${formatDate(lastInstallment.dataVencimento)})!`, supplier: s.fornecedor });
-      } else if (daysDiff > 15 && daysDiff <= 30) {
-        alerts.push({ type: 'info', message: `Quitação final em aproximadamente 1 mês (${formatDate(lastInstallment.dataVencimento)}).`, supplier: s.fornecedor });
-      }
-    });
-
-    return alerts;
-  }, [data]);
 
   const handleDashboardAction = (action: 'new_supplier' | 'financial' | 'settings') => {
     switch (action) {
@@ -437,8 +466,35 @@ export function MainApp() {
         );
       case 'financial':
         return <FinancialView suppliers={data.fornecedores} />;
+      case 'guests':
+        return (
+          <GuestsList 
+            guests={data.convidados || []} 
+            onAdd={() => setIsGuestModalOpen(true)} 
+            onEdit={handleEditGuest} 
+            onUpdate={updateGuest} 
+            onDelete={deleteGuest} 
+          />
+        );
+      case 'tasks':
+        return (
+          <TasksList 
+            tasks={data.tarefas || []} 
+            onAdd={() => setIsTaskModalOpen(true)} 
+            onEdit={handleEditTask} 
+            onUpdate={updateTask} 
+            onDelete={deleteTask} 
+          />
+        );
       case 'planning':
-        return <PlanningView suppliers={data.fornecedores} weddingDate={data.casal.data} />;
+        return (
+          <PlanningView 
+            suppliers={data.fornecedores} 
+            weddingDate={data.casal.data} 
+            simulation={data.simulation}
+            onUpdateSimulation={updateSimulation}
+          />
+        );
       case 'settings':
          return (
            <div className="max-w-2xl space-y-6">
@@ -548,6 +604,24 @@ export function MainApp() {
           onAdd={addSupplier} 
           onUpdate={updateSupplier}
           editSupplier={supplierToEdit}
+        />
+      )}
+
+      {isGuestModalOpen && (
+        <AddGuestModal
+          onClose={clearModal}
+          onAdd={addGuest}
+          onUpdate={updateGuest}
+          editGuest={guestToEdit}
+        />
+      )}
+
+      {isTaskModalOpen && (
+        <AddTaskModal
+          onClose={clearModal}
+          onAdd={addTask}
+          onUpdate={updateTask}
+          editTask={taskToEdit}
         />
       )}
     </div>
