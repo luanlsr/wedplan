@@ -1,5 +1,6 @@
 import { ArrowRight, CheckCircle2, LayoutDashboard, Briefcase, DollarSign, TrendingUp, Heart } from "lucide-react";
 import { Button } from "../ui";
+import { cn } from "../../lib/utils";
 
 interface LandingPageProps {
   onGetStarted: () => void;

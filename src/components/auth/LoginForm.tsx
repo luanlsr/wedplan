@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
-import { Mail, Lock, Loader2, ArrowRight, Github } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight, Globe } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -110,7 +110,7 @@ export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }:
 
         <div className="grid grid-cols-1 gap-4">
           <Button variant="outline" type="button" className="h-14 rounded-2xl border-white/5 bg-secondary/30 gap-3 font-bold">
-            <Github size={20} /> GitHub
+            <Globe size={20} /> GitHub
           </Button>
         </div>
 
