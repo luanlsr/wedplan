@@ -41,7 +41,7 @@ export function MainApp() {
   const { user, signOut } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
   const {
-    isModalOpen, setIsModalOpen, supplierToEdit, handleEditSupplier,
+    isModalOpen, setIsModalOpen, supplierToEdit,
     isGuestModalOpen, setIsGuestModalOpen, guestToEdit, handleEditGuest,
     isTaskModalOpen, setIsTaskModalOpen, taskToEdit, handleEditTask,
     clearModals

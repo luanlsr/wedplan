@@ -1,6 +1,5 @@
 import { Edit2, Trash2 } from 'lucide-react';
 import { Button, Badge } from '../ui';
-import { cn } from '../../lib/utils';
 import type { Guest } from '../../types';
 
 interface GuestRowProps {

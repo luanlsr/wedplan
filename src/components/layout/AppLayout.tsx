@@ -12,7 +12,7 @@ interface AppLayoutProps {
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (v: boolean) => void;
   isNewWedding: boolean;
-  onOnboardingComplete: (data: any) => void;
+  onOnboardingComplete: (data: { nome1: string; nome2: string; data: string; orcamento: number; }) => Promise<void>;
   pageTitle: string;
 }
 

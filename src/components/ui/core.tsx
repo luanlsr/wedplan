@@ -22,6 +22,7 @@ export const Card = ({ children, className, onClick }: { children: React.ReactNo
 export const Button = ({ 
   children, 
   variant = "primary", 
+  size = "default",
   onClick, 
   className,
   type = "button",
@@ -29,6 +30,7 @@ export const Button = ({
 }: { 
   children: React.ReactNode; 
   variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive";
+  size?: "default" | "sm" | "lg" | "icon";
   onClick?: () => void;
   className?: string;
   type?: "button" | "submit" | "reset";
@@ -42,14 +44,22 @@ export const Button = ({
     destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/20",
   };
 
+  const sizes = {
+    default: "px-4 py-2",
+    sm: "px-3 py-1 text-sm",
+    lg: "px-8 py-4 text-lg",
+    icon: "p-2 aspect-square",
+  };
+
   return (
     <button 
       disabled={disabled}
       onClick={onClick}
       type={type}
       className={cn(
-        "px-4 py-2 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer",
+        "rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer",
         variants[variant],
+        sizes[size],
         className
       )}
     >

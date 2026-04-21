@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "../ui";
-import { formatCurrency } from "../../utils/calculations";
 import { 
   Search, Plus, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
   DollarSign as DollarIcon, Calendar, CheckCircle2, 
-  AlertCircle, ChevronLeft
+  ChevronLeft
 } from "lucide-react";
 import type { Supplier } from "../../types";
 import { Reorder, motion, AnimatePresence } from "framer-motion";

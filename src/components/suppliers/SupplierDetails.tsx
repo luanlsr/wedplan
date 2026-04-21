@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Badge } from '../ui';
-import { 
-  ChevronLeft, CheckCircle2, Circle, Calendar, Printer, 
-  Download, Heart, DollarSign, FileText, Edit2, Info, 
-  ArrowUp, ArrowDown, ArrowUpDown 
+import {
+  ChevronLeft, CheckCircle2, Circle, Calendar, Printer,
+  Download, Heart, DollarSign, FileText, Edit2, Info,
+  ArrowUp, ArrowDown, ArrowUpDown,
+  Share2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatCurrency, formatDate } from '../../utils/calculations';
@@ -33,10 +34,10 @@ const SortButton = ({ active, onClick, label, direction }: { active: boolean, on
   </button>
 );
 
-export const SupplierDetails = ({ 
-  suppliers, 
-  updateInstallment, 
-  deleteSupplier, 
+export const SupplierDetails = ({
+  suppliers,
+  updateInstallment,
+  deleteSupplier,
   confirm,
   onToggleStatus
 }: SupplierDetailsProps) => {
