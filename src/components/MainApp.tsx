@@ -12,6 +12,7 @@ import { AddGuestModal } from './guests/AddGuestModal';
 import { TasksList } from './tasks/TasksList';
 import { AddTaskModal } from './tasks/AddTaskModal';
 import { CheckInView } from './guests/CheckInView';
+import { Onboarding } from './layout/Onboarding';
 import { useWeddingData } from '../hooks/useWeddingData';
 import { calculateStats, formatCurrency, formatDate } from '../utils/calculations';
 import type { Supplier, Installment, Guest, Task } from '../types';
@@ -62,6 +63,9 @@ export function MainApp() {
 
   const stats = useMemo(() => calculateStats(data), [data]);
   const isDark = data.configuracoes.tema === 'dark';
+  
+  // Condição para mostrar onboarding: NOMES PADRÃO e NÃO É STAFF/MASTER
+  const isNewWedding = !loading && data.id && (data.casal.nome1 === 'Cônjuge 1' || !data.casal.nome1) && data.role === 'couple';
 
   const toggleTheme = () => {
     updateConfig({ tema: isDark ? 'light' : 'dark' });
@@ -169,6 +173,27 @@ export function MainApp() {
   const handleEditTask = (task: Task) => {
     setTaskToEdit(task);
     setIsTaskModalOpen(true);
+  };
+
+  const handleOnboardingComplete = async (onboardingData: { nome1: string, nome2: string, data: string, orcamento: number }) => {
+    try {
+      await updateWeddingInfo({
+        nome1: onboardingData.nome1,
+        nome2: onboardingData.nome2,
+        data: onboardingData.data
+      });
+      await updateConfig({
+        orcamentoTotal: onboardingData.orcamento
+      });
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#a8863d', '#ffffff', '#e0c090']
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleToggleStatus = (supplierId: string, p: Installment) => {
@@ -523,6 +548,10 @@ export function MainApp() {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
+
+      {isNewWedding && (
+        <Onboarding onComplete={handleOnboardingComplete} />
+      )}
 
       <main className={cn(
         "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",

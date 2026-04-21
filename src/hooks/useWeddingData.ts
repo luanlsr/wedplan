@@ -25,8 +25,9 @@ export const useWeddingData = () => {
 
       // Se não houver perfil, decidir se cria (novo usuário) ou sai (usuário deletado)
       if (!profile) {
-        const createdAt = new Date(user.created_at || '');
-        const isNewUser = (new Date().getTime() - createdAt.getTime()) < 5 * 60 * 1000; // 5 minutos
+        const createdAtStr = user?.created_at;
+        const createdAt = createdAtStr ? new Date(createdAtStr) : new Date();
+        const isNewUser = !isNaN(createdAt.getTime()) && (new Date().getTime() - createdAt.getTime()) < 5 * 60 * 1000;
 
         if (isNewUser) {
           console.log('Criando perfil inicial para novo usuário...');
@@ -64,27 +65,27 @@ export const useWeddingData = () => {
         return ownedWedding.id;
       }
 
-      // 4. Se realmente não existe nada, cria o primeiro e único casamento
-      console.log('Nenhum casamento encontrado. Criando registro definitivo...');
-      const { data: newWedding, error: wError } = await supabase
+      // 4. Se realmente não existe nada, garante o registro único via upsert
+      console.log('Garantindo existência de registro de casamento único...');
+      const { data: wedding, error: wError } = await supabase
         .from('weddings')
-        .insert({
-          couple_name1: INITIAL_DATA.casal.nome1 || 'Cônjuge 1',
-          couple_name2: INITIAL_DATA.casal.nome2 || 'Cônjuge 2',
+        .upsert({
+          owner_id: userId,
+          couple_name1: INITIAL_DATA.casal.nome1 || '',
+          couple_name2: INITIAL_DATA.casal.nome2 || '',
           wedding_date: INITIAL_DATA.casal.data || null,
           total_budget: INITIAL_DATA.configuracoes.orcamentoTotal,
-          theme: INITIAL_DATA.configuracoes.tema,
-          owner_id: userId
-        })
+          theme: INITIAL_DATA.configuracoes.tema
+        }, { onConflict: 'owner_id' })
         .select()
         .single();
 
       if (wError) throw wError;
 
-      // Vincula o perfil a este novo ID
-      await supabase.from('profiles').update({ wedding_id: newWedding.id }).eq('id', userId);
+      // Vincula o perfil a este ID (seja novo ou recuperado)
+      await supabase.from('profiles').update({ wedding_id: wedding.id }).eq('id', userId);
 
-      return newWedding.id;
+      return wedding.id;
     } catch (err) {
       console.error('Falha crítica na gestão de vínculo do casamento:', err);
       throw err;
