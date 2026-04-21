@@ -170,10 +170,10 @@ export function MainApp() {
         setIsModalOpen(true);
         break;
       case 'financial':
-        navigate('/dashboard/financeiro');
+        navigate('/financeiro');
         break;
       case 'settings':
-        navigate('/dashboard/configuracoes');
+        navigate('/configuracoes');
         break;
     }
   };
@@ -181,12 +181,12 @@ export function MainApp() {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.includes('/fornecedores/')) return "Detalhes do Fornecedor";
-    if (path === "/dashboard/fornecedores") return "Lista de Fornecedores";
-    if (path === "/dashboard/convidados") return "Lista de Convidados";
-    if (path === "/dashboard/tarefas") return "Minhas Tarefas";
-    if (path === "/dashboard/financeiro") return "Fluxo de Caixa";
-    if (path === "/dashboard/planejamento") return "Planejamento Financeiro";
-    if (path === "/dashboard/configuracoes") return "Configurações";
+    if (path === "/fornecedores") return "Lista de Fornecedores";
+    if (path === "/convidados") return "Lista de Convidados";
+    if (path === "/tarefas") return "Minhas Tarefas";
+    if (path === "/financeiro") return "Fluxo de Caixa";
+    if (path === "/planejamento") return "Planejamento Financeiro";
+    if (path === "/configuracoes") return "Configurações";
     return "Visão Geral";
   };
 
@@ -194,7 +194,7 @@ export function MainApp() {
     const { id } = useParams();
     const currentSupplier = data.fornecedores.find(s => s.id === id);
 
-    if (!currentSupplier) return <Navigate to="/dashboard/fornecedores" />;
+    if (!currentSupplier) return <Navigate to="/fornecedores" />;
 
     const handlePrint = () => window.print();
     const handleExportCSV = (supplier: Supplier) => {
@@ -217,7 +217,7 @@ export function MainApp() {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500 pb-20 print:p-0">
         <div className="flex items-center justify-between mb-4 print:hidden">
-          <Button variant="outline" onClick={() => navigate('/dashboard/fornecedores')}>
+          <Button variant="outline" onClick={() => navigate('/fornecedores')}>
             <ChevronLeft size={18} />
             Voltar para lista
           </Button>
@@ -442,7 +442,7 @@ export function MainApp() {
                   });
                   if (isConfirmed) {
                     deleteSupplier(currentSupplier.id);
-                    navigate('/dashboard/fornecedores');
+                    navigate('/fornecedores');
                   }
                 }}>
                   Remover Fornecedor
@@ -494,7 +494,7 @@ export function MainApp() {
               <SuppliersList
                 suppliers={data.fornecedores}
                 onAdd={() => setIsModalOpen(true)}
-                onSelect={(s) => navigate(`/dashboard/fornecedores/${s.id}`)}
+                onSelect={(s) => navigate(`/fornecedores/${s.id}`)}
                 onReorder={reorderSuppliers}
               />
             } />

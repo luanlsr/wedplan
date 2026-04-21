@@ -19,13 +19,13 @@ export const Sidebar = ({ isDark, toggleTheme }: SidebarProps) => {
   };
 
   const menuItems = [
-    { id: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-    { id: "suppliers", path: "/dashboard/fornecedores", label: "Fornecedores", icon: Briefcase },
-    { id: "guests", path: "/dashboard/convidados", label: "Convidados", icon: Heart },
-    { id: "tasks", path: "/dashboard/tarefas", icon: CheckCircle2, label: "Tarefas" },
-    { id: "financial", path: "/dashboard/financeiro", label: "Financeiro", icon: DollarSign },
-    { id: "planning", path: "/dashboard/planejamento", label: "Planejamento", icon: TrendingUp },
-    { id: "settings", path: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
+    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase },
+    { id: "guests", path: "/convidados", label: "Convidados", icon: Heart },
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas" },
+    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign },
+    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp },
+    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings },
   ];
 
   return (
@@ -90,16 +90,16 @@ export const BottomNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const mainActions = [
-    { id: "dashboard", path: "/dashboard", icon: LayoutDashboard, label: "Início", end: true },
-    { id: "suppliers", path: "/dashboard/fornecedores", icon: Briefcase, label: "Fornec." },
-    { id: "guests", path: "/dashboard/convidados", icon: Heart, label: "Convid." },
-    { id: "tasks", path: "/dashboard/tarefas", icon: CheckCircle2, label: "Tarefas" },
+    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true },
+    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec." },
+    { id: "guests", path: "/convidados", icon: Heart, label: "Convid." },
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas" },
   ];
 
   const moreActions = [
-    { id: "financial", path: "/dashboard/financeiro", icon: DollarSign, label: "Financeiro" },
-    { id: "planning", path: "/dashboard/planejamento", icon: TrendingUp, label: "Planejamento" },
-    { id: "settings", path: "/dashboard/configuracoes", icon: Settings, label: "Configurações" },
+    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro" },
+    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento" },
+    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações" },
   ];
 
   return (

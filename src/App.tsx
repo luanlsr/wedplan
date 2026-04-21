@@ -28,60 +28,59 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AuthRoutes() {
+function AppRoutes() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="animate-spin text-primary" size={40} />
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <Routes>
+        <Route path="/reset-password" element={<ResetPassword onSuccess={() => navigate('/login')} />} />
+        <Route path="/*" element={<MainApp />} />
+      </Routes>
+    );
+  }
 
   return (
     <Routes>
       <Route path="/" element={
-        <LandingPage
-          onGetStarted={() => navigate('/signup')}
-          onLogin={() => navigate('/login')}
+        <LandingPage 
+          onGetStarted={() => navigate('/signup')} 
+          onLogin={() => navigate('/login')} 
         />
       } />
       <Route path="/login" element={
-        <LoginForm
-          onSuccess={() => navigate('/dashboard')}
+        <LoginForm 
+          onSuccess={() => navigate('/')} 
           onNavigateToSignUp={() => navigate('/signup')}
           onNavigateToForgot={() => navigate('/forgot-password')}
         />
       } />
       <Route path="/signup" element={
-        <SignUpForm
-          onSuccess={() => navigate('/dashboard')}
+        <SignUpForm 
+          onSuccess={() => navigate('/')} 
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
       <Route path="/forgot-password" element={
-        <ForgotPassword
+        <ForgotPassword 
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-}
-
-function AppRoutes() {
-  const navigate = useNavigate();
-
-  return (
-    <Routes>
-      <Route path="/dashboard/*" element={
-        <ProtectedRoute>
-          <MainApp />
-        </ProtectedRoute>
-      } />
       <Route path="/reset-password" element={
-        <ResetPassword
+        <ResetPassword 
           onSuccess={() => navigate('/login')}
         />
       } />
-      <Route path="/*" element={<AuthRoutes />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
