@@ -1,7 +1,8 @@
-import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown, ChevronDown, Filter, Briefcase } from 'lucide-react';
 import { Card, Button, Input, Badge, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo } from 'react';
+import { cn } from '../../lib/utils';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -15,9 +16,11 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
+  const [filterStatus, setFilterStatus] = useState('Todos');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
 
   const categories = ['Todos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Outros'];
+  const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
 
   const requestSort = (key: keyof Guest | 'total_pessoas') => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -31,7 +34,8 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     let items = guests.filter(g => {
       const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = filterCategory === 'Todos' || g.categoria === filterCategory;
-      return matchesSearch && matchesCategory;
+      const matchesStatus = filterStatus === 'Todos' || g.status === filterStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
     });
 
     if (sortConfig) {
@@ -51,7 +55,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     }
 
     return items;
-  }, [guests, searchTerm, filterCategory, sortConfig]);
+  }, [guests, searchTerm, filterCategory, filterStatus, sortConfig]);
 
   const totals = {
     total: guests.length,
@@ -83,31 +87,36 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
         </Card>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 rounded-2xl shadow-sm border">
-        <div className="flex flex-1 gap-2 w-full">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-card p-4 rounded-2xl shadow-sm border">
+        <div className="flex flex-col md:flex-row flex-1 gap-4 w-full">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <Input 
               placeholder="Buscar convidado..." 
-              className="pl-10 h-11 rounded-xl"
+              className="pl-10 h-11 rounded-xl w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-1 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-            {categories.map(cat => (
-              <Button
-                key={cat}
-                variant={filterCategory === cat ? "primary" : "outline"}
-                className="rounded-full whitespace-nowrap px-4 font-bold h-11"
-                onClick={() => setFilterCategory(cat)}
-              >
-                {cat}
-              </Button>
-            ))}
+          <div className="flex flex-col md:flex-row gap-2">
+            <FilterSelect 
+              value={filterCategory} 
+              onChange={setFilterCategory} 
+              options={categories} 
+              icon={<Briefcase size={16} />} 
+              label="Categoria"
+            />
+            <FilterSelect 
+              value={filterStatus} 
+              onChange={setFilterStatus} 
+              options={statuses} 
+              icon={<Filter size={16} />} 
+              label="Status"
+              isStatus
+            />
           </div>
         </div>
-        <Button className="gap-2 h-11 px-6 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={onAdd}>
+        <Button className="gap-2 h-11 px-6 rounded-xl font-bold shadow-lg shadow-primary/20 w-full lg:w-auto mt-4 lg:mt-0" onClick={onAdd}>
           <UserPlus size={18} />
           Novo Convidado
         </Button>
@@ -264,3 +273,23 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     </div>
   );
 };
+
+const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: any) => (
+  <div className="relative w-full md:w-52">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-colors">
+      {icon}
+    </div>
+    <select
+      className="h-11 w-full pl-12 pr-10 rounded-xl bg-secondary/10 border border-border text-foreground text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer hover:bg-secondary/20"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map((o: string) => (
+        <option key={o} value={o} className="bg-slate-900 border-none px-4 py-2 capitalize font-medium">
+          {o === "Todos" ? `Todas ${label}s` : (isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : o)}
+        </option>
+      ))}
+    </select>
+    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+  </div>
+);
