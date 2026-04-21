@@ -151,7 +151,12 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                 <div className="space-y-1">
                   <div className="flex gap-2 text-sm font-bold">
                      <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.adultos} Adultos</span>
-                     {guest.criancas > 0 && <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.criancas} Crianças</span>}
+                     {guest.criancas > 0 && (
+                       <div className="flex flex-col">
+                         <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.criancas} Crianças</span>
+                         {guest.children_names && <span className="text-[10px] text-muted-foreground italic ml-1 mt-0.5">({guest.children_names})</span>}
+                       </div>
+                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{guest.telefone || 'Sem telefone'}</p>
                 </div>
@@ -214,9 +219,12 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                     <Badge variant="outline" className="font-bold border-primary/20 text-primary">{guest.categoria}</Badge>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex gap-2 text-sm font-bold">
-                       <span>{guest.adultos} A</span>
-                       {guest.criancas > 0 && <span className="text-muted-foreground">{guest.criancas} C</span>}
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex gap-2 text-sm font-bold">
+                        <span>{guest.adultos} A</span>
+                        {guest.criancas > 0 && <span className="text-muted-foreground">{guest.criancas} C</span>}
+                      </div>
+                      {guest.children_names && <span className="text-[10px] text-muted-foreground italic truncate max-w-[120px]" title={guest.children_names}>({guest.children_names})</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4">

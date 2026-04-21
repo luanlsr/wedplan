@@ -21,6 +21,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
     status: "pendente" as Guest['status'],
     adultos: 1,
     criancas: 0,
+    children_names: "",
     telefone: "",
     observacoes: ""
   });
@@ -33,6 +34,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
         status: editGuest.status,
         adultos: editGuest.adultos,
         criancas: editGuest.criancas,
+        children_names: editGuest.children_names || "",
         telefone: editGuest.telefone || "",
         observacoes: editGuest.observacoes || ""
       });
@@ -142,6 +144,21 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                 </div>
               </div>
             </div>
+
+            {formData.criancas > 0 && (
+              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-sm font-bold text-muted-foreground">Nome da(s) Criança(s)</label>
+                <div className="relative">
+                  <Baby className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground opacity-50" size={18} />
+                  <Input 
+                    placeholder="Ex: Pedro, Maria" 
+                    className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all italic"
+                    value={formData.children_names}
+                    onChange={e => setFormData({...formData, children_names: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground">Telefone</label>

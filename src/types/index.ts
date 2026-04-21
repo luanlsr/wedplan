@@ -41,6 +41,7 @@ export interface Guest {
   status: "confirmado" | "pendente" | "recusado";
   adultos: number;
   criancas: number;
+  children_names?: string;
   telefone?: string;
   observacoes?: string;
 }
