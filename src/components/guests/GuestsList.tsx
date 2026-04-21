@@ -293,7 +293,7 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: any) 
     >
       {options.map((o: string) => (
         <option key={o} value={o} className="bg-slate-900 border-none px-4 py-2 capitalize font-medium">
-          {o === "Todos" ? `Todas ${label}s` : (isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : o)}
+          {o === "Todos" ? (isStatus ? "Todos os Status" : `Todas as ${label}s`) : (isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : o)}
         </option>
       ))}
     </select>
