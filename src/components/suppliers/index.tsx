@@ -5,7 +5,7 @@ import {
   Search, Plus, ChevronRight, Briefcase, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
   DollarSign as DollarIcon, Calendar, CheckCircle2, 
-  AlertCircle, GripVertical, ChevronLeft, ChevronRight
+  AlertCircle, GripVertical, ChevronLeft
 } from "lucide-react";
 import type { Supplier } from "../../types";
 import { Reorder, useDragControls, motion, AnimatePresence } from "framer-motion";
