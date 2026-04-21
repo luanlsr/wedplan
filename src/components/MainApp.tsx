@@ -11,6 +11,7 @@ import { GuestsList } from './guests/GuestsList';
 import { AddGuestModal } from './guests/AddGuestModal';
 import { TasksList } from './tasks/TasksList';
 import { AddTaskModal } from './tasks/AddTaskModal';
+import { CheckInView } from './guests/CheckInView';
 import { useWeddingData } from '../hooks/useWeddingData';
 import { calculateStats, formatCurrency, formatDate } from '../utils/calculations';
 import type { Supplier, Installment, Guest, Task } from '../types';
@@ -44,7 +45,7 @@ export function MainApp() {
     addSupplier, updateSupplier, deleteSupplier, updateInstallment,
     addGuest, updateGuest, deleteGuest,
     addTask, updateTask, deleteTask,
-    updateConfig, updateWeddingInfo, updateSimulation, reorderSuppliers
+    updateConfig, updateWeddingInfo, reorderSuppliers
   } = useWeddingData();
   const { user, resetPassword } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
@@ -498,6 +499,7 @@ export function MainApp() {
       <Sidebar
         isDark={isDark}
         toggleTheme={toggleTheme}
+        userRole={data.role}
       />
 
       <main className="flex-1 lg:ml-72 min-h-screen pb-24 lg:pb-10">
@@ -565,7 +567,15 @@ export function MainApp() {
                 suppliers={data.fornecedores}
                 weddingDate={data.casal.data}
                 simulation={data.simulation}
-                onUpdateSimulation={updateSimulation}
+                onUpdateSimulation={() => {}}
+              />
+            } />
+
+            <Route path="checkin" element={
+              <CheckInView
+                guests={data.convidados || []}
+                suppliers={data.fornecedores || []}
+                onTogglePresence={updateGuest}
               />
             } />
 
@@ -687,7 +697,7 @@ export function MainApp() {
         </div>
       </main>
 
-      <BottomNav />
+      <BottomNav userRole={data.role} />
 
       {isModalOpen && (
         <SupplierModal

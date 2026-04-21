@@ -35,15 +35,16 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
         .from('suppliers')
         .insert({
           wedding_id: wedding.id,
-          name: s.fornecedor,
-          service: s.servico,
-          category: s.categoria,
-          total_value: s.valorTotal,
-          payment_type: s.tipoPagamento,
+          fornecedor: s.fornecedor,
+          servico: s.servico,
+          categoria: s.categoria,
+          valor_total: s.valorTotal,
+          tipo_pagamento: s.tipoPagamento,
           status: s.status,
           order_index: s.order || 0,
-          contract_date: s.dataContrato,
+          data_contrato: s.dataContrato,
           payment_rule: s.regraPagamento,
+          staff_names: s.staff_names,
           notes: s.observacoes,
           entry_value: s.valorEntrada,
           entry_percentage: s.porcentagemEntrada,
@@ -59,11 +60,11 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
       // Migrate installments for this supplier
       const installmentsToInsert = s.parcelas.map(p => ({
         supplier_id: supplier.id,
-        number: p.numero,
-        due_date: p.dataVencimento,
-        value: p.valor,
+        numero: p.numero,
+        data_vencimento: p.dataVencimento,
+        valor: p.valor,
         status: p.status,
-        payment_date: p.dataPagamento
+        data_pagamento: p.dataPagamento
       }));
 
       const { error: iError } = await supabase

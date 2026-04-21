@@ -1,4 +1,5 @@
 export type PaymentStatus = "pago" | "parcial" | "pendente" | "atrasado";
+export type UserRole = "master" | "couple" | "staff";
 
 export type PaymentType = "parcelado_fixo" | "entrada_parcelas" | "entrada_quitacao" | "percentual_restante" | "pagamento_unico";
 
@@ -32,6 +33,7 @@ export interface Supplier {
   porcentagemEntrada?: number;
   entradaEmParcelas?: number;
   diasPagamentoFinalAntesCasamento?: number;
+  staff_names?: string;
 }
 
 export interface Guest {
@@ -44,6 +46,7 @@ export interface Guest {
   children_names?: string;
   telefone?: string;
   observacoes?: string;
+  is_present?: boolean;
 }
 
 export interface Task {
@@ -58,6 +61,8 @@ export interface Task {
 
 export interface WeddingData {
   id?: string;
+  role?: UserRole;
+  public_checkin_token?: string;
   casal: {
     nome1: string;
     nome2: string;

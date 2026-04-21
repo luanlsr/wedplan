@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Supplier, PaymentType } from "../../types";
 import { Card, Button, Input } from "../ui";
-import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock } from "lucide-react";
+import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock, ChevronDown, Users } from "lucide-react";
 import { generateInstallments, formatCurrency } from "../../utils/calculations";
 import { maskCurrency, unmaskCurrency } from "../../utils/masks";
 
@@ -30,6 +30,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     finalPaymentDaysBeforeWedding: "15",
     observacoes: "",
     regraPagamento: "",
+    staff_names: ""
   });
 
   useEffect(() => {
@@ -41,20 +42,21 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
         valorTotal: maskCurrency(editSupplier.valorTotal),
         tipoPagamento: editSupplier.tipoPagamento,
         numParcelas: editSupplier.parcelas.length.toString(),
-        entryPercentage: "30",
+        entryPercentage: editSupplier.porcentagemEntrada?.toString() || "30",
         entryValue: editSupplier.valorEntrada ? maskCurrency(editSupplier.valorEntrada) : "",
-        entryInInstallments: "1",
+        entryInInstallments: editSupplier.entradaEmParcelas?.toString() || "1",
         dataContrato: editSupplier.dataContrato,
         finalPaymentDaysBeforeWedding: editSupplier.diasPagamentoFinalAntesCasamento?.toString() || "15",
         observacoes: editSupplier.observacoes || "",
         regraPagamento: editSupplier.regraPagamento || "",
+        staff_names: editSupplier.staff_names || "",
       });
     }
   }, [editSupplier]);
 
   const categories = [
-    "Assessoria", "Bolo e Doces", "Buffet", "Decoração", "Dia da Noiva", "Dia do Noivo", "Documentação", 
-    "Espaço / Sítio", "Foto & Filmagem", "Iluminação", "Música / DJ", 
+    "Assessoria", "Bolo e Doces", "Buffet", "Decoração", "Dia da Noiva", "Dia do Noivo", "Documentação",
+    "Espaço / Sítio", "Foto & Filmagem", "Iluminação", "Música / DJ",
     "Vestuário", "Viagem", "Outros"
   ].sort((a, b) => a === "Outros" ? 1 : b === "Outros" ? -1 : a.localeCompare(b));
 
@@ -62,10 +64,10 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
   const handleEntryPercentageChange = (value: string) => {
     const total = unmaskCurrency(formData.valorTotal) || 0;
     const percentage = parseFloat(value) || 0;
-    
+
     // Calculate entry value but don't force too many decimals if not needed
     const entryVal = (total * percentage) / 100;
-    
+
     setFormData(prev => ({
       ...prev,
       entryPercentage: value,
@@ -77,10 +79,10 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     const total = unmaskCurrency(formData.valorTotal) || 0;
     const maskedValue = maskCurrency(value);
     const entryVal = unmaskCurrency(maskedValue) || 0;
-    
+
     // Calculate percentage with higher precision (2 decimals)
     const percentage = total > 0 ? (entryVal / total) * 100 : 0;
-    
+
     setFormData(prev => ({
       ...prev,
       entryValue: maskedValue,
@@ -122,7 +124,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const total = unmaskCurrency(formData.valorTotal);
-    
+
     const config: any = {
       startDate: formData.dataContrato,
       finalPaymentDaysBeforeWedding: parseInt(formData.finalPaymentDaysBeforeWedding)
@@ -155,7 +157,8 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
       valorEntrada: unmaskCurrency(formData.entryValue) || 0,
       porcentagemEntrada: parseFloat(formData.entryPercentage) || 0,
       entradaEmParcelas: parseInt(formData.entryInInstallments) || 1,
-      diasPagamentoFinalAntesCasamento: parseInt(formData.finalPaymentDaysBeforeWedding) || 15
+      diasPagamentoFinalAntesCasamento: parseInt(formData.finalPaymentDaysBeforeWedding) || 15,
+      staff_names: formData.staff_names
     };
 
     if (isEditing && onUpdate) {
@@ -185,48 +188,51 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
               <label className="text-sm font-bold text-muted-foreground">Fornecedor</label>
               <div className="relative">
                 <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
+                <Input
                   required
-                  placeholder="Ex: Fernando Lima" 
+                  placeholder="Ex: Fernando Lima"
                   className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.fornecedor}
-                  onChange={e => setFormData({...formData, fornecedor: (e.target as HTMLInputElement).value})}
+                  onChange={e => setFormData({ ...formData, fornecedor: (e.target as HTMLInputElement).value })}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground">Serviço</label>
-              <Input 
+              <Input
                 required
-                placeholder="Ex: Fotografia" 
+                placeholder="Ex: Fotografia"
                 className="bg-secondary/50 border-none focus:bg-card transition-all"
                 value={formData.servico}
-                onChange={e => setFormData({...formData, servico: (e.target as HTMLInputElement).value})}
+                onChange={e => setFormData({ ...formData, servico: (e.target as HTMLInputElement).value })}
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground">Categoria</label>
-              <select 
-                className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground"
-                value={formData.categoria}
-                onChange={e => setFormData({...formData, categoria: e.target.value})}
-              >
-                {categories.map(c => <option key={c} value={c} className="bg-card">{c}</option>)}
-              </select>
+              <div className="relative">
+                <select
+                  className="w-full h-12 px-4 pr-10 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground appearance-none"
+                  value={formData.categoria}
+                  onChange={e => setFormData({ ...formData, categoria: e.target.value })}
+                >
+                  {categories.map(c => <option key={c} value={c} className="bg-card">{c}</option>)}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+              </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground">Data do Contrato</label>
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
+                <Input
                   type="date"
                   required
                   className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.dataContrato}
-                  onChange={e => setFormData({...formData, dataContrato: (e.target as HTMLInputElement).value})}
+                  onChange={e => setFormData({ ...formData, dataContrato: (e.target as HTMLInputElement).value })}
                 />
               </div>
             </div>
@@ -235,10 +241,10 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
               <label className="text-sm font-bold text-muted-foreground">Valor Total (R$)</label>
               <div className="relative">
                 <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
+                <Input
                   type="text"
                   required
-                  placeholder="0,00" 
+                  placeholder="0,00"
                   className="pl-12 font-bold bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.valorTotal}
                   onChange={e => {
@@ -246,9 +252,9 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                     const total = unmaskCurrency(maskedValue) || 0;
                     const percentage = parseFloat(formData.entryPercentage) || 0;
                     const newEntryVal = (total * percentage) / 100;
-                    
+
                     setFormData(prev => ({
-                      ...prev, 
+                      ...prev,
                       valorTotal: maskedValue,
                       entryValue: total > 0 && percentage > 0 ? maskCurrency(newEntryVal) : prev.entryValue
                     }));
@@ -259,30 +265,33 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground">Tipo de Pagamento</label>
-              <select 
-                className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground"
-                value={formData.tipoPagamento}
-                onChange={e => setFormData({...formData, tipoPagamento: e.target.value as PaymentType})}
-              >
-                <option value="parcelado_fixo" className="bg-card">Parcelado Fixo</option>
-                <option value="pagamento_unico" className="bg-card">Pagamento Único</option>
-                <option value="entrada_parcelas" className="bg-card">Entrada + Parcelas</option>
-                <option value="entrada_quitacao" className="bg-card">Entrada + Saldo na Quitação</option>
-              </select>
+              <div className="relative">
+                <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <select
+                  className="w-full h-12 pl-12 pr-10 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground appearance-none"
+                  value={formData.tipoPagamento}
+                  onChange={e => setFormData({ ...formData, tipoPagamento: e.target.value as PaymentType })}
+                >
+                  <option value="parcelado_fixo" className="bg-card">Parcelado Fixo</option>
+                  <option value="pagamento_unico" className="bg-card">Pagamento Único</option>
+                  <option value="entrada_parcelas" className="bg-card">Entrada + Parcelas</option>
+                  <option value="entrada_quitacao" className="bg-card">Entrada + Saldo na Quitação</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+              </div>
             </div>
 
-            {/* Quitação target date - Always show */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground">Quitação (dias antes do casamento)</label>
               <div className="relative">
                 <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input 
+                <Input
                   type="number"
                   min="0"
                   max="365"
                   className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.finalPaymentDaysBeforeWedding}
-                  onChange={e => setFormData({...formData, finalPaymentDaysBeforeWedding: (e.target as HTMLInputElement).value})}
+                  onChange={e => setFormData({ ...formData, finalPaymentDaysBeforeWedding: (e.target as HTMLInputElement).value })}
                 />
               </div>
             </div>
@@ -290,13 +299,13 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
             {formData.tipoPagamento === "parcelado_fixo" && (
               <div className="space-y-2">
                 <label className="text-sm font-bold text-muted-foreground">Número de Parcelas</label>
-                <Input 
+                <Input
                   type="number"
                   min="1"
                   max="48"
                   className="bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.numParcelas}
-                  onChange={e => setFormData({...formData, numParcelas: (e.target as HTMLInputElement).value})}
+                  onChange={e => setFormData({ ...formData, numParcelas: (e.target as HTMLInputElement).value })}
                 />
               </div>
             )}
@@ -307,7 +316,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                   <label className="text-sm font-bold text-muted-foreground">Valor da Entrada (R$)</label>
                   <div className="relative">
                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                    <Input 
+                    <Input
                       type="text"
                       placeholder="Valor fixo"
                       className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
@@ -321,7 +330,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                   <label className="text-sm font-bold text-muted-foreground">Entrada em %</label>
                   <div className="relative">
                     <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                    <Input 
+                    <Input
                       type="number"
                       min="1"
                       max="99"
@@ -333,34 +342,32 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                   </div>
                 </div>
 
-                {(formData.tipoPagamento === "entrada_parcelas" || formData.tipoPagamento === "entrada_quitacao") && (
-                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground">Parcelar Entrada em:</label>
-                    <div className="relative">
-                      <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                      <Input 
-                        type="number"
-                        min="1"
-                        max="12"
-                        placeholder="Parcelas da entrada"
-                        className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
-                        value={formData.entryInInstallments}
-                        onChange={e => setFormData({...formData, entryInInstallments: (e.target as HTMLInputElement).value})}
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Parcelar Entrada em:</label>
+                  <div className="relative">
+                    <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <Input
+                      type="number"
+                      min="1"
+                      max="12"
+                      placeholder="Parcelas da entrada"
+                      className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
+                      value={formData.entryInInstallments}
+                      onChange={e => setFormData({ ...formData, entryInInstallments: (e.target as HTMLInputElement).value })}
+                    />
                   </div>
-                )}
+                </div>
 
                 {formData.tipoPagamento === "entrada_parcelas" && (
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-muted-foreground">Parcelas Restantes:</label>
-                    <Input 
+                    <Input
                       type="number"
                       min="1"
                       max="48"
                       className="bg-secondary/50 border-none focus:bg-card transition-all"
                       value={formData.numParcelas}
-                      onChange={e => setFormData({...formData, numParcelas: (e.target as HTMLInputElement).value})}
+                      onChange={e => setFormData({ ...formData, numParcelas: (e.target as HTMLInputElement).value })}
                     />
                   </div>
                 )}
@@ -370,22 +377,35 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
 
           <div className="space-y-2">
             <label className="text-sm font-bold text-muted-foreground">Regra de Pagamento / Negociação</label>
-            <Input 
-              placeholder="Ex: 30% entrada, restante 15 dias antes" 
+            <Input
+              placeholder="Ex: 30% entrada, restante 15 dias antes"
               className="bg-secondary/50 border-none focus:bg-card transition-all"
               value={formData.regraPagamento}
-              onChange={e => setFormData({...formData, regraPagamento: (e.target as HTMLInputElement).value})}
+              onChange={e => setFormData({ ...formData, regraPagamento: (e.target as HTMLInputElement).value })}
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-bold text-muted-foreground">Observações Adicionais</label>
-            <textarea 
-              placeholder="Notas importantes sobre o contrato..." 
+            <textarea
+              placeholder="Notas importantes sobre o contrato..."
               className="w-full min-h-[100px] p-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground resize-none"
               value={formData.observacoes}
-              onChange={e => setFormData({...formData, observacoes: e.target.value})}
+              onChange={e => setFormData({ ...formData, observacoes: e.target.value })}
             />
+          </div>
+
+          <div className="space-y-4">
+            <label className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+              <Users size={16} className="text-primary" /> Equipe / Staff do Fornecedor
+            </label>
+            <textarea
+              placeholder="Ex: João (Maitre), Maria (Garçom)..."
+              className="w-full min-h-[100px] p-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground resize-none"
+              value={formData.staff_names}
+              onChange={e => setFormData({ ...formData, staff_names: e.target.value })}
+            />
+            <p className="text-[10px] text-muted-foreground">Liste os nomes dos funcionários que estarão presentes no dia do evento.</p>
           </div>
 
           {/* Real-time Preview Section */}
@@ -418,7 +438,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                 )}
               </div>
               {isEditing && (
-                 <p className="text-[10px] text-amber-500 font-bold mt-4 uppercase">* Editar o plano de pagamento irá regenerar as parcelas e resetar os status de pagamento deste fornecedor.</p>
+                <p className="text-[10px] text-amber-500 font-bold mt-4 uppercase">* Editar o plano de pagamento irá regenerar as parcelas e resetar os status de pagamento deste fornecedor.</p>
               )}
             </div>
           )}

@@ -11,32 +11,53 @@ export const useWeddingData = () => {
   const [data, setData] = useState<WeddingData>(INITIAL_DATA);
   const [loading, setLoading] = useState(true);
 
-  // Helper to ensure a wedding exists for the user
+  // Helper to ensure a wedding exists for the user and return its ID
   const ensureWeddingExists = async (userId: string) => {
     try {
-      console.log('Iniciando verificação de sanidade para o usuário:', userId);
+      console.log('Verificando estabilidade do banco para o usuário:', userId);
       
-      // 0. Garantir perfil (Upsert evita 409 se o registro existir mas o SELECT falhar por RLS)
-      await supabase.from('profiles').upsert({
-        id: userId,
-        email: user?.email || '',
-        full_name: user?.user_metadata?.full_name || 'Usuário'
-      }, { onConflict: 'id' });
-
-      // 1. Buscar casamento vinculado
-      const { data: membership } = await supabase
-        .from('wedding_members')
-        .select('wedding_id')
-        .eq('user_id', userId)
+      // 1. Buscar Perfil (que contém o wedding_id)
+      let { data: profile } = await supabase
+        .from('profiles')
+        .select('wedding_id, role')
+        .eq('id', userId)
         .maybeSingle();
 
-      if (membership?.wedding_id) {
-        console.log('Casamento vinculado encontrado:', membership.wedding_id);
-        return membership.wedding_id;
+      // Se não houver perfil, criar um padrão
+      if (!profile) {
+        console.log('Criando perfil inicial...');
+        const { data: newProfile, error: pError } = await supabase
+          .from('profiles')
+          .upsert({ id: userId, role: 'couple' })
+          .select()
+          .single();
+        if (pError) throw pError;
+        profile = newProfile;
       }
 
-      console.log('Nenhum vínculo encontrado. Criando novo casamento...');
-      // 2. Criar casamento (Se o SELECT falhou, o INSERT pode falhar se já existir, então usamos lógica de RLS manual)
+      // 2. Se já tem wedding_id vinculado, retorna ele
+      if (profile?.wedding_id) {
+        console.log('Casamento vinculado encontrado no perfil:', profile.wedding_id);
+        return profile.wedding_id;
+      }
+
+      // 3. Se não tem no perfil, buscar se ele é OWNER de algum casamento
+      const { data: ownedWedding } = await supabase
+        .from('weddings')
+        .select('id')
+        .eq('owner_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (ownedWedding) {
+        console.log('Casamento encontrado como proprietário:', ownedWedding.id);
+        // Atualiza o perfil para guardar esse ID fixo
+        await supabase.from('profiles').update({ wedding_id: ownedWedding.id }).eq('id', userId);
+        return ownedWedding.id;
+      }
+
+      // 4. Se realmente não existe nada, cria o primeiro e único casamento
+      console.log('Nenhum casamento encontrado. Criando registro definitivo...');
       const { data: newWedding, error: wError } = await supabase
         .from('weddings')
         .insert({
@@ -45,54 +66,35 @@ export const useWeddingData = () => {
           wedding_date: INITIAL_DATA.casal.data || null,
           total_budget: INITIAL_DATA.configuracoes.orcamentoTotal,
           theme: INITIAL_DATA.configuracoes.tema,
-          creator_id: userId
+          owner_id: userId
         })
         .select()
         .single();
 
-      if (wError) {
-        console.error('Erro ao criar casamento:', wError);
-        // Se der erro aqui, talvez o casamento já exista mas não temos permissão de ver
-        throw wError;
-      }
+      if (wError) throw wError;
 
-      // 3. Vincular (Upsert evita o erro 409 que você viu)
-      const { error: memError } = await supabase.from('wedding_members').upsert({
-        wedding_id: newWedding.id,
-        user_id: userId,
-        role: 'owner'
-      }, { onConflict: 'wedding_id,user_id' });
-
-      if (memError) {
-        console.error('Erro ao vincular membro:', memError);
-        throw memError;
-      }
+      // Vincula o perfil a este novo ID
+      await supabase.from('profiles').update({ wedding_id: newWedding.id }).eq('id', userId);
 
       return newWedding.id;
     } catch (err) {
-      console.error('Falha no motor de dados:', err);
-      // Fallback: tentar buscar qualquer casamento que o usuário criou se o fluxo acima falhar
-      const { data: fallback } = await supabase.from('weddings').select('id').eq('creator_id', userId).limit(1).maybeSingle();
-      if (fallback) return fallback.id;
+      console.error('Falha crítica na gestão de vínculo do casamento:', err);
       throw err;
     }
   };
 
   const loadData = useCallback(async () => {
     if (!user) {
-      console.log('No user authenticated, using local search.');
+      console.log('Offline: using local storage.');
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) setData(JSON.parse(stored));
       setLoading(false);
       return;
     }
 
-    // Only show global loading on the very first load
-    if (!data.id) {
-      setLoading(true);
-    }
+    if (!data.id) setLoading(true);
+
     try {
-      console.log('Loading Supabase data for user:', user.id);
       const weddingId = await ensureWeddingExists(user.id);
       
       const { data: wedding, error: weddingError } = await supabase
@@ -101,31 +103,23 @@ export const useWeddingData = () => {
         .eq('id', weddingId)
         .single();
 
-      if (weddingError) {
-        console.error('Error fetching wedding details:', weddingError);
-        throw weddingError;
-      }
+      if (weddingError) throw weddingError;
 
-      console.log('Fetching related modules...');
       const [
-        { data: suppliersData, error: sErr },
-        { data: guestsData, error: gErr },
-        { data: tasksData, error: tErr },
-        { data: simulationData, error: simErr }
+        { data: suppliersData },
+        { data: guestsData },
+        { data: tasksData },
+        { data: profileData }
       ] = await Promise.all([
-        supabase.from('suppliers').select('*, parcelas:installments(*)').eq('wedding_id', weddingId).order('order_index'),
-        supabase.from('guests').select('*').eq('wedding_id', weddingId).order('name'),
-        supabase.from('tasks').select('*').eq('wedding_id', weddingId).order('order_index'),
-        supabase.from('planning_simulations').select('*').eq('wedding_id', weddingId).maybeSingle()
+        supabase.from('suppliers').select('*, parcelas:installments(*)').eq('wedding_id', weddingId),
+        supabase.from('guests').select('*').eq('wedding_id', weddingId).order('nome'),
+        supabase.from('tasks').select('*').eq('wedding_id', weddingId).order('ordem'),
+        supabase.from('profiles').select('role').eq('id', user.id).single()
       ]);
-
-      if (sErr) console.error('Suppliers Load Error:', sErr);
-      if (gErr) console.error('Guests Load Error:', gErr);
-      if (tErr) console.error('Tasks Load Error:', tErr);
-      if (simErr) console.error('Simulation Load Error:', simErr);
 
       const transformedData: WeddingData = {
         id: wedding.id,
+        role: profileData?.role as any,
         casal: {
           nome1: wedding.couple_name1 || '',
           nome2: wedding.couple_name2 || '',
@@ -133,64 +127,54 @@ export const useWeddingData = () => {
         },
         fornecedores: (suppliersData || []).map((s: any) => ({
           id: s.id,
-          fornecedor: s.name,
-          servico: s.service,
-          categoria: s.category,
-          valorTotal: parseFloat(s.total_value),
-          tipoPagamento: s.payment_type,
-          status: s.status,
-          dataContrato: s.contract_date,
-          regraPagamento: s.payment_rule,
-          observacoes: s.notes,
-          order: s.order_index,
-          valorEntrada: parseFloat(s.entry_value),
-          porcentagemEntrada: parseFloat(s.entry_percentage),
-          entradaEmParcelas: s.entry_installments,
-          numeroParcelas: s.num_installments,
-          diasPagamentoFinalAntesCasamento: s.final_payment_days_before,
+          fornecedor: s.fornecedor,
+          servico: s.servico,
+          categoria: s.categoria,
+          valorTotal: parseFloat(s.valor_total),
+          tipoPagamento: s.tipo_pagamento,
+          status: 'pendente', // Calculado em tempo de execução geralmente
+          dataContrato: s.data_contrato,
+          staff_names: s.staff_names,
           parcelas: (s.parcelas || []).map((p: any) => ({
             id: p.id,
-            numero: p.number,
-            dataVencimento: p.due_date,
-            valor: parseFloat(p.value),
+            numero: p.numero,
+            dataVencimento: p.data_vencimento,
+            valor: parseFloat(p.valor),
             status: p.status,
-            dataPagamento: p.payment_date
+            dataPagamento: p.data_pagamento
           })).sort((a: any, b: any) => a.numero - b.numero)
         })),
         convidados: (guestsData || []).map((g: any) => ({
           id: g.id,
-          nome: g.name,
-          categoria: g.category,
+          nome: g.nome,
+          categoria: g.categoria,
           status: g.status,
-          adultos: g.adults_count,
-          criancas: g.children_count,
-          telefone: g.phone,
-          observacoes: g.notes
+          adultos: g.adultos,
+          criancas: g.criancas,
+          children_names: g.children_names,
+          telefone: g.telefone,
+          observacoes: g.observacoes,
+          is_present: g.is_present
         })),
         tarefas: (tasksData || []).map((t: any) => ({
           id: t.id,
-          titulo: t.title,
-          descricao: t.description,
-          categoria: t.category,
-          dataLimite: t.due_date,
+          titulo: t.titulo,
+          descricao: t.descricao,
+          categoria: t.categoria,
+          dataLimite: t.data_limite,
           status: t.status,
-          ordem: t.order_index
+          ordem: t.ordem
         })),
         configuracoes: {
           orcamentoTotal: parseFloat(wedding.total_budget),
           tema: wedding.theme || 'light'
         },
-        simulation: simulationData ? {
-          step: simulationData.current_step,
-          index: simulationData.current_month_index,
-          aportes: simulationData.simulated_aportes
-        } : undefined
+        public_checkin_token: wedding.public_checkin_token
       };
 
-      console.log('Transformed Data Ready. id:', transformedData.id);
       setData(transformedData);
     } catch (error) {
-      console.error('Critical load failure:', error);
+      console.error('Falha ao carregar dados do Supabase:', error);
     } finally {
       setLoading(false);
     }
@@ -200,412 +184,210 @@ export const useWeddingData = () => {
     loadData();
   }, [loadData]);
 
-  // Suppliers CRUD
+  // CRUD Operations
   const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
-    console.log('Adding supplier...', supplier.fornecedor);
-    if (!user) {
-      const newSupplier = { ...supplier, id: crypto.randomUUID() } as Supplier;
-      setData(prev => ({ ...prev, fornecedores: [...prev.fornecedores, newSupplier] }));
-      return;
-    }
-
-    if (!data.id) {
-      console.error('Cant add supplier: No wedding_id');
-      return;
-    }
-
+    if (!user || !data.id) return;
     try {
       const { data: sData, error: sError } = await supabase.from('suppliers').insert({
         wedding_id: data.id,
-        name: supplier.fornecedor,
-        service: supplier.servico,
-        category: supplier.categoria,
-        total_value: supplier.valorTotal,
-        payment_type: supplier.tipoPagamento,
-        status: supplier.status,
-        contract_date: supplier.dataContrato,
-        payment_rule: supplier.regraPagamento,
-        notes: supplier.observacoes,
-        entry_value: supplier.valorEntrada || 0,
-        entry_percentage: supplier.porcentagemEntrada || 0,
-        entry_installments: supplier.entradaEmParcelas || 0,
-        num_installments: supplier.numeroParcelas || 0,
-        final_payment_days_before: supplier.diasPagamentoFinalAntesCasamento || 15,
-        order_index: supplier.order || 0
+        fornecedor: supplier.fornecedor,
+        servico: supplier.servico,
+        categoria: supplier.categoria,
+        valor_total: supplier.valorTotal,
+        tipo_pagamento: supplier.tipoPagamento,
+        data_contrato: supplier.dataContrato,
+        staff_names: supplier.staff_names
       }).select().single();
 
       if (sError) throw sError;
 
-      if (sData && supplier.parcelas && supplier.parcelas.length > 0) {
-        console.log('Inserting installments for supplier:', sData.id);
+      if (supplier.parcelas?.length > 0) {
         const installments = supplier.parcelas.map(p => ({
           supplier_id: sData.id,
-          number: p.numero,
-          due_date: p.dataVencimento,
-          value: p.valor,
-          status: p.status,
-          payment_date: p.dataPagamento
+          numero: p.numero,
+          data_vencimento: p.dataVencimento,
+          valor: p.valor,
+          status: p.status
         }));
-        const { error: iErr } = await supabase.from('installments').insert(installments);
-        if (iErr) console.error('Error saving installments:', iErr);
+        await supabase.from('installments').insert(installments);
       }
-
-      console.log('Supplier and installments saved to Supabase.');
-      // Update local state without full reload
-      const newSupplier = { ...supplier, id: sData.id } as Supplier;
-      setData(prev => ({
-        ...prev,
-        fornecedores: [...prev.fornecedores, newSupplier]
-      }));
-    } catch (err) {
-      console.error('Failed to add supplier:', err);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const updateSupplier = async (id: string, updated: Partial<Supplier>) => {
-    console.log('Updating supplier:', id, updated);
-    if (!user) {
-      setData(prev => ({
-        ...prev,
-        fornecedores: prev.fornecedores.map(s => s.id === id ? { ...s, ...updated } : s)
-      }));
-      return;
-    }
-
+    if (!user) return;
     try {
-      // Optimistic update
-      setData(prev => ({
-        ...prev,
-        fornecedores: prev.fornecedores.map(s => s.id === id ? { ...s, ...updated } : s)
-      }));
-
       const payload: any = {};
-      if (updated.fornecedor) payload.name = updated.fornecedor;
-      if (updated.servico) payload.service = updated.servico;
-      if (updated.categoria) payload.category = updated.categoria;
-      if (updated.valorTotal !== undefined) payload.total_value = updated.valorTotal;
-      if (updated.status) payload.status = updated.status;
-      if (updated.observacoes !== undefined) payload.notes = updated.observacoes;
-      if (updated.regraPagamento !== undefined) payload.payment_rule = updated.regraPagamento;
-      if (updated.tipoPagamento) payload.payment_type = updated.tipoPagamento;
-      if (updated.dataContrato) payload.contract_date = updated.dataContrato;
-      if (updated.order !== undefined) payload.order_index = updated.order;
+      if (updated.fornecedor) payload.fornecedor = updated.fornecedor;
+      if (updated.servico) payload.servico = updated.servico;
+      if (updated.categoria) payload.categoria = updated.categoria;
+      if (updated.valorTotal !== undefined) payload.valor_total = updated.valorTotal;
+      if (updated.staff_names !== undefined) payload.staff_names = updated.staff_names;
+      if (updated.tipoPagamento) payload.tipo_pagamento = updated.tipoPagamento;
+      if (updated.dataContrato) payload.data_contrato = updated.dataContrato;
 
-      const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
-      if (error) throw error;
-      console.log('Supplier updated in Supabase.');
-    } catch (err) {
-      console.error('Failed to update supplier:', err);
+      await supabase.from('suppliers').update(payload).eq('id', id);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const deleteSupplier = async (id: string) => {
-    console.log('Deleting supplier:', id);
-    if (!user) {
-      setData(prev => ({ ...prev, fornecedores: prev.fornecedores.filter(s => s.id !== id) }));
-      return;
-    }
-
+    if (!user) return;
     try {
-      // Optimistic delete
-      setData(prev => ({ 
-        ...prev, 
-        fornecedores: prev.fornecedores.filter(s => s.id !== id) 
-      }));
-
-      const { error } = await supabase.from('suppliers').delete().eq('id', id);
-      if (error) throw error;
-      console.log('Supplier deleted from Supabase.');
-    } catch (err) {
-      console.error('Failed to delete supplier:', err);
+      await supabase.from('suppliers').delete().eq('id', id);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const updateInstallment = async (supplierId: string, installmentId: string, updated: Partial<Installment>) => {
-    console.log('Updating installment:', installmentId, updated);
-    if (!user) {
-      setData(prev => ({
-        ...prev,
-        fornecedores: prev.fornecedores.map(s => {
-          if (s.id !== supplierId) return s;
-          return {
-            ...s,
-            parcelas: s.parcelas.map(p => p.id === installmentId ? { ...p, ...updated } : p)
-          };
-        })
-      }));
-      return;
-    }
-
+    if (!user) return;
     try {
-      // Optimistic update
-      setData(prev => ({
-        ...prev,
-        fornecedores: prev.fornecedores.map(s => {
-          if (s.id !== supplierId) return s;
-          return {
-            ...s,
-            parcelas: s.parcelas.map(p => p.id === installmentId ? { ...p, ...updated } : p)
-          };
-        })
-      }));
-
       const payload: any = {};
       if (updated.status) payload.status = updated.status;
-      if (updated.dataPagamento !== undefined) payload.payment_date = updated.dataPagamento;
-      if (updated.valor !== undefined) payload.value = updated.valor;
-      if (updated.dataVencimento) payload.due_date = updated.dataVencimento;
+      if (updated.valor !== undefined) payload.valor = updated.valor;
 
-      const { error } = await supabase.from('installments').update(payload).eq('id', installmentId);
-      if (error) throw error;
-      console.log('Installment updated in Supabase.');
-    } catch (err) {
-      console.error('Failed to update installment:', err);
+      await supabase.from('installments').update(payload).eq('id', installmentId);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  // Guests CRUD
   const addGuest = async (guest: Omit<Guest, 'id'>) => {
-    console.log('Adding guest...', guest.nome);
-    if (!user || !data.id) {
-      const newGuest = { ...guest, id: crypto.randomUUID() } as Guest;
-      setData(prev => ({ ...prev, convidados: [...(prev.convidados || []), newGuest] }));
-      return;
-    }
-
+    if (!user || !data.id) return;
     try {
-      const { data: nGuest, error } = await supabase.from('guests').insert({
+      await supabase.from('guests').insert({
         wedding_id: data.id,
-        name: guest.nome,
-        category: guest.categoria,
+        nome: guest.nome,
+        categoria: guest.categoria,
         status: guest.status,
-        adults_count: guest.adultos,
-        children_count: guest.criancas,
-        phone: guest.telefone,
-        notes: guest.observacoes
-      }).select().single();
-
-      if (error) throw error;
-      console.log('Guest saved to Supabase.');
-      
-      const newGuest = { ...guest, id: nGuest.id } as Guest;
-      setData(prev => ({ 
-        ...prev, 
-        convidados: [...(prev.convidados || []), newGuest] 
-      }));
-    } catch (err) {
-      console.error('Failed to add guest:', err);
+        adultos: guest.adultos,
+        criancas: guest.criancas,
+        children_names: guest.children_names,
+        telefone: guest.telefone,
+        observacoes: guest.observacoes,
+        is_present: guest.is_present || false
+      });
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const updateGuest = async (id: string, updated: Partial<Guest>) => {
-    console.log('Updating guest:', id, updated);
-    if (!user) {
-      setData(prev => ({
-        ...prev,
-        convidados: (prev.convidados || []).map(g => g.id === id ? { ...g, ...updated } : g)
-      }));
-      return;
-    }
+    if (!user) return;
     try {
-      // Optimistic update
-      setData(prev => ({
-        ...prev,
-        convidados: (prev.convidados || []).map(g => g.id === id ? { ...g, ...updated } : g)
-      }));
-
       const payload: any = {};
-      if (updated.nome) payload.name = updated.nome;
-      if (updated.categoria) payload.category = updated.categoria;
+      if (updated.nome) payload.nome = updated.nome;
+      if (updated.categoria) payload.categoria = updated.categoria;
       if (updated.status) payload.status = updated.status;
-      if (updated.adultos !== undefined) payload.adults_count = updated.adultos;
-      if (updated.criancas !== undefined) payload.children_count = updated.criancas;
-      if (updated.telefone !== undefined) payload.phone = updated.telefone;
-      if (updated.observacoes !== undefined) payload.notes = updated.observacoes;
+      if (updated.adultos !== undefined) payload.adultos = updated.adultos;
+      if (updated.criancas !== undefined) payload.criancas = updated.criancas;
+      if (updated.children_names !== undefined) payload.children_names = updated.children_names;
+      if (updated.telefone !== undefined) payload.telefone = updated.telefone;
+      if (updated.observacoes !== undefined) payload.observacoes = updated.observacoes;
+      if (updated.is_present !== undefined) payload.is_present = updated.is_present;
 
-      const { error } = await supabase.from('guests').update(payload).eq('id', id);
-      if (error) throw error;
-      console.log('Guest updated in Supabase.');
-    } catch (err) {
-      console.error('Failed to update guest:', err);
+      await supabase.from('guests').update(payload).eq('id', id);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const deleteGuest = async (id: string) => {
-    console.log('Deleting guest:', id);
-    if (!user) {
-      setData(prev => ({ ...prev, convidados: (prev.convidados || []).filter(g => g.id !== id) }));
-      return;
-    }
-
+    if (!user) return;
     try {
-      // Optimistic delete
-      setData(prev => ({ 
-        ...prev, 
-        convidados: (prev.convidados || []).filter(g => g.id !== id) 
-      }));
-
-      const { error } = await supabase.from('guests').delete().eq('id', id);
-      if (error) throw error;
-      console.log('Guest deleted from Supabase.');
-    } catch (err) {
-      console.error('Failed to delete guest:', err);
+      await supabase.from('guests').delete().eq('id', id);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  // Tasks CRUD
   const addTask = async (task: Omit<Task, 'id'>) => {
-    console.log('Adding task...', task.titulo);
-    if (!user || !data.id) {
-      const newTask = { ...task, id: crypto.randomUUID() } as Task;
-      setData(prev => ({ ...prev, tarefas: [...(prev.tarefas || []), newTask] }));
-      return;
-    }
-
+    if (!user || !data.id) return;
     try {
-      const { data: nTask, error } = await supabase.from('tasks').insert({
+      await supabase.from('tasks').insert({
         wedding_id: data.id,
-        title: task.titulo,
-        description: task.descricao,
-        category: task.categoria,
-        due_date: task.dataLimite,
+        titulo: task.titulo,
+        descricao: task.descricao,
+        categoria: task.categoria,
+        data_limite: task.dataLimite,
         status: task.status,
-        order_index: task.ordem || 0
-      }).select().single();
-
-      if (error) throw error;
-      console.log('Task saved to Supabase.');
-      
-      const newTask = { ...task, id: nTask.id } as Task;
-      setData(prev => ({ 
-        ...prev, 
-        tarefas: [...(prev.tarefas || []), newTask] 
-      }));
-    } catch (err) {
-      console.error('Failed to add task:', err);
+        ordem: task.ordem
+      });
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const updateTask = async (id: string, updated: Partial<Task>) => {
-    console.log('Updating task:', id, updated);
-    if (!user) {
-      setData(prev => ({
-        ...prev,
-        tarefas: (prev.tarefas || []).map(t => t.id === id ? { ...t, ...updated } : t)
-      }));
-      return;
-    }
-
+    if (!user) return;
     try {
-      // Optimistic update
-      setData(prev => ({
-        ...prev,
-        tarefas: (prev.tarefas || []).map(t => t.id === id ? { ...t, ...updated } : t)
-      }));
-
       const payload: any = {};
-      if (updated.titulo) payload.title = updated.titulo;
-      if (updated.descricao !== undefined) payload.description = updated.descricao;
-      if (updated.categoria) payload.category = updated.categoria;
-      if (updated.dataLimite !== undefined) payload.due_date = updated.dataLimite;
+      if (updated.titulo) payload.titulo = updated.titulo;
+      if (updated.descricao !== undefined) payload.descricao = updated.descricao;
+      if (updated.categoria) payload.categoria = updated.categoria;
+      if (updated.dataLimite !== undefined) payload.data_limite = updated.dataLimite;
       if (updated.status) payload.status = updated.status;
-      if (updated.ordem !== undefined) payload.order_index = updated.ordem;
+      if (updated.ordem !== undefined) payload.ordem = updated.ordem;
 
-      const { error } = await supabase.from('tasks').update(payload).eq('id', id);
-      if (error) throw error;
-      console.log('Task updated in Supabase.');
-    } catch (err) {
-      console.error('Failed to update task:', err);
+      await supabase.from('tasks').update(payload).eq('id', id);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const deleteTask = async (id: string) => {
-    console.log('Deleting task:', id);
-    if (!user) {
-      setData(prev => ({ ...prev, tarefas: (prev.tarefas || []).filter(t => t.id !== id) }));
-      return;
-    }
-
+    if (!user) return;
     try {
-      // Optimistic delete
-      setData(prev => ({ 
-        ...prev, 
-        tarefas: (prev.tarefas || []).filter(t => t.id !== id) 
-      }));
-
-      const { error } = await supabase.from('tasks').delete().eq('id', id);
-      if (error) throw error;
-      console.log('Task deleted from Supabase.');
-    } catch (err) {
-      console.error('Failed to delete task:', err);
+      await supabase.from('tasks').delete().eq('id', id);
       loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const updateWeddingInfo = async (info: Partial<WeddingData["casal"]>) => {
-    console.log('Updating wedding info...', info);
-    setData(prev => ({ ...prev, casal: { ...prev.casal, ...info } }));
-    if (user && data.id) {
+    if (!user || !data.id) return;
+    try {
       const payload: any = {};
       if (info.nome1) payload.couple_name1 = info.nome1;
       if (info.nome2) payload.couple_name2 = info.nome2;
       if (info.data) payload.wedding_date = info.data;
       await supabase.from('weddings').update(payload).eq('id', data.id);
-      console.log('Wedding info updated in Supabase.');
+      loadData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const updateConfig = async (config: Partial<WeddingData["configuracoes"]>) => {
-    console.log('Updating config...', config);
-    setData(prev => ({ ...prev, configuracoes: { ...prev.configuracoes, ...config } }));
-    if (user && data.id) {
+    if (!user || !data.id) return;
+    try {
       const payload: any = {};
       if (config.orcamentoTotal !== undefined) payload.total_budget = config.orcamentoTotal;
       if (config.tema) payload.theme = config.tema;
       await supabase.from('weddings').update(payload).eq('id', data.id);
-      console.log('Config updated in Supabase.');
-    }
-  };
-
-  const updateSimulation = async (simulationData: any) => {
-    console.log('Saving simulation state...', simulationData);
-    if (!user || !data.id) return;
-
-    try {
-      const { error } = await supabase.from('planning_simulations').upsert({
-        wedding_id: data.id,
-        current_step: simulationData.step,
-        current_month_index: simulationData.index,
-        simulated_aportes: simulationData.aportes,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'wedding_id' });
-      
-      if (error) throw error;
-      console.log('Simulation state saved to Supabase.');
+      loadData();
     } catch (err) {
-      console.error('Failed to save simulation:', err);
+      console.error(err);
     }
   };
 
   const reorderSuppliers = async (newOrder: Supplier[]) => {
     setData(prev => ({ ...prev, fornecedores: newOrder }));
-    if (user) {
-      console.log('Reordering suppliers in Supabase...');
-      const promises = newOrder.map((s, index) => 
-        supabase.from('suppliers').update({ order_index: index }).eq('id', s.id)
-      );
-      await Promise.all(promises);
-      console.log('Suppliers reordered.');
-    }
+    // No Supabase novo precisaríamos de uma coluna de ordem estável
   };
 
   return {
@@ -623,7 +405,6 @@ export const useWeddingData = () => {
     deleteTask,
     updateWeddingInfo,
     updateConfig,
-    updateSimulation,
     reorderSuppliers,
     refreshData: loadData
   };

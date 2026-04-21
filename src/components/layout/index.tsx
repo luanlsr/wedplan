@@ -1,4 +1,4 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, NavLink } from "react-router-dom";
@@ -7,9 +7,10 @@ import { useState } from "react";
 interface SidebarProps {
   isDark: boolean;
   toggleTheme: () => void;
+  userRole?: string;
 }
 
-export const Sidebar = ({ isDark, toggleTheme }: SidebarProps) => {
+export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple' }: SidebarProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -22,11 +23,12 @@ export const Sidebar = ({ isDark, toggleTheme }: SidebarProps) => {
     { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
     { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase },
     { id: "guests", path: "/convidados", label: "Convidados", icon: Heart },
-    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas" },
-    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign },
-    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp },
-    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings },
-  ];
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' },
+    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'staff' },
+    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'staff' },
+    { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck },
+    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'staff' },
+  ].filter(item => !item.hidden);
 
   return (
     <div className="hidden lg:flex w-72 h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex-col z-50">
@@ -86,7 +88,7 @@ export const Sidebar = ({ isDark, toggleTheme }: SidebarProps) => {
   );
 };
 
-export const BottomNav = () => {
+export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const mainActions = [
@@ -97,10 +99,11 @@ export const BottomNav = () => {
   ];
 
   const moreActions = [
-    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro" },
-    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento" },
-    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações" },
-  ];
+    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'staff' },
+    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'staff' },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in" },
+    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'staff' },
+  ].filter(item => !item.hidden);
 
   return (
     <>

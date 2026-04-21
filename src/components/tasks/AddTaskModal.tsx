@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Task } from "../../types";
 import { Card, Button, Input } from "../ui";
-import { X, Calendar, CheckSquare, Tag, AlignLeft, Flag } from "lucide-react";
+import { X, Calendar, CheckSquare, Tag, AlignLeft, Flag, ChevronDown } from "lucide-react";
 
 interface AddTaskModalProps {
   onClose: () => void;
@@ -96,16 +96,17 @@ export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModa
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-muted-foreground">Categoria</label>
-                <div className="relative">
-                  <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                  <select 
-                    className="w-full h-12 pl-12 pr-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground appearance-none"
-                    value={formData.categoria}
-                    onChange={e => setFormData({...formData, categoria: e.target.value})}
-                  >
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
+                  <div className="relative">
+                    <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <select 
+                      className="w-full h-12 pl-12 pr-10 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground appearance-none"
+                      value={formData.categoria}
+                      onChange={e => setFormData({...formData, categoria: e.target.value})}
+                    >
+                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+                  </div>
               </div>
 
               <div className="space-y-2">
@@ -128,7 +129,7 @@ export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModa
               <div className="relative">
                 <Flag className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <select 
-                  className="w-full h-12 pl-12 pr-4 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground appearance-none"
+                  className="w-full h-12 pl-12 pr-10 rounded-xl bg-secondary/50 border-2 border-transparent focus:border-primary/30 focus:bg-card focus:outline-none text-sm font-medium transition-all text-foreground appearance-none"
                   value={formData.status}
                   onChange={e => setFormData({...formData, status: e.target.value as Task['status']})}
                 >
@@ -136,6 +137,7 @@ export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModa
                   <option value="em_progresso">Em Progresso</option>
                   <option value="concluido">Concluída</option>
                 </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
               </div>
             </div>
           </div>

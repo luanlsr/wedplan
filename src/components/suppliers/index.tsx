@@ -289,7 +289,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
 };
 
 const FilterSelect = ({ value, onChange, options, icon, isStatus }: any) => (
-  <div className="relative w-full md:w-52">
+  <div className="relative w-full md:min-w-[240px] md:w-fit">
     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-colors">
       {icon}
     </div>
