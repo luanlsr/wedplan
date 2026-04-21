@@ -2,7 +2,6 @@ import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown, ChevronDown
 import { Card, Button, Input, Badge, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo } from 'react';
-import { cn } from '../../lib/utils';
 
 interface GuestsListProps {
   guests: Guest[];
