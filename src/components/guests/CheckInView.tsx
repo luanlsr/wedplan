@@ -10,7 +10,7 @@ interface CheckInViewProps {
   onTogglePresence: (id: string, updated: Partial<Guest>) => void;
 }
 
-export const CheckInView = ({ guests, suppliers, onTogglePresence }: CheckInViewProps) => {
+export const CheckInView = ({ guests, onTogglePresence }: Omit<CheckInViewProps, 'suppliers'>) => {
   const [activeTab, setActiveTab] = useState<'guests' | 'suppliers'>('guests');
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'todos' | 'presentes' | 'ausentes'>('todos');

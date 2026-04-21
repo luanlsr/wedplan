@@ -1,8 +1,10 @@
-import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown, ChevronDown, Filter, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, Button, Input, Badge, useConfirm } from '../ui';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card, Button, Input, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../../lib/utils';
+import { GuestStats } from './GuestStats';
+import { GuestRow } from './GuestRow';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -20,7 +22,6 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
 
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
@@ -35,7 +36,6 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     setSortConfig({ key, direction });
   };
 
-  // Reset page on filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterCategory, filterStatus]);
@@ -73,267 +73,115 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     currentPage * itemsPerPage
   );
 
-  const totals = {
+  const totals = useMemo(() => ({
     total: guests.length,
     confirmados: guests.filter(g => g.status === 'confirmado').length,
     pendentes: guests.filter(g => g.status === 'pendente').length,
     adultos: guests.reduce((acc, g) => acc + (g.adultos || 0), 0),
     criancas: guests.reduce((acc, g) => acc + (g.criancas || 0), 0)
-  };
+  }), [guests]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-3 sm:p-4 bg-primary/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
-          <p className="text-[8px] sm:text-xs font-black text-primary uppercase tracking-widest">Total</p>
-          <div>
-            <p className="text-base sm:text-2xl font-black leading-none">{totals.adultos + totals.criancas}</p>
-            <p className="text-[7px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-tighter mt-1">{totals.total} Grp</p>
-          </div>
-        </Card>
-        <Card className="p-3 sm:p-4 bg-green-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
-          <p className="text-[8px] sm:text-xs font-black text-green-600 uppercase tracking-widest">Confirma.</p>
-          <p className="text-base sm:text-2xl font-black leading-none">{totals.confirmados}</p>
-        </Card>
-        <Card className="p-3 sm:p-4 bg-amber-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
-          <p className="text-[8px] sm:text-xs font-black text-amber-600 uppercase tracking-widest">Pendente</p>
-          <p className="text-base sm:text-2xl font-black leading-none">{totals.pendentes}</p>
-        </Card>
-        <Card className="p-3 sm:p-4 bg-blue-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
-          <p className="text-[8px] sm:text-xs font-black text-blue-600 uppercase tracking-widest">AD / CR</p>
-          <p className="text-base sm:text-2xl font-black leading-none">{totals.adultos}/{totals.criancas}</p>
-        </Card>
-      </div>
+      <GuestStats totals={totals} />
 
-      <div className="bg-card p-3 sm:p-4 rounded-3xl shadow-sm border space-y-3">
-        <div className="flex flex-col lg:flex-row gap-3 items-center">
-          <div className="relative flex-1 w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
-            <Input 
-              placeholder="Buscar convidado..." 
-              className="pl-10 h-12 rounded-2xl w-full bg-secondary/5 border-none focus:bg-secondary/10 transition-all font-bold"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex gap-2 w-full lg:w-auto">
-            <Button 
-              variant="outline" 
-              className={cn(
-                "flex-1 lg:hidden rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest border-none bg-secondary/5",
-                (filterCategory !== 'Todos' || filterStatus !== 'Todos') && "text-primary bg-primary/5"
-              )}
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-            >
-              <Filter size={16} className="mr-2" />
-              {showMobileFilters ? 'Ocultar Filtros' : 'Filtros'}
-            </Button>
-            <Button className="flex-[2] gap-2 h-12 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 w-full lg:w-auto" onClick={onAdd}>
-              <UserPlus size={18} />
-              Convidar
-            </Button>
-          </div>
-        </div>
-
-        {/* Expandable Mobile Filters */}
-        <div className={cn(
-          "grid grid-cols-1 md:flex gap-2 overflow-hidden transition-all duration-300",
-          showMobileFilters ? "max-h-[200px] opacity-100 pt-1" : "max-h-0 opacity-0 md:max-h-[100px] md:opacity-100"
-        )}>
-          <FilterSelect 
-            value={filterCategory} 
-            onChange={setFilterCategory} 
-            options={categories} 
-            icon={<Briefcase size={16} />} 
-            label="Categoria"
-          />
-          <FilterSelect 
-            value={filterStatus} 
-            onChange={setFilterStatus} 
-            options={statuses} 
-            icon={<Filter size={16} />} 
-            label="Status"
-            isStatus
-          />
-        </div>
-      </div>
-
-      <Card className="border-none shadow-xl overflow-hidden rounded-3xl">
-        {/* Mobile List View */}
-        <div className="md:hidden divide-y divide-border">
-          {paginatedItems.map((guest) => (
-            <div key={guest.id} className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-lg">{guest.nome}</p>
-                  <p className="text-xs font-bold text-primary uppercase">{guest.categoria}</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    const statusMap: Record<string, "confirmado" | "pendente" | "recusado"> = {
-                      'pendente': 'confirmado',
-                      'confirmado': 'recusado',
-                      'recusado': 'pendente'
-                    };
-                    onUpdate(guest.id, { status: statusMap[guest.status] });
-                  }}
-                >
-                  {guest.status === 'confirmado' ? <Badge variant="success">Confirmado</Badge> :
-                   guest.status === 'pendente' ? <Badge variant="warning">Pendente</Badge> :
-                   <Badge variant="error">Recusado</Badge>}
-                </button>
+      <Card className="border-none shadow-2xl overflow-hidden bg-card/60 backdrop-blur-xl rounded-[2rem]">
+        <div className="p-6 sm:p-8 border-b border-border bg-muted/20">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row items-center gap-4 flex-1">
+              <div className="relative w-full md:w-96 group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+                <Input
+                  placeholder="Buscar convidado..."
+                  className="h-12 pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-2xl font-bold"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
               
-              <div className="flex justify-between items-end">
-                <div className="space-y-1">
-                  <div className="flex gap-2 text-sm font-bold">
-                     <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.adultos} Adultos</span>
-                     {guest.criancas > 0 && (
-                       <div className="flex flex-col">
-                         <span className="bg-secondary px-2 py-0.5 rounded text-xs leading-relaxed">{guest.criancas} Crianças</span>
-                         {guest.children_names && <span className="text-[10px] text-muted-foreground italic ml-1 mt-0.5">({guest.children_names})</span>}
-                       </div>
-                     )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{guest.telefone || 'Sem telefone'}</p>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="outline" className="h-10 w-10 p-0 text-primary border-primary/20" onClick={() => onEdit(guest)}>
-                    <Edit2 size={16} />
-                  </Button>
-                    <Button variant="outline" className="h-10 w-10 p-0 text-destructive border-destructive/20" onClick={async () => {
-                       const isConfirmed = await confirm({
-                         title: "Excluir Convidado?",
-                         description: `Tem certeza que deseja remover este convidado da lista?`,
-                         type: "danger",
-                         confirmLabel: "Excluir",
-                         cancelLabel: "Cancelar"
-                       });
-                       if (isConfirmed) onDelete(guest.id);
-                    }}>
-                      <Trash2 size={16} />
-                    </Button>
-                </div>
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                 <Button 
+                   variant="outline" 
+                   className={cn("md:hidden h-12 w-full rounded-2xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
+                   onClick={() => setShowMobileFilters(!showMobileFilters)}
+                 >
+                   <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+                 </Button>
+
+                 <div className={cn(
+                   "md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto",
+                   showMobileFilters ? "flex absolute top-[100%] left-0 right-0 z-50 p-4 bg-background border-b border-border shadow-2xl animate-in slide-in-from-top-2" : "hidden"
+                 )}>
+                    <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
+                    <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
+                 </div>
               </div>
             </div>
-          ))}
+
+            <Button onClick={onAdd} className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest gap-2 shadow-[0_10px_20px_rgba(var(--primary-rgb),0.2)]">
+              <UserPlus size={18} /> Adicionar Grupo
+            </Button>
+          </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-6 py-4">
-                  <button onClick={() => requestSort('nome')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
-                    Convidado {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                  </button>
+              <tr className="bg-muted/30 border-b border-border">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('nome')}>
+                  <div className="flex items-center gap-2">
+                    NOME {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                  </div>
                 </th>
-                <th className="px-6 py-4">
-                  <button onClick={() => requestSort('categoria')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
-                    Categoria {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                  </button>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('categoria')}>
+                  <div className="flex items-center gap-2">
+                    CATEGORIA {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                  </div>
                 </th>
-                <th className="px-6 py-4">
-                  <button onClick={() => requestSort('total_pessoas')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
-                    Pessoas {sortConfig?.key === 'total_pessoas' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                  </button>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('total_pessoas')}>
+                  <div className="flex items-center gap-2">
+                    A/C {sortConfig?.key === 'total_pessoas' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                  </div>
                 </th>
-                <th className="px-6 py-4">
-                  <button onClick={() => requestSort('status')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
-                    Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
-                  </button>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('status')}>
+                  <div className="flex items-center gap-2">
+                    STATUS {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                  </div>
                 </th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Contato</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-right">Ações</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">CONTATO</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {paginatedItems.map((guest) => (
-                <tr key={guest.id} className="hover:bg-muted/30 transition-colors group">
-                  <td className="px-6 py-4 font-bold">{guest.nome}</td>
-                  <td className="px-6 py-4">
-                    <Badge variant="outline" className="font-bold border-primary/20 text-primary">{guest.categoria}</Badge>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex gap-2 text-sm font-bold">
-                        <span>{guest.adultos} A</span>
-                        {guest.criancas > 0 && <span className="text-muted-foreground">{guest.criancas} C</span>}
-                      </div>
-                      {guest.children_names && <span className="text-[10px] text-muted-foreground italic truncate max-w-[120px]" title={guest.children_names}>({guest.children_names})</span>}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button 
-                      onClick={() => {
-                        const statusMap: Record<string, "confirmado" | "pendente" | "recusado"> = {
-                          'pendente': 'confirmado',
-                          'confirmado': 'recusado',
-                          'recusado': 'pendente'
-                        };
-                        onUpdate(guest.id, { status: statusMap[guest.status] });
-                      }}
-                    >
-                      {guest.status === 'confirmado' ? <Badge variant="success">Confirmado</Badge> :
-                       guest.status === 'pendente' ? <Badge variant="warning">Pendente</Badge> :
-                       <Badge variant="error">Recusado</Badge>}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-muted-foreground">{guest.telefone || '-'}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" className="h-8 w-8 p-0 text-primary" onClick={() => onEdit(guest)}>
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={async () => {
-                         const isConfirmed = await confirm({
-                           title: "Excluir Convidado?",
-                           description: `Tem certeza que deseja remover "${guest.nome}"?`,
-                           type: "danger",
-                           confirmLabel: "Excluir",
-                           cancelLabel: "Cancelar"
-                         });
-                         if (isConfirmed) onDelete(guest.id);
-                      }}>
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
+                <GuestRow 
+                  key={guest.id} 
+                  guest={guest} 
+                  onEdit={onEdit} 
+                  onUpdate={onUpdate} 
+                  onDelete={onDelete} 
+                  confirm={confirm}
+                />
               ))}
             </tbody>
           </table>
           
-          {/* Pagination Bar */}
           {totalPages > 1 && (
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-4 bg-muted/20 border-t border-border">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                 Exibindo <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="text-foreground">{Math.min(currentPage * itemsPerPage, sortedAndFilteredGuests.length)}</span> de <span className="text-foreground">{sortedAndFilteredGuests.length}</span> convidados
               </p>
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="outline" 
-                  className="h-9 w-9 p-0 rounded-lg" 
-                  onClick={() => setCurrentPage(1)} 
-                  disabled={currentPage === 1}
-                >
+                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
                   <ChevronLeft size={16} className="-mr-1" /><ChevronLeft size={16} />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-9 w-9 p-0 rounded-lg" 
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
-                  disabled={currentPage === 1}
-                >
+                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
                   <ChevronLeft size={16} />
                 </Button>
                 
                 <div className="flex items-center gap-1 mx-2">
                   {[...Array(totalPages)].map((_, i) => {
                     const page = i + 1;
-                    // Lógica para mostrar apenas algumas páginas se houver muitas
                     if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
                       if (page === 2 || page === totalPages - 1) return <span key={page} className="text-muted-foreground text-xs mx-1">...</span>;
                       return null;
@@ -342,10 +190,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                       <Button
                         key={page}
                         variant={currentPage === page ? "primary" : "ghost"}
-                        className={cn(
-                          "h-9 w-9 p-0 rounded-lg text-sm font-bold",
-                          currentPage === page ? "shadow-md" : "hover:bg-secondary"
-                        )}
+                        className={cn("h-9 w-9 p-0 rounded-lg text-sm font-bold", currentPage === page && "shadow-md")}
                         onClick={() => setCurrentPage(page)}
                       >
                         {page}
@@ -354,20 +199,10 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                   })}
                 </div>
 
-                <Button 
-                  variant="outline" 
-                  className="h-9 w-9 p-0 rounded-lg" 
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
-                  disabled={currentPage === totalPages}
-                >
+                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
                   <ChevronRight size={16} />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-9 w-9 p-0 rounded-lg" 
-                  onClick={() => setCurrentPage(totalPages)} 
-                  disabled={currentPage === totalPages}
-                >
+                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
                   <ChevronRight size={16} /><ChevronRight size={16} className="-ml-1" />
                 </Button>
               </div>

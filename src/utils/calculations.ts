@@ -89,7 +89,7 @@ export const generateInstallments = (
   };
 
   if (type === "parcelado_fixo") {
-    const num = config.numInstallments;
+    const num = config.numInstallments || 1;
     const value = totalValue / num;
     const startDate = config.startDate ? parseISO(config.startDate) : new Date();
 
