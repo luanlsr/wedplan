@@ -205,6 +205,8 @@ export function MainApp() {
   };
 
   const SupplierDetailsWrapper = () => {
+    const { id } = useParams();
+    const currentSupplier = data.fornecedores.find(s => s.id === id);
     const [instSort, setInstSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'numero', direction: 'asc' });
 
     if (!currentSupplier) return <Navigate to="/fornecedores" />;
