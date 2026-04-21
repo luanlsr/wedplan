@@ -258,8 +258,8 @@ export function MainApp() {
     if (!currentSupplier) return <Navigate to="/fornecedores" />;
 
     const sortedInstallments = [...currentSupplier.parcelas].sort((a, b) => {
-      const valA = a[instSort.key as keyof typeof a];
-      const valB = b[instSort.key as keyof typeof b];
+      const valA = a[instSort.key as keyof typeof a] ?? '';
+      const valB = b[instSort.key as keyof typeof b] ?? '';
       if (valA < valB) return instSort.direction === 'asc' ? -1 : 1;
       if (valA > valB) return instSort.direction === 'asc' ? 1 : -1;
       return 0;

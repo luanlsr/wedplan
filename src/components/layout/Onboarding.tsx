@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, Button, Input } from '../ui';
-import { Heart, Calendar, Users, DollarSign, ArrowRight, Loader2 } from 'lucide-react';
+import { Heart, Calendar, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface OnboardingProps {
