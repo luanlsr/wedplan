@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Guest } from "../../types";
 import { Card, Button, Input } from "../ui";
-import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus } from "lucide-react";
+import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus, Plus, Trash2 } from "lucide-react";
 
 import { maskPhone } from "../../utils/masks";
 
@@ -41,13 +41,49 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
     }
   }, [editGuest]);
 
-  const categories = ["Noivos", "Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Staff", "Outros"];
+    const [childList, setChildList] = useState<string[]>([""]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const guestData = {
-      ...formData,
+    useEffect(() => {
+        if (editGuest && editGuest.children_names) {
+            setChildList(editGuest.children_names.split(", "));
+        }
+    }, [editGuest]);
+
+    const handleAddChild = () => {
+        const newList = [...childList, ""];
+        setChildList(newList);
+        setFormData({ ...formData, criancas: newList.length });
     };
+
+    const handleRemoveChild = (index: number) => {
+        const newList = childList.filter((_, i) => i !== index);
+        setChildList(newList.length > 0 ? newList : [""]);
+        const finalCount = newList.length;
+        setFormData({ 
+            ...formData, 
+            criancas: finalCount,
+            children_names: newList.join(", ") 
+        });
+    };
+
+    const handleChildNameChange = (index: number, name: string) => {
+        const newList = [...childList];
+        newList[index] = name;
+        setChildList(newList);
+        setFormData({ ...formData, children_names: newList.join(", ") });
+    };
+
+    const categories = ["Noivos", "Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Staff", "Outros"];
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        // Limpar nomes vazios antes de salvar
+        const validNames = childList.filter(name => name.trim() !== "");
+        const guestData = {
+            ...formData,
+            children_names: validNames.join(", "),
+            criancas: formData.criancas > 0 ? validNames.length : 0
+        };
 
     if (isEditing && onUpdate) {
       onUpdate(editGuest!.id, guestData);
@@ -139,23 +175,64 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                     min="0"
                     className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
                     value={formData.criancas}
-                    onChange={e => setFormData({...formData, criancas: parseInt(e.target.value) || 0})}
+                    onChange={e => {
+                      const count = parseInt(e.target.value) || 0;
+                      setFormData({...formData, criancas: count});
+                      if (count > 0) {
+                        if (count > childList.length) {
+                          setChildList([...childList, ...Array(count - childList.length).fill("")]);
+                        } else if (count < childList.length) {
+                          setChildList(childList.slice(0, count));
+                        }
+                      } else {
+                        setChildList([""]);
+                      }
+                    }}
                   />
                 </div>
               </div>
             </div>
 
             {formData.criancas > 0 && (
-              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                <label className="text-sm font-bold text-muted-foreground">Nome da(s) Criança(s)</label>
-                <div className="relative">
-                  <Baby className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground opacity-50" size={18} />
-                  <Input 
-                    placeholder="Ex: Pedro, Maria" 
-                    className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all italic"
-                    value={formData.children_names}
-                    onChange={e => setFormData({...formData, children_names: e.target.value})}
-                  />
+              <div className="space-y-3 p-4 bg-secondary/30 rounded-2xl border border-border animate-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-black text-primary uppercase tracking-tight">Nomes das Crianças</label>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1 text-xs border-primary/20 text-primary hover:bg-primary/10"
+                    onClick={handleAddChild}
+                  >
+                    <Plus size={14} /> Add Outro
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {childList.map((name, index) => (
+                    <div key={index} className="flex gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                      <div className="relative flex-1">
+                        <Baby className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-50" size={16} />
+                        <Input 
+                          placeholder={`Nome do ${index + 1}º filho`}
+                          className="h-10 pl-10 bg-card border-none focus:ring-1 focus:ring-primary/30 text-sm"
+                          value={name}
+                          onChange={e => handleChildNameChange(index, e.target.value)}
+                        />
+                      </div>
+                      {childList.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-10 w-10 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRemoveChild(index)}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
