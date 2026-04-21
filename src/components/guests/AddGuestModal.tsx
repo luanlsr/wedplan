@@ -200,8 +200,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                   <Button 
                     type="button" 
                     variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1 text-xs border-primary/20 text-primary hover:bg-primary/10"
+                    className="h-8 py-0 px-3 gap-1 text-xs border-primary/20 text-primary hover:bg-primary/10"
                     onClick={handleAddChild}
                   >
                     <Plus size={14} /> Add Outro
@@ -224,7 +223,6 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                         <Button 
                           type="button" 
                           variant="ghost" 
-                          size="sm" 
                           className="h-10 w-10 p-0 text-destructive hover:bg-destructive/10"
                           onClick={() => handleRemoveChild(index)}
                         >
