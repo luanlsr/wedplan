@@ -6,27 +6,10 @@ import { SignUpForm } from './components/auth/SignUpForm';
 import { ForgotPassword } from './components/auth/ForgotPassword';
 import { ResetPassword } from './components/auth/ResetPassword';
 import { LandingPage } from './components/layout/LandingPage';
-import { NotFound } from './components/layout/NotFound';
 import { Loader2 } from 'lucide-react';
 import { ConfirmProvider } from './components/ui';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="animate-spin text-primary" size={40} />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-}
 
 function AppRoutes() {
   const { user, loading } = useAuth();
