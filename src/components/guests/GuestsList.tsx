@@ -18,7 +18,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
 
-  const categories = ['Todos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Outros'];
+  const categories = ['Todos', 'Noivos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Staff', 'Outros'];
   const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
 
   const requestSort = (key: keyof Guest | 'total_pessoas') => {

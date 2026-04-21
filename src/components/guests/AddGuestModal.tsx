@@ -39,7 +39,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
     }
   }, [editGuest]);
 
-  const categories = ["Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Outros"];
+  const categories = ["Noivos", "Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Staff", "Outros"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
