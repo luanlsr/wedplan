@@ -131,46 +131,45 @@ export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimul
   };
 
   const renderIntro = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 max-w-3xl mx-auto text-center">
-      <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 border border-primary/20">
-        <Calculator size={40} />
+    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 max-w-3xl mx-auto text-center px-4 sm:px-0">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 border border-primary/20">
+        <Calculator size={32} className="sm:w-[40px] sm:h-[40px]" />
       </div>
       
       <div className="space-y-4">
-        <h3 className="text-4xl font-black uppercase tracking-tight italic">Simulador de Fluxo de Caixa</h3>
-        <p className="text-lg text-muted-foreground font-medium leading-relaxed">
+        <h3 className="text-2xl sm:text-4xl font-black uppercase tracking-tight italic">Simulador de Caixa</h3>
+        <p className="text-sm sm:text-lg text-muted-foreground font-medium leading-relaxed">
             Vamos percorrer <span className="text-foreground font-bold">{simulationTimeline.length} meses</span> até o seu casamento. 
-            Em cada mês, você verá o que está agendado e decidirá quanto quer pagar. 
-            Ao final, calcularemos o <span className="text-primary font-bold">Plano de Poupança</span> necessário para as quitações remanescentes.
+            Descubra o <span className="text-primary font-bold italic uppercase tracking-tighter">Plano de Poupança</span> necessário.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-         <Card className="p-6 bg-card/40 border-white/5 space-y-2">
-            <h4 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
-               <CheckCircle2 size={14} /> Passo 1: Exercício
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-left">
+         <Card className="p-4 sm:p-6 bg-card/40 border-white/5 space-y-2">
+            <h4 className="text-[10px] sm:text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
+               <CheckCircle2 size={12} /> Passo 1: Exercício
             </h4>
-            <p className="text-xs text-muted-foreground">Mês a mês, defina seu aporte financeiro real baseado nos fornecedores vencendo.</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Defina seu aporte financeiro real baseado nos fornecedores vencendo.</p>
          </Card>
-         <Card className="p-6 bg-card/40 border-white/5 space-y-2">
-            <h4 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
-               <TrendingUp size={14} /> Passo 2: Estratégia
+         <Card className="p-4 sm:p-6 bg-card/40 border-white/5 space-y-2">
+            <h4 className="text-[10px] sm:text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
+               <TrendingUp size={12} /> Passo 2: Estratégia
             </h4>
-            <p className="text-xs text-muted-foreground">Descubra quanto falta para as quitações de 15 dias antes e quanto poupar por mês.</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Descubra quanto falta para as quitações e quanto poupar por mês.</p>
          </Card>
       </div>
 
       <div className="flex flex-col gap-4">
         <Button 
             onClick={() => setStep('simulacao')}
-            className="w-full h-20 rounded-[2rem] bg-primary text-white font-black text-xl uppercase shadow-2xl shadow-primary/30 group"
+            className="w-full h-16 sm:h-20 rounded-[1.5rem] sm:rounded-[2rem] bg-primary text-white font-black text-lg sm:text-xl uppercase shadow-2xl shadow-primary/30 group"
         >
-            {Object.keys(simulatedAportes).length > 0 ? 'Continuar Simulação Salva' : 'Começar Simulação Mensal'}
+            {Object.keys(simulatedAportes).length > 0 ? 'Continuar Simulação' : 'Começar Simulação'}
             <ArrowRight className="ml-3 group-hover:translate-x-1 transition-transform" />
         </Button>
         {Object.keys(simulatedAportes).length > 0 && (
-            <Button variant="ghost" onClick={resetSimulation} className="text-xs font-black uppercase text-muted-foreground hover:text-red-500">
-                Reiniciar e Apagar Dados Salvos
+            <Button variant="ghost" onClick={resetSimulation} className="text-[10px] font-black uppercase text-muted-foreground hover:text-red-500">
+                Reiniciar e Apagar Dados
             </Button>
         )}
       </div>
@@ -196,8 +195,8 @@ export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimul
         {/* Left Card: Month Details */}
         <div className="space-y-6">
            <div className="space-y-1">
-             <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">{simulacaoIndex + 1} de {simulationTimeline.length} Meses</p>
-             <h3 className="text-4xl font-black uppercase italic tracking-tighter text-foreground">{currentMonthData?.label}</h3>
+             <p className="text-[10px] sm:text-xs font-black text-primary uppercase tracking-[0.2em]">{simulacaoIndex + 1} de {simulationTimeline.length} Meses</p>
+             <h3 className="text-2xl sm:text-4xl font-black uppercase italic tracking-tighter text-foreground">{currentMonthData?.label}</h3>
            </div>
 
            <Card className="bg-card/40 border-white/5 overflow-hidden">
@@ -236,12 +235,12 @@ export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimul
               </div>
 
               <div className="relative">
-                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-black text-primary/30 italic">R$</span>
+                 <span className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-xl sm:text-3xl font-black text-primary/30 italic">R$</span>
                  <Input 
                    type="number" 
                    autoFocus
                    placeholder="0,00"
-                   className="h-24 pl-20 pr-8 bg-secondary/20 border-2 border-white/5 focus:border-primary/50 text-5xl font-black transition-all rounded-[2rem] placeholder:text-muted-foreground/10"
+                   className="h-16 sm:h-24 pl-14 sm:pl-20 pr-8 bg-secondary/20 border-2 border-white/5 focus:border-primary/50 text-2xl sm:text-5xl font-black transition-all rounded-2xl sm:rounded-[2rem] placeholder:text-muted-foreground/10"
                    value={currentInputValue}
                    onChange={(e) => setCurrentInputValue(e.target.value === "" ? "" : Number(e.target.value))}
                  />
@@ -372,13 +371,13 @@ export const PlanningView = ({ suppliers, weddingDate, simulation, onUpdateSimul
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-5xl font-black text-foreground tracking-tighter uppercase italic flex items-center gap-4">
+      <div className="flex flex-col gap-1 sm:gap-2">
+        <h2 className="text-3xl sm:text-5xl font-black text-foreground tracking-tighter uppercase italic flex items-center gap-3 sm:gap-4">
           Consultoria
           <span className="text-primary">Financeira</span>
         </h2>
-        <p className="text-muted-foreground font-semibold flex items-center gap-2 tracking-wide uppercase text-[10px]">
-          <DollarSign size={14} className="text-primary" />
+        <p className="text-muted-foreground font-semibold flex items-center gap-2 tracking-wide uppercase text-[8px] sm:text-[10px]">
+          <DollarSign size={12} className="text-primary sm:w-[14px] sm:h-[14px]" />
           Exercício de projeção de fluxo de caixa e quitação final
         </p>
       </div>

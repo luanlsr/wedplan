@@ -7,6 +7,7 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
     const { data: wedding, error: wError } = await supabase
       .from('weddings')
       .insert({
+        owner_id: userId,
         couple_name1: data.casal.nome1,
         couple_name2: data.casal.nome2,
         wedding_date: data.casal.data,
@@ -18,16 +19,15 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
 
     if (wError) throw wError;
 
-    // 2. Create Wedding Member link
-    const { error: mError } = await supabase
-      .from('wedding_members')
-      .upsert({
-        wedding_id: wedding.id,
-        user_id: userId,
-        role: 'owner'
-      });
+    // 2. Link profile to this wedding
+    const { error: pError } = await supabase
+      .from('profiles')
+      .update({
+        wedding_id: wedding.id
+      })
+      .eq('id', userId);
 
-    if (mError) throw mError;
+    if (pError) throw pError;
 
     // 3. Migrate Suppliers & Installments
     for (const s of data.fornecedores) {
@@ -40,17 +40,8 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
           categoria: s.categoria,
           valor_total: s.valorTotal,
           tipo_pagamento: s.tipoPagamento,
-          status: s.status,
-          order_index: s.order || 0,
           data_contrato: s.dataContrato,
-          payment_rule: s.regraPagamento,
-          staff_names: s.staff_names,
-          notes: s.observacoes,
-          entry_value: s.valorEntrada,
-          entry_percentage: s.porcentagemEntrada,
-          entry_installments: s.entradaEmParcelas,
-          num_installments: s.numeroParcelas,
-          final_payment_days_before: s.diasPagamentoFinalAntesCasamento
+          staff_names: s.staff_names
         })
         .select()
         .single();
@@ -63,8 +54,7 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
         numero: p.numero,
         data_vencimento: p.dataVencimento,
         valor: p.valor,
-        status: p.status,
-        data_pagamento: p.dataPagamento
+        status: p.status
       }));
 
       const { error: iError } = await supabase
@@ -72,6 +62,47 @@ export const migrateLocalStorageToSupabase = async (userId: string, data: Weddin
         .insert(installmentsToInsert);
 
       if (iError) throw iError;
+    }
+
+    // 4. Migrate Guests
+    if (data.convidados && data.convidados.length > 0) {
+      const guestsToInsert = data.convidados.map(g => ({
+        wedding_id: wedding.id,
+        nome: g.nome,
+        categoria: g.categoria,
+        status: g.status,
+        adultos: g.adultos,
+        criancas: g.criancas,
+        children_names: g.children_names,
+        telefone: g.telefone,
+        observacoes: g.observacoes,
+        is_present: g.is_present
+      }));
+
+      const { error: gError } = await supabase
+        .from('guests')
+        .insert(guestsToInsert);
+      
+      if (gError) throw gError;
+    }
+
+    // 5. Migrate Tasks
+    if (data.tarefas && data.tarefas.length > 0) {
+      const tasksToInsert = data.tarefas.map(t => ({
+        wedding_id: wedding.id,
+        titulo: t.titulo,
+        descricao: t.descricao,
+        categoria: t.categoria,
+        data_limite: t.dataLimite,
+        status: t.status,
+        ordem: t.ordem
+      }));
+
+      const { error: tError } = await supabase
+        .from('tasks')
+        .insert(tasksToInsert);
+      
+      if (tError) throw tError;
     }
 
     return { success: true, weddingId: wedding.id };

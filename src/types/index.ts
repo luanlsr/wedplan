@@ -75,7 +75,7 @@ export interface WeddingData {
     orcamentoTotal: number;
     tema: "light" | "dark";
   };
-  simulation?: any;
+  simulation?: Record<string, unknown>;
 }
 
 export interface FinancialStats {

@@ -13,6 +13,7 @@ import { TasksList } from './tasks/TasksList';
 import { AddTaskModal } from './tasks/AddTaskModal';
 import { CheckInView } from './guests/CheckInView';
 import { Onboarding } from './layout/Onboarding';
+import { SettingsView } from './SettingsView';
 import { useWeddingData } from '../hooks/useWeddingData';
 import { calculateStats, formatCurrency, formatDate } from '../utils/calculations';
 import type { Supplier, Installment, Guest, Task } from '../types';
@@ -49,7 +50,7 @@ export function MainApp() {
     addTask, updateTask, deleteTask,
     updateConfig, updateWeddingInfo, reorderSuppliers
   } = useWeddingData();
-  const { user, resetPassword, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -557,7 +558,7 @@ export function MainApp() {
         "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",
         isSidebarCollapsed ? "lg:ml-24" : "lg:ml-72"
       )}>
-        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10">
+        <div className="max-w-[1600px] mx-auto p-3 sm:p-6 lg:p-10">
           <Header title={getPageTitle()} />
 
           <Routes>
@@ -634,118 +635,14 @@ export function MainApp() {
             } />
 
             <Route path="configuracoes" element={
-              <div className="max-w-2xl space-y-6">
-                <Card className="bg-card">
-                  <h3 className="text-xl font-bold mb-6">Configurações do Casamento</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-muted-foreground">Orçamento Total (R$)</label>
-                      <Input
-                        type="text"
-                        className="font-bold"
-                        value={maskCurrency(data.configuracoes.orcamentoTotal)}
-                        onChange={(e) => updateConfig({ orcamentoTotal: unmaskCurrency(e.target.value) })}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-muted-foreground">Nome 1</label>
-                        <Input
-                          value={data.casal.nome1}
-                          onChange={(e) => updateWeddingInfo({ nome1: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-muted-foreground">Nome 2</label>
-                        <Input
-                          value={data.casal.nome2}
-                          onChange={(e) => updateWeddingInfo({ nome2: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-muted-foreground">Data do Grande Dia</label>
-                      <Input
-                        type="date"
-                        value={data.casal.data}
-                        onChange={(e) => updateWeddingInfo({ data: e.target.value })}
-                      />
-                    </div>
-
-                    {user && (
-                      <div className="pt-6 border-t border-border space-y-4">
-                        <h4 className="font-bold text-foreground">Segurança</h4>
-                        <p className="text-sm text-muted-foreground">Clique no botão abaixo para receber um e-mail de redefinição de senha.</p>
-                        <Button
-                          variant="outline"
-                          className="w-full h-12 border-primary/20 hover:bg-primary/5 text-primary"
-                          onClick={async () => {
-                            if (!user?.email) return;
-                            const { error } = await resetPassword(user.email);
-                            if (!error) {
-                              await customAlert({
-                                title: "E-mail Enviado!",
-                                description: "Um link para redefinição de senha foi enviado para o seu e-mail cadastrado.",
-                                type: "success",
-                                confirmLabel: "Entendido"
-                              });
-                            } else {
-                              await customAlert({
-                                title: "Erro ao Enviar",
-                                description: error.message || "Ocorreu um erro ao enviar o e-mail de redefinição de senha.",
-                                type: "danger",
-                                confirmLabel: "Tentar Novamente"
-                              });
-                            }
-                          }}
-                        >
-                          Redefinir Minha Senha
-                        </Button>
-                      </div>
-                    )}
-
-                    {user && (
-                      <div className="pt-6 border-t border-border space-y-4">
-                        <h4 className="font-bold text-foreground">Sincronização Supabase</h4>
-                        <p className="text-sm text-muted-foreground">Você está logado como {user.email}. Seus dados locais podem ser enviados para a nuvem para acesso em outros dispositivos.</p>
-                        <Button
-                          onClick={handleSyncData}
-                          disabled={isSyncing}
-                          className="w-full h-12 bg-primary text-white font-bold"
-                        >
-                          {isSyncing ? "Sincronizando..." : "Sincronizar Dados Atuais com a Nuvem"}
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="pt-6 border-t border-border space-y-4">
-                      <h4 className="font-bold text-foreground">Gerenciamento de Dados</h4>
-                      <p className="text-sm text-muted-foreground">Cuidado: Esta ação irá apagar todos os fornecedores, pagamentos e configurações personalizadas.</p>
-                      <Button
-                        variant="destructive"
-                        className="w-full h-12"
-                        onClick={async () => {
-                          const isConfirmed = await confirm({
-                            title: "AÇÃO IRREVERSÍVEL",
-                            description: "Esta ação irá apagar TODOS os seus dados definitivamente. Para continuar, confirme com a palavra abaixo.",
-                            type: "danger",
-                            requireString: "APAGAR",
-                            confirmLabel: "Apagar Tudo",
-                            cancelLabel: "Cancelar",
-                          });
-
-                          if (isConfirmed) {
-                            localStorage.removeItem("wedding_manager_data");
-                            window.location.reload();
-                          }
-                        }}
-                      >
-                        Limpar Todos os Dados (Reset)
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
+              <SettingsView
+                data={data}
+                updateWeddingInfo={updateWeddingInfo}
+                updateConfig={updateConfig}
+                handleSyncData={handleSyncData}
+                isSyncing={isSyncing}
+                customAlert={customAlert}
+              />
             } />
           </Routes>
         </div>

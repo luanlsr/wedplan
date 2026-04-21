@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Info, AlertOctagon } from "lucide-react";
 import { Button, Card, Input, cn } from "./core";
 
@@ -30,12 +30,6 @@ export const ConfirmDialog = ({
   const [inputValue, setInputValue] = useState("");
   const [isClosing, setIsClosing] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      setInputValue("");
-      setIsClosing(false);
-    }
-  }, [isOpen]);
 
   const handleClose = () => {
     setIsClosing(true);

@@ -22,8 +22,8 @@ export const maskPhone = (value: string) => {
 export const maskCurrency = (value: string | number) => {
   if (value === undefined || value === null) return "";
   
-  // Converte para string e remove não dígitos
-  const digits = String(value).replace(/\D/g, "");
+  // Converte para string com 2 casas decimais e remove não dígitos
+  const digits = (typeof value === 'number' ? value.toFixed(2) : value).replace(/\D/g, "");
   
   // Formata como moeda brasileira
   const amount = Number(digits) / 100;

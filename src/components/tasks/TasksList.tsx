@@ -73,33 +73,33 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Stats Cards - Remains Same */}
-        <Card className="p-6 bg-card border-none shadow-lg flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <CheckCircle2 size={24} />
+      {/* Stats Cards - Updated to be side-by-side or horizontally scrollable */}
+      <div className="flex sm:grid sm:grid-cols-3 gap-3 overflow-x-auto no-scrollbar pb-2 sm:pb-0 px-0.5">
+        <Card className="flex-1 min-w-[110px] p-3 sm:p-6 bg-card border-none shadow-lg flex flex-col items-center sm:items-start text-center sm:text-left gap-1 sm:gap-4 shrink-0 transition-all">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-primary/10 text-primary shrink-0 transition-colors">
+            <CheckCircle2 size={16} className="sm:w-[24px] sm:h-[24px]" />
           </div>
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase">Tarefas Totais</p>
-            <p className="text-2xl font-black">{stats.total}</p>
+            <p className="text-[9px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest sm:tracking-wider">Totais</p>
+            <p className="text-lg sm:text-2xl font-black truncate leading-tight">{stats.total}</p>
           </div>
         </Card>
-        <Card className="p-6 bg-card border-none shadow-lg flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-600">
-            <CheckCircle2 size={24} />
+        <Card className="flex-1 min-w-[110px] p-3 sm:p-6 bg-card border-none shadow-lg flex flex-col items-center sm:items-start text-center sm:text-left gap-1 sm:gap-4 shrink-0 transition-all">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-green-500/10 text-green-600 shrink-0 transition-colors">
+            <CheckCircle2 size={16} className="sm:w-[24px] sm:h-[24px]" />
           </div>
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase">Concluídas</p>
-            <p className="text-2xl font-black text-green-600">{stats.concluidas}</p>
+            <p className="text-[9px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest sm:tracking-wider">Prontas</p>
+            <p className="text-lg sm:text-2xl font-black text-green-600 truncate leading-tight">{stats.concluidas}</p>
           </div>
         </Card>
-        <Card className="p-6 bg-card border-none shadow-lg flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
-            <CheckCircle2 size={24} />
+        <Card className="flex-1 min-w-[110px] p-3 sm:p-6 bg-card border-none shadow-lg flex flex-col items-center sm:items-start text-center sm:text-left gap-1 sm:gap-4 shrink-0 transition-all">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-600 shrink-0 transition-colors">
+            <CheckCircle2 size={16} className="sm:w-[24px] sm:h-[24px]" />
           </div>
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase">Pendentes</p>
-            <p className="text-2xl font-black text-amber-600">{stats.pendentes}</p>
+            <p className="text-[9px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest sm:tracking-wider">Faltam</p>
+            <p className="text-lg sm:text-2xl font-black text-amber-600 truncate leading-tight">{stats.pendentes}</p>
           </div>
         </Card>
       </div>
@@ -126,10 +126,10 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
           </Button>
         </div>
 
-        {/* Sorting Bar */}
-        <div className="flex items-center gap-2 p-2 px-4 bg-secondary/10 rounded-xl overflow-x-auto no-scrollbar border border-white/5">
-           <span className="text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap mr-2">Ordenar por:</span>
-           <div className="flex gap-2">
+        {/* Sorting Bar - Fixed Horizontal Scroll and Cutoff */}
+        <div className="flex items-center gap-3 p-3 bg-secondary/10 rounded-2xl overflow-x-auto no-scrollbar border border-white/5 w-full">
+           <span className="text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap shrink-0 opacity-60">Ordenar por:</span>
+           <div className="flex gap-2 shrink-0 pr-4">
              <SortTab active={sortBy === 'titulo'} onClick={() => handleSort('titulo')} label="Título" direction={sortBy === 'titulo' ? sortDirection : null} />
              <SortTab active={sortBy === 'categoria'} onClick={() => handleSort('categoria')} label="Categoria" direction={sortBy === 'categoria' ? sortDirection : null} />
              <SortTab active={sortBy === 'dataLimite'} onClick={() => handleSort('dataLimite')} label="Data" direction={sortBy === 'dataLimite' ? sortDirection : null} />

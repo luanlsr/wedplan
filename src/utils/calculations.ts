@@ -1,4 +1,4 @@
-import type { WeddingData, FinancialStats, Installment } from "../types";
+import type { WeddingData, FinancialStats, Installment, PaymentStatus } from "../types";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,7 +23,7 @@ export const calculateStats = (data: WeddingData): FinancialStats => {
   data.fornecedores.forEach((s) => {
     const supplierTotal = s.parcelas.reduce((acc, p) => acc + p.valor, 0);
     totalContratado += supplierTotal;
-    
+
     // Category total
     porCategoria[s.categoria] = (porCategoria[s.categoria] || 0) + supplierTotal;
 
@@ -57,7 +57,7 @@ export const calculateStats = (data: WeddingData): FinancialStats => {
     totalPago,
     totalRestante: totalContratado - totalPago,
     porCategoria,
-    porStatus: statusCounts as any,
+    porStatus: statusCounts as Record<PaymentStatus, number>,
     proximosVencimentos: sortedPayments
   };
 };
@@ -66,7 +66,14 @@ export const generateInstallments = (
   weddingDate: string,
   totalValue: number,
   type: string,
-  config: any
+  config: {
+    finalPaymentDaysBeforeWedding?: number | string;
+    numInstallments?: number;
+    startDate?: string;
+    entryValue?: number;
+    entryPercentage?: number;
+    entryInInstallments?: number;
+  }
 ): Installment[] => {
   const installments: Installment[] = [];
   const weddingDt = parseISO(weddingDate);
@@ -74,10 +81,10 @@ export const generateInstallments = (
   const calculateLastDate = () => {
     // If we have a wedding date, the final payment date is ALWAYS relative to it.
     // If no specific quitação prazo is set, default to 15 days before.
-    const days = config.finalPaymentDaysBeforeWedding !== undefined 
-      ? (parseInt(config.finalPaymentDaysBeforeWedding) || 0)
-      : 15; 
-      
+    const days = config.finalPaymentDaysBeforeWedding !== undefined
+      ? (parseInt(String(config.finalPaymentDaysBeforeWedding)) || 0)
+      : 15;
+
     return format(subDays(weddingDt, days), "yyyy-MM-dd");
   };
 
@@ -87,16 +94,16 @@ export const generateInstallments = (
     const startDate = config.startDate ? parseISO(config.startDate) : new Date();
 
     for (let i = 1; i <= num; i++) {
-        const defaultDate = format(addDays(startDate, (i - 1) * 30), "yyyy-MM-dd");
-        const date = i === num ? calculateLastDate() : defaultDate;
-        
-        installments.push({
-            id: Math.random().toString(36).substr(2, 9),
-            numero: i,
-            valor: value,
-            dataVencimento: date,
-            status: "pendente"
-        });
+      const defaultDate = format(addDays(startDate, (i - 1) * 30), "yyyy-MM-dd");
+      const date = i === num ? calculateLastDate() : defaultDate;
+
+      installments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        numero: i,
+        valor: value,
+        dataVencimento: date,
+        status: "pendente"
+      });
     }
   } else if (type === "pagamento_unico") {
     installments.push({
@@ -115,22 +122,22 @@ export const generateInstallments = (
     // Entry installments
     const entryValuePerInstallment = entryValueTotal / entryInInstallments;
     for (let i = 1; i <= entryInInstallments; i++) {
-        installments.push({
-            id: Math.random().toString(36).substr(2, 9),
-            numero: i,
-            valor: entryValuePerInstallment,
-            dataVencimento: format(addDays(startDate, (i - 1) * 30), "yyyy-MM-dd"),
-            status: "pendente"
-        });
+      installments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        numero: i,
+        valor: entryValuePerInstallment,
+        dataVencimento: format(addDays(startDate, (i - 1) * 30), "yyyy-MM-dd"),
+        status: "pendente"
+      });
     }
 
     // Final Payment (Quitação) - Always at the end
     installments.push({
-        id: Math.random().toString(36).substr(2, 9),
-        numero: entryInInstallments + 1,
-        valor: remainingValue,
-        dataVencimento: calculateLastDate(), // Forced to target date
-        status: "pendente"
+      id: Math.random().toString(36).substr(2, 9),
+      numero: entryInInstallments + 1,
+      valor: remainingValue,
+      dataVencimento: calculateLastDate(), // Forced to target date
+      status: "pendente"
     });
   } else if (type === "entrada_parcelas") {
     const entryValue = (config.entryValue !== undefined && !isNaN(config.entryValue)) ? config.entryValue : (totalValue * (config.entryPercentage || 30)) / 100;
@@ -142,29 +149,29 @@ export const generateInstallments = (
     // Entry installments
     const entryValuePerInstallment = entryValue / entryInInstallments;
     for (let i = 1; i <= entryInInstallments; i++) {
-        installments.push({
-            id: Math.random().toString(36).substr(2, 9),
-            numero: i,
-            valor: entryValuePerInstallment,
-            dataVencimento: format(addDays(startDate, (i - 1) * 30), "yyyy-MM-dd"),
-            status: "pendente"
-        });
+      installments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        numero: i,
+        valor: entryValuePerInstallment,
+        dataVencimento: format(addDays(startDate, (i - 1) * 30), "yyyy-MM-dd"),
+        status: "pendente"
+      });
     }
 
     // Remaining installments
     const remainingValuePerInstallment = remainingValue / numInstallments;
     const lastEntryDate = addDays(startDate, (entryInInstallments - 1) * 30);
     for (let i = 1; i <= numInstallments; i++) {
-        const defaultDate = format(addDays(lastEntryDate, i * 30), "yyyy-MM-dd");
-        const date = i === numInstallments ? calculateLastDate() : defaultDate;
+      const defaultDate = format(addDays(lastEntryDate, i * 30), "yyyy-MM-dd");
+      const date = i === numInstallments ? calculateLastDate() : defaultDate;
 
-        installments.push({
-            id: Math.random().toString(36).substr(2, 9),
-            numero: entryInInstallments + i,
-            valor: remainingValuePerInstallment,
-            dataVencimento: date,
-            status: "pendente"
-        });
+      installments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        numero: entryInInstallments + i,
+        valor: remainingValuePerInstallment,
+        dataVencimento: date,
+        status: "pendente"
+      });
     }
   }
 

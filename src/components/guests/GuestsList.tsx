@@ -17,6 +17,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
 
   // Pagination State
@@ -49,8 +50,8 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
     if (sortConfig) {
       items.sort((a, b) => {
-        let valA: any = a[sortConfig.key as keyof Guest];
-        let valB: any = b[sortConfig.key as keyof Guest];
+        let valA = a[sortConfig.key as keyof Guest] ?? '';
+        let valB = b[sortConfig.key as keyof Guest] ?? '';
 
         if (sortConfig.key === 'total_pessoas') {
           valA = (a.adultos || 0) + (a.criancas || 0);
@@ -82,59 +83,80 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-primary/10 border-none">
-          <p className="text-xs font-bold text-primary uppercase">Total Convidados</p>
-          <p className="text-2xl font-black">{totals.adultos + totals.criancas}</p>
-          <p className="text-[10px] text-muted-foreground uppercase font-bold">{totals.total} grupos/famílias</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-3 sm:p-4 bg-primary/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
+          <p className="text-[8px] sm:text-xs font-black text-primary uppercase tracking-widest">Total</p>
+          <div>
+            <p className="text-base sm:text-2xl font-black leading-none">{totals.adultos + totals.criancas}</p>
+            <p className="text-[7px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-tighter mt-1">{totals.total} Grp</p>
+          </div>
         </Card>
-        <Card className="p-4 bg-green-500/10 border-none">
-          <p className="text-xs font-bold text-green-600 uppercase">Confirmados</p>
-          <p className="text-2xl font-black">{totals.confirmados}</p>
+        <Card className="p-3 sm:p-4 bg-green-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
+          <p className="text-[8px] sm:text-xs font-black text-green-600 uppercase tracking-widest">Confirma.</p>
+          <p className="text-base sm:text-2xl font-black leading-none">{totals.confirmados}</p>
         </Card>
-        <Card className="p-4 bg-amber-500/10 border-none">
-          <p className="text-xs font-bold text-amber-600 uppercase">Pendentes</p>
-          <p className="text-2xl font-black">{totals.pendentes}</p>
+        <Card className="p-3 sm:p-4 bg-amber-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
+          <p className="text-[8px] sm:text-xs font-black text-amber-600 uppercase tracking-widest">Pendente</p>
+          <p className="text-base sm:text-2xl font-black leading-none">{totals.pendentes}</p>
         </Card>
-        <Card className="p-4 bg-blue-500/10 border-none">
-          <p className="text-xs font-bold text-blue-600 uppercase">Adultos/Crianças</p>
-          <p className="text-2xl font-black">{totals.adultos} <span className="text-sm font-medium">/ {totals.criancas}</span></p>
+        <Card className="p-3 sm:p-4 bg-blue-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
+          <p className="text-[8px] sm:text-xs font-black text-blue-600 uppercase tracking-widest">AD / CR</p>
+          <p className="text-base sm:text-2xl font-black leading-none">{totals.adultos}/{totals.criancas}</p>
         </Card>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-card p-4 rounded-2xl shadow-sm border">
-        <div className="flex flex-col md:flex-row flex-1 gap-4 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+      <div className="bg-card p-3 sm:p-4 rounded-3xl shadow-sm border space-y-3">
+        <div className="flex flex-col lg:flex-row gap-3 items-center">
+          <div className="relative flex-1 w-full group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
             <Input 
               placeholder="Buscar convidado..." 
-              className="pl-10 h-11 rounded-xl w-full"
+              className="pl-10 h-12 rounded-2xl w-full bg-secondary/5 border-none focus:bg-secondary/10 transition-all font-bold"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex flex-col md:flex-row gap-2">
-            <FilterSelect 
-              value={filterCategory} 
-              onChange={setFilterCategory} 
-              options={categories} 
-              icon={<Briefcase size={16} />} 
-              label="Categoria"
-            />
-            <FilterSelect 
-              value={filterStatus} 
-              onChange={setFilterStatus} 
-              options={statuses} 
-              icon={<Filter size={16} />} 
-              label="Status"
-              isStatus
-            />
+          
+          <div className="flex gap-2 w-full lg:w-auto">
+            <Button 
+              variant="outline" 
+              className={cn(
+                "flex-1 lg:hidden rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest border-none bg-secondary/5",
+                (filterCategory !== 'Todos' || filterStatus !== 'Todos') && "text-primary bg-primary/5"
+              )}
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+            >
+              <Filter size={16} className="mr-2" />
+              {showMobileFilters ? 'Ocultar Filtros' : 'Filtros'}
+            </Button>
+            <Button className="flex-[2] gap-2 h-12 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 w-full lg:w-auto" onClick={onAdd}>
+              <UserPlus size={18} />
+              Convidar
+            </Button>
           </div>
         </div>
-        <Button className="gap-2 h-11 px-6 rounded-xl font-bold shadow-lg shadow-primary/20 w-full lg:w-auto mt-4 lg:mt-0" onClick={onAdd}>
-          <UserPlus size={18} />
-          Novo Convidado
-        </Button>
+
+        {/* Expandable Mobile Filters */}
+        <div className={cn(
+          "grid grid-cols-1 md:flex gap-2 overflow-hidden transition-all duration-300",
+          showMobileFilters ? "max-h-[200px] opacity-100 pt-1" : "max-h-0 opacity-0 md:max-h-[100px] md:opacity-100"
+        )}>
+          <FilterSelect 
+            value={filterCategory} 
+            onChange={setFilterCategory} 
+            options={categories} 
+            icon={<Briefcase size={16} />} 
+            label="Categoria"
+          />
+          <FilterSelect 
+            value={filterStatus} 
+            onChange={setFilterStatus} 
+            options={statuses} 
+            icon={<Filter size={16} />} 
+            label="Status"
+            isStatus
+          />
+        </div>
       </div>
 
       <Card className="border-none shadow-xl overflow-hidden rounded-3xl">
@@ -366,7 +388,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   );
 };
 
-const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { value: string, onChange: (v: string) => void, options: string[], icon: React.ReactNode, isStatus?: boolean, label?: string }) => (
+const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { value: string, onChange: (v: string) => void, options: string[], icon: React.ReactNode, isStatus?: boolean, label: string }) => (
   <div className="relative w-full md:min-w-[240px] md:w-fit">
     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-colors">
       {icon}

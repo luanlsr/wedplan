@@ -212,7 +212,7 @@ export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
 
   return (
     <>
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-4 py-2 flex items-center justify-between z-[60] safe-area-bottom">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-2 xs:px-4 py-2 flex items-center justify-around z-[60] safe-area-bottom">
         {mainActions.map((item) => (
           <NavLink
             key={item.id}
@@ -220,48 +220,59 @@ export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
             end={item.end}
             onClick={() => setIsMenuOpen(false)}
             className={({ isActive }) => cn(
-              "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[64px]",
+              "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[50px] xs:min-w-[64px]",
               isActive ? "text-primary scale-110" : "text-muted-foreground"
             )}
           >
-            <item.icon size={24} />
-            <span className="text-[10px] font-bold">{item.label}</span>
+            <item.icon size={20} className="xs:w-[24px] xs:h-[24px]" />
+            <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
           </NavLink>
         ))}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={cn(
-            "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[64px]",
+            "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[50px] xs:min-w-[64px]",
             isMenuOpen ? "text-primary scale-110" : "text-muted-foreground"
           )}
         >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          <span className="text-[10px] font-bold">Mais</span>
+          {isMenuOpen ? <X size={20} className="xs:w-[24px] xs:h-[24px]" /> : <Menu size={20} className="xs:w-[24px] xs:h-[24px]" />}
+          <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-tighter">Mais</span>
         </button>
       </div>
 
       {/* Mobile Over-Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[55] bg-background/80 backdrop-blur-md animate-in fade-in slide-in-from-bottom-10 duration-300">
-          <div className="p-8 pt-20 space-y-6">
-            <h3 className="text-2xl font-black mb-8">Outras Ferramentas</h3>
-            <div className="grid grid-cols-2 gap-4">
+        <div className="lg:hidden fixed inset-0 z-[55] bg-background/90 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-10 duration-300">
+          <div className="p-6 pt-20 space-y-6 flex flex-col h-full">
+            <h3 className="text-3xl font-black mb-4 italic uppercase tracking-tighter">Outros <span className="text-primary italic not-italic">Apps</span></h3>
+            <div className="grid grid-cols-2 gap-4 flex-1 content-start">
               {moreActions.map((item) => (
                 <NavLink
                   key={item.id}
                   to={item.path}
                   onClick={() => setIsMenuOpen(false)}
                   className={({ isActive }) => cn(
-                    "p-6 rounded-3xl flex flex-col gap-3 font-bold text-left transition-all",
-                    isActive ? "bg-primary text-white" : "bg-secondary/50"
+                    "p-5 rounded-[2rem] border border-white/5 flex flex-col gap-4 font-black transition-all",
+                    isActive ? "bg-primary text-white shadow-xl shadow-primary/20" : "bg-secondary/40 text-foreground"
                   )}
                 >
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-                    <item.icon size={24} />
-                  </div>
-                  <span className="text-sm">{item.label}</span>
+                  {({ isActive }: { isActive: boolean }) => (
+                    <>
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                        isActive ? "bg-white/20" : "bg-card shadow-lg"
+                      )}>
+                        <item.icon size={24} />
+                      </div>
+                      <span className="text-sm uppercase tracking-tighter">{item.label}</span>
+                    </>
+                  )}
                 </NavLink>
               ))}
+            </div>
+            
+            <div className="mt-auto pb-24 border-t border-white/10 pt-6">
+               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-center opacity-30">WedPlan Premium Suite</p>
             </div>
           </div>
         </div>
@@ -271,15 +282,18 @@ export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
 };
 
 export const Header = ({ title }: { title: string }) => (
-  <header className="flex items-center justify-between mb-8 flex-wrap gap-4">
-    <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight pt-2">{title}</h2>
-    <div className="flex items-center gap-4 lg:gap-6">
+  <header className="flex items-center justify-between mb-4 sm:mb-8 flex-wrap gap-4 relative">
+    <div className="flex-1 min-w-0">
+      <h2 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase italic leading-none pt-2 truncate">{title}</h2>
+      <div className="h-1 w-12 bg-primary rounded-full mt-2" />
+    </div>
+    <div className="flex items-center gap-3 lg:gap-6">
       <div className="text-right hidden sm:block">
         <p className="text-sm font-black uppercase tracking-tighter">WedPlan</p>
-        <p className="text-[10px] text-primary uppercase tracking-widest font-black italic">Wedding Management Suite</p>
+        <p className="text-[10px] text-primary uppercase tracking-widest font-black italic">Wedding Suite</p>
       </div>
-      <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-lg shadow-primary/20 transition-transform hover:rotate-3 duration-300">
-        <div className="w-full h-full rounded-[0.9rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black italic text-lg shadow-inner">
+      <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-lg shadow-primary/20 transition-transform active:scale-95 duration-300">
+        <div className="w-full h-full rounded-[0.9rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black italic text-base sm:text-lg shadow-inner">
           WP
         </div>
       </div>

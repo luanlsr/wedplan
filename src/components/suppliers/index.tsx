@@ -87,8 +87,8 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Search & Filter Bar */}
-      <div className="flex flex-col gap-6 bg-card/60 backdrop-blur-xl p-8 rounded-[2rem] border border-white/5 shadow-2xl">
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-6">
+      <div className="flex flex-col gap-6 bg-card/60 backdrop-blur-xl p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 shadow-2xl">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 sm:gap-6">
           <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
             <div className="relative w-full md:w-96 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all duration-300" size={20} />
@@ -196,7 +196,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 bg-card/40 backdrop-blur-xl rounded-[2rem] border border-white/5 shadow-xl mt-8"
+          className="flex flex-col md:flex-row items-center justify-between gap-6 p-4 sm:p-8 bg-card/40 backdrop-blur-xl rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 shadow-xl mt-8"
         >
           <div className="flex flex-col gap-1">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Progresso da Lista</p>
@@ -372,18 +372,20 @@ const ReorderItem = ({ supplier, onSelect, isManual }: any) => {
                                 <GripVertical size={20} />
                             </div>
                         )}
-                        <div className="flex items-center gap-3 flex-wrap min-w-0">
-                            <h4 className="text-xl sm:text-2xl font-black text-foreground group-hover:text-primary transition-colors duration-300 truncate">
+                        <div className="flex flex-1 items-start sm:items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+                            <h4 className="text-lg sm:text-2xl font-black text-foreground group-hover:text-primary transition-colors duration-300 truncate max-w-full">
                               {supplier.fornecedor}
                             </h4>
-                            <Badge variant="outline" className="shrink-0 bg-primary/5 text-primary border-primary/20 text-[9px] uppercase font-black px-3 py-0.5">
-                                {supplier.categoria}
-                            </Badge>
-                            {supplier.status === 'atrasado' && (
-                              <span className="flex items-center gap-1 text-red-500 text-[9px] font-black uppercase shrink-0 px-2 py-0.5 bg-red-500/10 rounded-full border border-red-500/20">
-                                <AlertCircle size={10} /> Atrasado
-                              </span>
-                            )}
+                            <div className="flex flex-wrap gap-2">
+                                <Badge variant="outline" className="shrink-0 bg-primary/5 text-primary border-primary/20 text-[8px] sm:text-[9px] uppercase font-black px-2 sm:px-3 py-0.5">
+                                    {supplier.categoria}
+                                </Badge>
+                                {supplier.status === 'atrasado' && (
+                                  <span className="flex items-center gap-1 text-red-500 text-[8px] sm:text-[9px] font-black uppercase shrink-0 px-2 py-0.5 bg-red-500/10 rounded-full border border-red-500/20">
+                                    <AlertCircle size={10} /> Atrasado
+                                  </span>
+                                )}
+                            </div>
                         </div>
                         <div className="ml-auto group-hover:translate-x-1 transition-transform duration-500 text-muted-foreground group-hover:text-primary">
                              <ChevronRight size={20} />

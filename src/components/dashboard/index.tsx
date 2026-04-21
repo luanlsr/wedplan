@@ -13,10 +13,7 @@ interface DashboardProps {
   onAction: (action: 'new_supplier' | 'financial' | 'settings') => void;
 }
 
-// Internal helper for styling combine
-function cn(...inputs: any[]) {
-    return inputs.filter(Boolean).join(" ");
-}
+import { cn } from "../../lib/utils";
 
 export const Dashboard = ({ stats, onAction }: DashboardProps) => {
   const pieData = Object.entries(stats.porCategoria).map(([name, value]) => ({ name, value }));
@@ -32,15 +29,15 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Summary Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {summaryCards.map((card, i) => (
-          <Card key={i} className="flex items-center gap-4 border-none shadow-lg bg-card">
-            <div className={cn("p-4 rounded-2xl", card.bg)}>
-              <card.icon className={card.color} size={24} />
+          <Card key={i} className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 border-none shadow-lg bg-card p-3 sm:p-6 overflow-hidden relative">
+            <div className={cn("p-2 sm:p-4 rounded-xl sm:rounded-2xl shrink-0", card.bg)}>
+              <card.icon className={cn(card.color, "sm:w-[24px] sm:h-[24px]")} size={18} />
             </div>
-            <div>
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{card.title}</p>
-              <h3 className="text-2xl font-black text-foreground">{formatCurrency(card.value)}</h3>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] sm:text-sm font-black text-muted-foreground uppercase tracking-widest sm:tracking-wider truncate">{card.title}</p>
+              <h3 className="text-base sm:text-2xl font-black text-foreground truncate">{formatCurrency(card.value)}</h3>
             </div>
           </Card>
         ))}

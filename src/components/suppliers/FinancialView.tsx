@@ -196,28 +196,28 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Statistics Cards */}
-        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <Card className="bg-card/40 border-none justify-between flex flex-col p-6 h-32">
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+          <Card className="bg-card/40 border-none justify-between flex flex-col p-4 sm:p-6 h-28 sm:h-32">
              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Total no Filtro</p>
-             <h4 className="text-3xl font-black text-foreground">{formatCurrency(stats.total)}</h4>
+             <h4 className="text-2xl sm:text-3xl font-black text-foreground">{formatCurrency(stats.total)}</h4>
              <div className="h-1 w-full bg-secondary/30 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-primary w-full opacity-30" />
              </div>
           </Card>
-          <Card className="bg-green-500/5 border border-green-500/10 flex flex-col justify-between p-6 h-32">
+          <Card className="bg-green-500/5 border border-green-500/10 flex flex-col justify-between p-4 sm:p-6 h-28 sm:h-32">
              <p className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] flex items-center gap-2">
                <CheckCircle size={12} /> Total Pago
              </p>
-             <h4 className="text-3xl font-black text-green-500">{formatCurrency(stats.paid)}</h4>
+             <h4 className="text-2xl sm:text-3xl font-black text-green-500">{formatCurrency(stats.paid)}</h4>
              <div className="h-1 w-full bg-green-500/20 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-green-500" style={{ width: `${(stats.paid / stats.total * 100) || 0}%` }} />
              </div>
           </Card>
-          <Card className="bg-amber-500/5 border border-amber-500/10 flex flex-col justify-between p-6 h-32">
+          <Card className="bg-amber-500/5 border border-amber-500/10 flex flex-col justify-between p-4 sm:p-6 h-28 sm:h-32">
              <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
                <Clock size={12} /> Saldo Pendente
              </p>
-             <h4 className="text-3xl font-black text-amber-500">{formatCurrency(stats.pending)}</h4>
+             <h4 className="text-2xl sm:text-3xl font-black text-amber-500">{formatCurrency(stats.pending)}</h4>
              <div className="h-1 w-full bg-amber-500/20 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-amber-500" style={{ width: `${(stats.pending / stats.total * 100) || 0}%` }} />
              </div>

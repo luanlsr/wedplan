@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { WeddingData, Supplier, Installment, Guest, Task } from "../types";
+import type { WeddingData, Supplier, Installment, Guest, Task, UserRole } from "../types";
 import { INITIAL_DATA } from "../data/initialData";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
@@ -12,10 +12,9 @@ export const useWeddingData = () => {
   const [loading, setLoading] = useState(true);
 
   // Helper to ensure a wedding exists for the user and return its ID
-  const ensureWeddingExists = async (userId: string) => {
+  const ensureWeddingExists = useCallback(async (userId: string) => {
     try {
-      console.log('Verificando estabilidade do banco para o usuário:', userId);
-      
+
       // 1. Buscar Perfil (que contém o wedding_id)
       let { data: profile } = await supabase
         .from('profiles')
@@ -30,7 +29,6 @@ export const useWeddingData = () => {
         const isNewUser = !isNaN(createdAt.getTime()) && (new Date().getTime() - createdAt.getTime()) < 5 * 60 * 1000;
 
         if (isNewUser) {
-          console.log('Criando perfil inicial para novo usuário...');
           const { data: newProfile, error: pError } = await supabase
             .from('profiles')
             .upsert({ id: userId, role: 'couple' })
@@ -46,7 +44,6 @@ export const useWeddingData = () => {
 
       // 2. Se já tem wedding_id vinculado, retorna ele
       if (profile?.wedding_id) {
-        console.log('Casamento vinculado encontrado no perfil:', profile.wedding_id);
         return profile.wedding_id;
       }
 
@@ -59,14 +56,12 @@ export const useWeddingData = () => {
         .maybeSingle();
 
       if (ownedWedding) {
-        console.log('Casamento encontrado como proprietário:', ownedWedding.id);
         // Atualiza o perfil para guardar esse ID fixo
         await supabase.from('profiles').update({ wedding_id: ownedWedding.id }).eq('id', userId);
         return ownedWedding.id;
       }
 
       // 4. Se realmente não existe nada, garante o registro único via upsert
-      console.log('Garantindo existência de registro de casamento único...');
       const { data: wedding, error: wError } = await supabase
         .from('weddings')
         .upsert({
@@ -90,11 +85,10 @@ export const useWeddingData = () => {
       console.error('Falha crítica na gestão de vínculo do casamento:', err);
       throw err;
     }
-  };
+  }, [user?.created_at]);
 
   const loadData = useCallback(async () => {
     if (!user) {
-      console.log('Offline: using local storage.');
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) setData(JSON.parse(stored));
       setLoading(false);
@@ -105,7 +99,7 @@ export const useWeddingData = () => {
 
     try {
       const weddingId = await ensureWeddingExists(user.id);
-      
+
       if (!weddingId) {
         setData(INITIAL_DATA);
         setLoading(false);
@@ -134,13 +128,14 @@ export const useWeddingData = () => {
 
       const transformedData: WeddingData = {
         id: wedding.id,
-        role: profileData?.role as any,
+        role: profileData?.role as UserRole,
+        public_checkin_token: wedding.public_checkin_token,
         casal: {
           nome1: wedding.couple_name1 || '',
           nome2: wedding.couple_name2 || '',
           data: wedding.wedding_date || '',
         },
-        fornecedores: (suppliersData || []).map((s: any) => ({
+        fornecedores: (suppliersData || []).map((s) => ({
           id: s.id,
           fornecedor: s.fornecedor,
           servico: s.servico,
@@ -153,17 +148,16 @@ export const useWeddingData = () => {
           parcelas: (s.parcelas || []).map((p: any) => ({
             id: p.id,
             numero: p.numero,
-            dataVencimento: p.data_vencimento,
+            dataVencimento: p.data_venc_original || p.data_vencimento,
             valor: parseFloat(p.valor),
-            status: p.status,
-            dataPagamento: p.data_pagamento
-          })).sort((a: any, b: any) => a.numero - b.numero)
+            status: p.status as "pago" | "pendente"
+          })).sort((a: Installment, b: Installment) => a.numero - b.numero)
         })),
-        convidados: (guestsData || []).map((g: any) => ({
+        convidados: (guestsData || []).map((g) => ({
           id: g.id,
           nome: g.nome,
           categoria: g.categoria,
-          status: g.status,
+          status: g.status as "confirmado" | "pendente" | "recusado",
           adultos: g.adultos,
           criancas: g.criancas,
           children_names: g.children_names,
@@ -171,20 +165,19 @@ export const useWeddingData = () => {
           observacoes: g.observacoes,
           is_present: g.is_present
         })),
-        tarefas: (tasksData || []).map((t: any) => ({
+        tarefas: (tasksData || []).map((t) => ({
           id: t.id,
           titulo: t.titulo,
           descricao: t.descricao,
           categoria: t.categoria,
           dataLimite: t.data_limite,
-          status: t.status,
+          status: t.status as "pendente" | "em_progresso" | "concluido",
           ordem: t.ordem
         })),
         configuracoes: {
           orcamentoTotal: parseFloat(wedding.total_budget),
           tema: wedding.theme || 'light'
-        },
-        public_checkin_token: wedding.public_checkin_token
+        }
       };
 
       setData(transformedData);
@@ -194,7 +187,7 @@ export const useWeddingData = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, data.id, ensureWeddingExists]);
 
   useEffect(() => {
     loadData();
@@ -268,6 +261,7 @@ export const useWeddingData = () => {
       const payload: any = {};
       if (updated.status) payload.status = updated.status;
       if (updated.valor !== undefined) payload.valor = updated.valor;
+      if (updated.dataVencimento) payload.data_vencimento = updated.dataVencimento;
 
       await supabase.from('installments').update(payload).eq('id', installmentId);
       loadData();
