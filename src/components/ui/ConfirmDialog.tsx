@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { X, AlertTriangle, CheckCircle2, Info, AlertOctagon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertTriangle, CheckCircle2, Info, AlertOctagon } from "lucide-react";
 import { Button, Card, Input, cn } from "./core";
 
 export type ConfirmDialogType = "info" | "success" | "warning" | "danger";

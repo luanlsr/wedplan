@@ -12,7 +12,7 @@ import { ConfirmProvider } from './components/ui';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -20,11 +20,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -38,26 +38,26 @@ function AuthRoutes() {
   return (
     <Routes>
       <Route path="/" element={
-        <LandingPage 
-          onGetStarted={() => navigate('/signup')} 
-          onLogin={() => navigate('/login')} 
+        <LandingPage
+          onGetStarted={() => navigate('/signup')}
+          onLogin={() => navigate('/login')}
         />
       } />
       <Route path="/login" element={
-        <LoginForm 
-          onSuccess={() => navigate('/dashboard')} 
+        <LoginForm
+          onSuccess={() => navigate('/dashboard')}
           onNavigateToSignUp={() => navigate('/signup')}
           onNavigateToForgot={() => navigate('/forgot-password')}
         />
       } />
       <Route path="/signup" element={
-        <SignUpForm 
-          onSuccess={() => navigate('/dashboard')} 
+        <SignUpForm
+          onSuccess={() => navigate('/dashboard')}
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
       <Route path="/forgot-password" element={
-        <ForgotPassword 
+        <ForgotPassword
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
@@ -77,7 +77,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/reset-password" element={
-        <ResetPassword 
+        <ResetPassword
           onSuccess={() => navigate('/login')}
         />
       } />
