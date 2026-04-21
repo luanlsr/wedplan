@@ -246,7 +246,7 @@ export const useWeddingData = () => {
     }
   };
 
-  const updateInstallment = async (supplierId: string, installmentId: string, updated: Partial<Installment>) => {
+  const updateInstallment = async (_supplierId: string, installmentId: string, updated: Partial<Installment>) => {
     if (!user) return;
     try {
       const payload: any = {};

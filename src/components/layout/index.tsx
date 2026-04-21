@@ -1,16 +1,62 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, NavLink } from "react-router-dom";
 import { useState } from "react";
 
+// Estilos customizados para tooltips premium quando colapsado
+const tooltipStyles = `
+  .sidebar-tooltip {
+    position: relative;
+  }
+  .sidebar-tooltip:after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(10px);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+  }
+  .sidebar-tooltip:hover:after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(15px);
+  }
+`;
+
+interface MenuItem {
+  id: string;
+  path: string;
+  label: string;
+  icon: React.ElementType;
+  end?: boolean;
+  hidden?: boolean;
+  visibleOnlyForStaff?: boolean;
+}
+
 interface SidebarProps {
   isDark: boolean;
   toggleTheme: () => void;
   userRole?: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple' }: SidebarProps) => {
+export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse }: SidebarProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -19,26 +65,48 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple' }: SidebarPro
     navigate('/');
   };
 
-  const menuItems = [
-    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase },
+  const menuItems = ([
+    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true, hidden: userRole === 'staff' },
+    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase, hidden: userRole === 'staff' },
     { id: "guests", path: "/convidados", label: "Convidados", icon: Heart },
     { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' },
     { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'staff' },
     { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'staff' },
     { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck },
     { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'staff' },
-  ].filter(item => !item.hidden);
+  ] as MenuItem[]).filter(item => {
+    if (item.hidden) return false;
+    if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
+    return true;
+  });
 
   return (
-    <div className="hidden lg:flex w-72 h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex-col z-50">
-      <div className="flex items-center gap-3 mb-10 px-2 group cursor-pointer" onClick={() => navigate('/dashboard')}>
-        <div className="w-12 h-12 rounded-2xl bg-white overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-500">
+    <>
+    <style>{tooltipStyles}</style>
+    <div className={cn(
+      "hidden lg:flex h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex-col z-50 transition-all duration-500",
+      isCollapsed ? "w-24" : "w-72"
+    )}>
+      {/* Collapse Toggle Button */}
+      <button 
+        onClick={onToggleCollapse}
+        className="absolute -right-3 top-24 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 hover:scale-110 transition-all z-[60]"
+      >
+        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
+
+      <div className={cn(
+        "flex items-center gap-3 mb-10 px-2 group cursor-pointer overflow-hidden transition-all duration-500",
+        isCollapsed ? "justify-center" : "justify-start"
+      )} onClick={() => navigate('/dashboard')}>
+        <div className="w-12 h-12 rounded-2xl bg-white shrink-0 overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-500">
           <img src="/logo-wedplan.png" alt="WedPlan Logo" className="w-full h-full object-cover" />
         </div>
-        <div>
-          <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Wed<br/><span className="text-primary not-italic">Plan</span></h1>
-        </div>
+        {!isCollapsed && (
+          <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+            <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Wed<br/><span className="text-primary not-italic">Plan</span></h1>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 space-y-2">
@@ -47,8 +115,10 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple' }: SidebarPro
             key={item.id}
             to={item.path}
             end={item.end}
+            data-tooltip={isCollapsed ? item.label : undefined}
             className={({ isActive }) => cn(
-              "w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group relative",
+              "w-full flex items-center rounded-xl transition-all duration-300 group relative overflow-visible",
+              isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3.5",
               isActive 
                 ? "bg-primary text-white shadow-xl shadow-primary/20" 
                 : "hover:bg-primary/10 text-muted-foreground hover:text-primary"
@@ -56,9 +126,11 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple' }: SidebarPro
           >
             {({ isActive }) => (
               <>
-                <item.icon size={22} className={cn(isActive ? "text-white" : "group-hover:text-primary")} />
-                <span className="font-semibold tracking-wide">{item.label}</span>
-                {isActive && (
+                <item.icon size={22} className={cn("shrink-0 transition-all", isActive ? "text-white" : "group-hover:text-primary")} />
+                {!isCollapsed && (
+                  <span className="font-semibold tracking-wide whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">{item.label}</span>
+                )}
+                {isActive && !isCollapsed && (
                   <div className="absolute right-2 w-1.5 h-6 rounded-full bg-white/50" />
                 )}
               </>
@@ -70,40 +142,54 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple' }: SidebarPro
       <div className="space-y-4 pt-6 mt-6 border-t border-primary/10">
         <button 
           onClick={toggleTheme}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          data-tooltip={isCollapsed ? (isDark ? "Modo Claro" : "Modo Escuro") : undefined}
+          className={cn(
+            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all",
+            isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
+          )}
         >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
-          <span className="font-medium">{isDark ? "Modo Claro" : "Modo Escuro"}</span>
+          <div className="shrink-0">{isDark ? <Sun size={20} /> : <Moon size={20} />}</div>
+          {!isCollapsed && <span className="font-medium whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">{isDark ? "Modo Claro" : "Modo Escuro"}</span>}
         </button>
         
         <button 
           onClick={handleSignOut}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+          data-tooltip={isCollapsed ? "Sair" : undefined}
+          className={cn(
+            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
+            isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
+          )}
         >
-          <LogOut size={20} />
-          <span className="font-medium">Sair</span>
+          <div className="shrink-0"><LogOut size={20} /></div>
+          {!isCollapsed && <span className="font-medium whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">Sair</span>}
         </button>
       </div>
     </div>
+    </>
   );
 };
 
 export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const mainActions = [
-    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true },
-    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec." },
+  const mainActions = ([
+    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'staff' },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true },
+    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec.", hidden: userRole === 'staff' },
     { id: "guests", path: "/convidados", icon: Heart, label: "Convid." },
-    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas" },
-  ];
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' },
+  ] as MenuItem[]).filter(item => {
+    if (item.hidden) return false;
+    if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
+    return true;
+  });
 
-  const moreActions = [
+  const moreActions = ([
     { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'staff' },
     { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'staff' },
-    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in" },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: userRole === 'staff' },
     { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'staff' },
-  ].filter(item => !item.hidden);
+  ] as MenuItem[]).filter(item => !item.hidden);
 
   return (
     <>

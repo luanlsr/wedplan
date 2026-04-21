@@ -52,7 +52,7 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-foreground">Resumo por Categoria</h3>
           </div>
-          <div className="h-80 w-full">
+          <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={pieData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} stroke="currentColor" className="text-muted-foreground/20" />
@@ -78,7 +78,7 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
         {/* Categories Pie */}
         <Card className="shadow-xl border-none bg-card">
           <h3 className="text-lg font-bold mb-8 text-foreground">Distribuição de Verba</h3>
-          <div className="h-60 w-full">
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

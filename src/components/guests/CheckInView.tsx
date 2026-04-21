@@ -40,7 +40,7 @@ export const CheckInView = ({ guests, suppliers, onTogglePresence }: CheckInView
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-20">
+    <div className="space-y-6 max-w-full mx-auto pb-20">
       {/* Header Statístico */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-6 bg-primary/10 border-none flex items-center gap-4">
@@ -125,7 +125,7 @@ export const CheckInView = ({ guests, suppliers, onTogglePresence }: CheckInView
       </div>
 
       {/* Listas */}
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {activeTab === 'guests' ? (
           <>
             {filteredGuests.map(guest => (

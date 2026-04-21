@@ -22,7 +22,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 12;
 
   // Reset page when filters or sorting change
   useEffect(() => {
@@ -138,7 +138,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
         {paginatedTasks.map((task) => (
           <Card key={task.id} className={cn(
             "p-4 border-none shadow-md transition-all hover:shadow-lg group flex items-center gap-4",

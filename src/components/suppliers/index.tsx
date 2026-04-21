@@ -28,7 +28,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 12;
 
   const categories = ["Todas", ...Array.from(new Set(suppliers.map((s) => s.categoria))).sort((a, b) => a.localeCompare(b))];
   const statuses = ["Todos", "pago", "pendente", "parcial", "atrasado"];

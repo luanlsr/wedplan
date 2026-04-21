@@ -21,7 +21,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 15;
 
   const categories = ['Todos', 'Noivos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Staff', 'Outros'];
   const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
@@ -366,7 +366,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   );
 };
 
-const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: any) => (
+const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { value: string, onChange: (v: string) => void, options: string[], icon: React.ReactNode, isStatus?: boolean, label?: string }) => (
   <div className="relative w-full md:min-w-[240px] md:w-fit">
     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-colors">
       {icon}

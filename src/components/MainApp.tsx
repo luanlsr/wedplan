@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { cn } from '../lib/utils';
 import confetti from 'canvas-confetti';
-import { Sidebar, Header, BottomNav } from './layout';
+import { Sidebar, Header, BottomNav } from './layout/index';
 import { Dashboard } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { FinancialView } from './suppliers/FinancialView';
@@ -23,8 +23,8 @@ import { maskCurrency, unmaskCurrency } from '../utils/masks';
 
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 
-const SortButton = ({ active, onClick, label, direction }: any) => (
-  <button 
+const SortButton = ({ active, onClick, label, direction }: { active: boolean, onClick: () => void, label: string, direction?: 'asc' | 'desc' | null }) => (
+  <button
     onClick={onClick}
     className={cn(
       "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
@@ -32,14 +32,15 @@ const SortButton = ({ active, onClick, label, direction }: any) => (
     )}
   >
     {label}
-    {!direction ? <ArrowUpDown size={10} className="opacity-30" /> : 
-     direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+    {!direction ? <ArrowUpDown size={10} className="opacity-30" /> :
+      direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
   </button>
 );
 
 export function MainApp() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const {
     data, loading,
     addSupplier, updateSupplier, deleteSupplier, updateInstallment,
@@ -49,7 +50,7 @@ export function MainApp() {
   } = useWeddingData();
   const { user, resetPassword } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [editingInstallmentId, setEditingInstallmentId] = useState<string | null>(null);
@@ -213,8 +214,8 @@ export function MainApp() {
     if (!currentSupplier) return <Navigate to="/fornecedores" />;
 
     const sortedInstallments = [...currentSupplier.parcelas].sort((a, b) => {
-      let valA: any = a[instSort.key as keyof typeof a];
-      let valB: any = b[instSort.key as keyof typeof b];
+      const valA = a[instSort.key as keyof typeof a];
+      const valB = b[instSort.key as keyof typeof b];
       if (valA < valB) return instSort.direction === 'asc' ? -1 : 1;
       if (valA > valB) return instSort.direction === 'asc' ? 1 : -1;
       return 0;
@@ -246,7 +247,7 @@ export function MainApp() {
     const finalDeadline = currentSupplier.parcelas[currentSupplier.parcelas.length - 1].dataVencimento;
 
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500 pb-20 print:p-0">
+      <div className="space-y-6 max-w-full mx-auto animate-in fade-in slide-in-from-left-4 duration-500 pb-20 print:p-0">
         <div className="flex items-center justify-between mb-4 print:hidden">
           <Button variant="outline" onClick={() => navigate('/fornecedores')}>
             <ChevronLeft size={18} />
@@ -301,7 +302,7 @@ export function MainApp() {
             {(currentSupplier.regraPagamento || currentSupplier.observacoes) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {currentSupplier.regraPagamento && (
-                   <Card className="border-none shadow-lg bg-card p-6 border-l-4 border-primary">
+                  <Card className="border-none shadow-lg bg-card p-6 border-l-4 border-primary">
                     <div className="flex items-center gap-2 mb-3 text-primary">
                       <DollarSign size={18} />
                       <h4 className="font-extrabold text-sm uppercase tracking-wider">Regra de Pagamento</h4>
@@ -500,10 +501,15 @@ export function MainApp() {
         isDark={isDark}
         toggleTheme={toggleTheme}
         userRole={data.role}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      <main className="flex-1 lg:ml-72 min-h-screen pb-24 lg:pb-10">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10">
+      <main className={cn(
+        "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500",
+        isSidebarCollapsed ? "lg:ml-24" : "lg:ml-72"
+      )}>
+        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10">
           <Header title={getPageTitle()} />
 
           <Routes>
@@ -528,7 +534,7 @@ export function MainApp() {
                 <Dashboard stats={stats} onAction={handleDashboardAction} />
               </div>
             } />
-            
+
             <Route path="fornecedores" element={
               <SuppliersList
                 suppliers={data.fornecedores}
@@ -541,7 +547,7 @@ export function MainApp() {
             <Route path="fornecedores/:id" element={<SupplierDetailsWrapper />} />
 
             <Route path="financeiro" element={<FinancialView suppliers={data.fornecedores} />} />
-            
+
             <Route path="convidados" element={
               <GuestsList
                 guests={data.convidados || []}
@@ -567,7 +573,7 @@ export function MainApp() {
                 suppliers={data.fornecedores}
                 weddingDate={data.casal.data}
                 simulation={data.simulation}
-                onUpdateSimulation={() => {}}
+                onUpdateSimulation={() => { }}
               />
             } />
 
