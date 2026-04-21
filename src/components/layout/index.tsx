@@ -90,23 +90,26 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
       {/* Collapse Toggle Button */}
       <button 
         onClick={onToggleCollapse}
-        className="absolute -right-3 top-24 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 hover:scale-110 transition-all z-[60]"
+        className="absolute -right-3 top-24 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 hover:scale-110 transition-all duration-500 ease-in-out z-[60]"
       >
-        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        <div className={cn("transition-transform duration-500", isCollapsed ? "rotate-0" : "rotate-0")}>
+          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </div>
       </button>
 
       <div className={cn(
-        "flex items-center gap-3 mb-10 px-2 group cursor-pointer overflow-hidden transition-all duration-500",
+        "flex items-center gap-3 mb-10 px-2 group cursor-pointer overflow-hidden",
         isCollapsed ? "justify-center" : "justify-start"
       )} onClick={() => navigate('/dashboard')}>
-        <div className="w-12 h-12 rounded-2xl bg-white shrink-0 overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-500">
+        <div className="w-12 h-12 rounded-2xl bg-white shrink-0 overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-700 ease-in-out">
           <img src="/logo-wedplan.png" alt="WedPlan Logo" className="w-full h-full object-cover" />
         </div>
-        {!isCollapsed && (
-          <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-            <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Wed<br/><span className="text-primary not-italic">Plan</span></h1>
-          </div>
-        )}
+        <div className={cn(
+          "transition-all duration-500 ease-in-out",
+          isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-10" : "w-auto opacity-100 translate-x-0"
+        )}>
+          <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Wed<br/><span className="text-primary not-italic">Plan</span></h1>
+        </div>
       </div>
 
       <nav className="flex-1 space-y-2">
@@ -126,12 +129,18 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
           >
             {({ isActive }) => (
               <>
-                <item.icon size={22} className={cn("shrink-0 transition-all", isActive ? "text-white" : "group-hover:text-primary")} />
-                {!isCollapsed && (
-                  <span className="font-semibold tracking-wide whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">{item.label}</span>
-                )}
-                {isActive && !isCollapsed && (
-                  <div className="absolute right-2 w-1.5 h-6 rounded-full bg-white/50" />
+                <item.icon size={22} className={cn("shrink-0 transition-all duration-500 ease-in-out", isActive ? "text-white" : "group-hover:text-primary")} />
+                <span className={cn(
+                  "font-semibold tracking-wide whitespace-nowrap transition-all duration-500 ease-in-out",
+                  isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0 ml-4"
+                )}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <div className={cn(
+                    "absolute right-2 w-1.5 h-6 rounded-full bg-white/50 transition-all duration-500",
+                    isCollapsed ? "opacity-0 scale-0" : "opacity-100 scale-100"
+                  )} />
                 )}
               </>
             )}
@@ -144,24 +153,34 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
           onClick={toggleTheme}
           data-tooltip={isCollapsed ? (isDark ? "Modo Claro" : "Modo Escuro") : undefined}
           className={cn(
-            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all",
+            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all duration-500 ease-in-out relative",
             isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
           )}
         >
-          <div className="shrink-0">{isDark ? <Sun size={20} /> : <Moon size={20} />}</div>
-          {!isCollapsed && <span className="font-medium whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">{isDark ? "Modo Claro" : "Modo Escuro"}</span>}
+          <div className="shrink-0 transition-transform duration-500">{isDark ? <Sun size={20} /> : <Moon size={20} />}</div>
+          <span className={cn(
+            "font-medium whitespace-nowrap transition-all duration-500 ease-in-out",
+            isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0"
+          )}>
+            {isDark ? "Modo Claro" : "Modo Escuro"}
+          </span>
         </button>
         
         <button 
           onClick={handleSignOut}
           data-tooltip={isCollapsed ? "Sair" : undefined}
           className={cn(
-            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
+            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-500 ease-in-out relative",
             isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
           )}
         >
-          <div className="shrink-0"><LogOut size={20} /></div>
-          {!isCollapsed && <span className="font-medium whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">Sair</span>}
+          <div className="shrink-0 transition-transform duration-500"><LogOut size={20} /></div>
+          <span className={cn(
+            "font-medium whitespace-nowrap transition-all duration-500 ease-in-out",
+            isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0"
+          )}>
+            Sair
+          </span>
         </button>
       </div>
     </div>

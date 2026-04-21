@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import confetti from 'canvas-confetti';
 import { Sidebar, Header, BottomNav } from './layout/index';
@@ -48,7 +48,7 @@ export function MainApp() {
     addTask, updateTask, deleteTask,
     updateConfig, updateWeddingInfo, reorderSuppliers
   } = useWeddingData();
-  const { user, resetPassword } = useAuth();
+  const { user, resetPassword, signOut } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,6 +66,25 @@ export function MainApp() {
   const toggleTheme = () => {
     updateConfig({ tema: isDark ? 'light' : 'dark' });
   };
+
+  // Sincronizar tema com a classe HTML
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
+
+  // Logout automático se o usuário for removido do banco ou sessão estiver órfã
+  useEffect(() => {
+    // Se terminou de carregar, o usuário está autenticado mas não temos ID de casamento vinculado
+    // Isso indica que o registro no banco foi removido mas a sessão auth ainda existe.
+    if (!loading && user && !data.id) {
+      console.warn('Sessão órfã detectada. Realizando logout automático...');
+      signOut().then(() => navigate('/login'));
+    }
+  }, [loading, user, data.id, signOut, navigate]);
 
   const handleSyncData = async () => {
     if (!user) return;
@@ -506,7 +525,7 @@ export function MainApp() {
       />
 
       <main className={cn(
-        "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500",
+        "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",
         isSidebarCollapsed ? "lg:ml-24" : "lg:ml-72"
       )}>
         <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10">

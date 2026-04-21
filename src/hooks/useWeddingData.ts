@@ -23,16 +23,24 @@ export const useWeddingData = () => {
         .eq('id', userId)
         .maybeSingle();
 
-      // Se não houver perfil, criar um padrão
+      // Se não houver perfil, decidir se cria (novo usuário) ou sai (usuário deletado)
       if (!profile) {
-        console.log('Criando perfil inicial...');
-        const { data: newProfile, error: pError } = await supabase
-          .from('profiles')
-          .upsert({ id: userId, role: 'couple' })
-          .select()
-          .single();
-        if (pError) throw pError;
-        profile = newProfile;
+        const createdAt = new Date(user.created_at || '');
+        const isNewUser = (new Date().getTime() - createdAt.getTime()) < 5 * 60 * 1000; // 5 minutos
+
+        if (isNewUser) {
+          console.log('Criando perfil inicial para novo usuário...');
+          const { data: newProfile, error: pError } = await supabase
+            .from('profiles')
+            .upsert({ id: userId, role: 'couple' })
+            .select()
+            .single();
+          if (pError) throw pError;
+          profile = newProfile;
+        } else {
+          console.warn('Perfil não encontrado para usuário antigo. Possível deleção de conta.');
+          return null; // Retorna null para indicar que não há vínculo válido
+        }
       }
 
       // 2. Se já tem wedding_id vinculado, retorna ele
@@ -97,6 +105,12 @@ export const useWeddingData = () => {
     try {
       const weddingId = await ensureWeddingExists(user.id);
       
+      if (!weddingId) {
+        setData(INITIAL_DATA);
+        setLoading(false);
+        return;
+      }
+
       const { data: wedding, error: weddingError } = await supabase
         .from('weddings')
         .select('*')
@@ -175,6 +189,7 @@ export const useWeddingData = () => {
       setData(transformedData);
     } catch (error) {
       console.error('Falha ao carregar dados do Supabase:', error);
+      setData(INITIAL_DATA);
     } finally {
       setLoading(false);
     }
