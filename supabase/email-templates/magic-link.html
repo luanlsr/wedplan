@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Rápido - Eternal Planner</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FDFBF7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #4A4A4A;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FDFBF7; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="100%" maxWidth="600" style="max-width: 600px; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 45px rgba(74, 93, 78, 0.08);">
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" style="padding: 40px 40px 20px 40px;">
+                            <div style="background-color: #4A5D4E; color: #FDFBF7; padding: 12px 24px; border-radius: 12px; display: inline-block; font-weight: 900; font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase;">
+                                Eternal Planner
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px;">
+                            <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 800; color: #1A1A1A; text-align: center;">Seu Link de Acesso</h2>
+                            <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.7; color: #555555; text-align: center;">
+                                Clique no botão abaixo para entrar na sua conta instantaneamente. Simples assim!
+                            </p>
+                            
+                            <!-- Action Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 20px 40px; background-color: #4A5D4E; color: #ffffff; text-decoration: none; border-radius: 16px; font-weight: 800; font-size: 16px; letter-spacing: 0.02em; box-shadow: 0 10px 25px rgba(74, 93, 78, 0.2);">
+                                            ENTRAR AGORA
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <div style="margin-top: 40px; padding: 20px; border-radius: 16px; background-color: #f9faf9; border: 1px solid #eeeeee;">
+                                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #888888; text-align: center;">
+                                    Este link expira em breve por segurança. Se preferir, use o link direto:<br>
+                                    <a href="{{ .ConfirmationURL }}" style="color: #4A5D4E; word-break: break-all; font-weight: 600;">{{ .ConfirmationURL }}</a>
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px 40px; background-color: #FDFBF7; border-top: 1px solid #eeeeee;">
+                            <p style="margin: 0; font-size: 12px; color: #999999; text-align: center; line-height: 1.8;">
+                                <strong>Eternal Planner</strong> - A tecnologia a favor do seu casamento.<br>
+                                <span style="font-weight: normal; opacity: 0.7;">Organize fornecedores, convidados e tarefas em um só lugar.</span>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

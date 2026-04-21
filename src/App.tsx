@@ -6,7 +6,9 @@ import { SignUpForm } from './components/auth/SignUpForm';
 import { ForgotPassword } from './components/auth/ForgotPassword';
 import { ResetPassword } from './components/auth/ResetPassword';
 import { LandingPage } from './components/layout/LandingPage';
+import { NotFound } from './components/layout/NotFound';
 import { Loader2 } from 'lucide-react';
+import { ConfirmProvider } from './components/ui';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -59,12 +61,27 @@ function AuthRoutes() {
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+function AppRoutes() {
+  const navigate = useNavigate();
+
+  return (
+    <Routes>
+      <Route path="/dashboard/*" element={
+        <ProtectedRoute>
+          <MainApp />
+        </ProtectedRoute>
+      } />
       <Route path="/reset-password" element={
         <ResetPassword 
           onSuccess={() => navigate('/login')}
         />
       } />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/*" element={<AuthRoutes />} />
     </Routes>
   );
 }
@@ -72,16 +89,11 @@ function AuthRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/dashboard/*" element={
-            <ProtectedRoute>
-              <MainApp />
-            </ProtectedRoute>
-          } />
-          <Route path="/*" element={<AuthRoutes />} />
-        </Routes>
-      </Router>
+      <ConfirmProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </ConfirmProvider>
     </AuthProvider>
   );
 }

@@ -3,6 +3,8 @@ import type { Guest } from "../../types";
 import { Card, Button, Input } from "../ui";
 import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus } from "lucide-react";
 
+import { maskPhone } from "../../utils/masks";
+
 interface AddGuestModalProps {
   onClose: () => void;
   onAdd: (guest: Omit<Guest, 'id'>) => void;
@@ -149,7 +151,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                   placeholder="(11) 99999-9999" 
                   className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.telefone}
-                  onChange={e => setFormData({...formData, telefone: e.target.value})}
+                  onChange={e => setFormData({...formData, telefone: maskPhone(e.target.value)})}
                 />
               </div>
             </div>

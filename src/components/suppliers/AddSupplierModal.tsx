@@ -3,6 +3,7 @@ import type { Supplier, PaymentType } from "../../types";
 import { Card, Button, Input } from "../ui";
 import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock } from "lucide-react";
 import { generateInstallments, formatCurrency } from "../../utils/calculations";
+import { maskCurrency, unmaskCurrency } from "../../utils/masks";
 
 interface SupplierModalProps {
   onClose: () => void;
@@ -37,11 +38,11 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
         fornecedor: editSupplier.fornecedor,
         servico: editSupplier.servico,
         categoria: editSupplier.categoria,
-        valorTotal: editSupplier.valorTotal.toString(),
+        valorTotal: maskCurrency(editSupplier.valorTotal),
         tipoPagamento: editSupplier.tipoPagamento,
         numParcelas: editSupplier.parcelas.length.toString(),
         entryPercentage: "30",
-        entryValue: "",
+        entryValue: editSupplier.valorEntrada ? maskCurrency(editSupplier.valorEntrada) : "",
         entryInInstallments: "1",
         dataContrato: editSupplier.dataContrato,
         finalPaymentDaysBeforeWedding: editSupplier.diasPagamentoFinalAntesCasamento?.toString() || "15",
@@ -59,7 +60,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
 
   // Helper to sync % and Value
   const handleEntryPercentageChange = (value: string) => {
-    const total = parseFloat(formData.valorTotal) || 0;
+    const total = unmaskCurrency(formData.valorTotal) || 0;
     const percentage = parseFloat(value) || 0;
     
     // Calculate entry value but don't force too many decimals if not needed
@@ -68,26 +69,27 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     setFormData(prev => ({
       ...prev,
       entryPercentage: value,
-      entryValue: value === "" ? "" : (Math.round(entryVal * 100) / 100).toString()
+      entryValue: value === "" ? "" : maskCurrency(entryVal)
     }));
   };
 
   const handleEntryValueChange = (value: string) => {
-    const total = parseFloat(formData.valorTotal) || 0;
-    const entryVal = parseFloat(value) || 0;
+    const total = unmaskCurrency(formData.valorTotal) || 0;
+    const maskedValue = maskCurrency(value);
+    const entryVal = unmaskCurrency(maskedValue) || 0;
     
     // Calculate percentage with higher precision (2 decimals)
     const percentage = total > 0 ? (entryVal / total) * 100 : 0;
     
     setFormData(prev => ({
       ...prev,
-      entryValue: value,
+      entryValue: maskedValue,
       entryPercentage: value === "" ? "" : (Math.round(percentage * 100) / 100).toString()
     }));
   };
 
   const preview = useMemo(() => {
-    const total = parseFloat(formData.valorTotal) || 0;
+    const total = unmaskCurrency(formData.valorTotal) || 0;
     if (total <= 0) return null;
 
     if (formData.tipoPagamento === "parcelado_fixo") {
@@ -98,7 +100,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     }
 
     if (formData.tipoPagamento === "entrada_parcelas" || formData.tipoPagamento === "entrada_quitacao") {
-      const entryTotal = parseFloat(formData.entryValue) || (total * (parseFloat(formData.entryPercentage) || 0)) / 100;
+      const entryTotal = unmaskCurrency(formData.entryValue) || (total * (parseFloat(formData.entryPercentage) || 0)) / 100;
       const entryNum = parseInt(formData.entryInInstallments) || 1;
       const remainingTotal = total - entryTotal;
       const remainingNum = formData.tipoPagamento === "entrada_parcelas" ? (parseInt(formData.numParcelas) || 1) : 1;
@@ -119,7 +121,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const total = parseFloat(formData.valorTotal);
+    const total = unmaskCurrency(formData.valorTotal);
     
     const config: any = {
       startDate: formData.dataContrato,
@@ -129,7 +131,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     if (formData.tipoPagamento === "parcelado_fixo") {
       config.numInstallments = parseInt(formData.numParcelas);
     } else if (formData.tipoPagamento === "entrada_parcelas" || formData.tipoPagamento === "entrada_quitacao") {
-      config.entryValue = parseFloat(formData.entryValue);
+      config.entryValue = unmaskCurrency(formData.entryValue);
       config.entryPercentage = parseFloat(formData.entryPercentage);
       config.entryInInstallments = parseInt(formData.entryInInstallments);
       config.numInstallments = parseInt(formData.numParcelas);
@@ -150,7 +152,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
       observacoes: formData.observacoes,
       regraPagamento: formData.regraPagamento,
       numeroParcelas: parseInt(formData.numParcelas),
-      valorEntrada: parseFloat(formData.entryValue) || 0,
+      valorEntrada: unmaskCurrency(formData.entryValue) || 0,
       porcentagemEntrada: parseFloat(formData.entryPercentage) || 0,
       entradaEmParcelas: parseInt(formData.entryInInstallments) || 1,
       diasPagamentoFinalAntesCasamento: parseInt(formData.finalPaymentDaysBeforeWedding) || 15
@@ -234,22 +236,21 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
               <div className="relative">
                 <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <Input 
-                  type="number"
+                  type="text"
                   required
-                  step="0.01"
                   placeholder="0,00" 
                   className="pl-12 font-bold bg-secondary/50 border-none focus:bg-card transition-all"
                   value={formData.valorTotal}
                   onChange={e => {
-                    const newVal = (e.target as HTMLInputElement).value;
-                    const total = parseFloat(newVal) || 0;
+                    const maskedValue = maskCurrency(e.target.value);
+                    const total = unmaskCurrency(maskedValue) || 0;
                     const percentage = parseFloat(formData.entryPercentage) || 0;
                     const newEntryVal = (total * percentage) / 100;
                     
                     setFormData(prev => ({
                       ...prev, 
-                      valorTotal: newVal,
-                      entryValue: total > 0 && percentage > 0 ? (Math.round(newEntryVal * 100) / 100).toString() : prev.entryValue
+                      valorTotal: maskedValue,
+                      entryValue: total > 0 && percentage > 0 ? maskCurrency(newEntryVal) : prev.entryValue
                     }));
                   }}
                 />
@@ -307,12 +308,11 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                   <div className="relative">
                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                     <Input 
-                      type="number"
-                      step="0.01"
+                      type="text"
                       placeholder="Valor fixo"
                       className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
                       value={formData.entryValue}
-                      onChange={e => handleEntryValueChange((e.target as HTMLInputElement).value)}
+                      onChange={e => handleEntryValueChange(e.target.value)}
                     />
                   </div>
                 </div>

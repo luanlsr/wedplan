@@ -251,9 +251,15 @@ export const useWeddingData = () => {
       }
 
       console.log('Supplier and installments saved to Supabase.');
-      loadData();
+      // Update local state without full reload
+      const newSupplier = { ...supplier, id: sData.id } as Supplier;
+      setData(prev => ({
+        ...prev,
+        fornecedores: [...prev.fornecedores, newSupplier]
+      }));
     } catch (err) {
       console.error('Failed to add supplier:', err);
+      loadData();
     }
   };
 
@@ -268,6 +274,12 @@ export const useWeddingData = () => {
     }
 
     try {
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        fornecedores: prev.fornecedores.map(s => s.id === id ? { ...s, ...updated } : s)
+      }));
+
       const payload: any = {};
       if (updated.fornecedor) payload.name = updated.fornecedor;
       if (updated.servico) payload.service = updated.servico;
@@ -283,9 +295,9 @@ export const useWeddingData = () => {
       const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
       if (error) throw error;
       console.log('Supplier updated in Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to update supplier:', err);
+      loadData();
     }
   };
 
@@ -297,12 +309,18 @@ export const useWeddingData = () => {
     }
 
     try {
+      // Optimistic delete
+      setData(prev => ({ 
+        ...prev, 
+        fornecedores: prev.fornecedores.filter(s => s.id !== id) 
+      }));
+
       const { error } = await supabase.from('suppliers').delete().eq('id', id);
       if (error) throw error;
       console.log('Supplier deleted from Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to delete supplier:', err);
+      loadData();
     }
   };
 
@@ -323,6 +341,18 @@ export const useWeddingData = () => {
     }
 
     try {
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        fornecedores: prev.fornecedores.map(s => {
+          if (s.id !== supplierId) return s;
+          return {
+            ...s,
+            parcelas: s.parcelas.map(p => p.id === installmentId ? { ...p, ...updated } : p)
+          };
+        })
+      }));
+
       const payload: any = {};
       if (updated.status) payload.status = updated.status;
       if (updated.dataPagamento !== undefined) payload.payment_date = updated.dataPagamento;
@@ -332,9 +362,9 @@ export const useWeddingData = () => {
       const { error } = await supabase.from('installments').update(payload).eq('id', installmentId);
       if (error) throw error;
       console.log('Installment updated in Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to update installment:', err);
+      loadData();
     }
   };
 
@@ -348,7 +378,7 @@ export const useWeddingData = () => {
     }
 
     try {
-      const { error } = await supabase.from('guests').insert({
+      const { data: nGuest, error } = await supabase.from('guests').insert({
         wedding_id: data.id,
         name: guest.nome,
         category: guest.categoria,
@@ -357,12 +387,19 @@ export const useWeddingData = () => {
         children_count: guest.criancas,
         phone: guest.telefone,
         notes: guest.observacoes
-      });
+      }).select().single();
+
       if (error) throw error;
       console.log('Guest saved to Supabase.');
-      loadData();
+      
+      const newGuest = { ...guest, id: nGuest.id } as Guest;
+      setData(prev => ({ 
+        ...prev, 
+        convidados: [...(prev.convidados || []), newGuest] 
+      }));
     } catch (err) {
       console.error('Failed to add guest:', err);
+      loadData();
     }
   };
 
@@ -375,8 +412,13 @@ export const useWeddingData = () => {
       }));
       return;
     }
-
     try {
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        convidados: (prev.convidados || []).map(g => g.id === id ? { ...g, ...updated } : g)
+      }));
+
       const payload: any = {};
       if (updated.nome) payload.name = updated.nome;
       if (updated.categoria) payload.category = updated.categoria;
@@ -389,9 +431,9 @@ export const useWeddingData = () => {
       const { error } = await supabase.from('guests').update(payload).eq('id', id);
       if (error) throw error;
       console.log('Guest updated in Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to update guest:', err);
+      loadData();
     }
   };
 
@@ -403,12 +445,18 @@ export const useWeddingData = () => {
     }
 
     try {
+      // Optimistic delete
+      setData(prev => ({ 
+        ...prev, 
+        convidados: (prev.convidados || []).filter(g => g.id !== id) 
+      }));
+
       const { error } = await supabase.from('guests').delete().eq('id', id);
       if (error) throw error;
       console.log('Guest deleted from Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to delete guest:', err);
+      loadData();
     }
   };
 
@@ -422,7 +470,7 @@ export const useWeddingData = () => {
     }
 
     try {
-      const { error } = await supabase.from('tasks').insert({
+      const { data: nTask, error } = await supabase.from('tasks').insert({
         wedding_id: data.id,
         title: task.titulo,
         description: task.descricao,
@@ -430,12 +478,19 @@ export const useWeddingData = () => {
         due_date: task.dataLimite,
         status: task.status,
         order_index: task.ordem || 0
-      });
+      }).select().single();
+
       if (error) throw error;
       console.log('Task saved to Supabase.');
-      loadData();
+      
+      const newTask = { ...task, id: nTask.id } as Task;
+      setData(prev => ({ 
+        ...prev, 
+        tarefas: [...(prev.tarefas || []), newTask] 
+      }));
     } catch (err) {
       console.error('Failed to add task:', err);
+      loadData();
     }
   };
 
@@ -450,6 +505,12 @@ export const useWeddingData = () => {
     }
 
     try {
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        tarefas: (prev.tarefas || []).map(t => t.id === id ? { ...t, ...updated } : t)
+      }));
+
       const payload: any = {};
       if (updated.titulo) payload.title = updated.titulo;
       if (updated.descricao !== undefined) payload.description = updated.descricao;
@@ -461,9 +522,9 @@ export const useWeddingData = () => {
       const { error } = await supabase.from('tasks').update(payload).eq('id', id);
       if (error) throw error;
       console.log('Task updated in Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to update task:', err);
+      loadData();
     }
   };
 
@@ -475,12 +536,18 @@ export const useWeddingData = () => {
     }
 
     try {
+      // Optimistic delete
+      setData(prev => ({ 
+        ...prev, 
+        tarefas: (prev.tarefas || []).filter(t => t.id !== id) 
+      }));
+
       const { error } = await supabase.from('tasks').delete().eq('id', id);
       if (error) throw error;
       console.log('Task deleted from Supabase.');
-      loadData();
     } catch (err) {
       console.error('Failed to delete task:', err);
+      loadData();
     }
   };
 

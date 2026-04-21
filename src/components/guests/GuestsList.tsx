@@ -1,5 +1,5 @@
 import { Users, UserPlus, Trash2, Edit2, Search } from 'lucide-react';
-import { Card, Button, Input, Badge } from '../ui';
+import { Card, Button, Input, Badge, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState } from 'react';
 
@@ -12,6 +12,7 @@ interface GuestsListProps {
 }
 
 export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: GuestsListProps) => {
+  const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
 
@@ -121,11 +122,18 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                   <Button variant="outline" className="h-10 w-10 p-0 text-primary border-primary/20" onClick={() => onEdit(guest)}>
                     <Edit2 size={16} />
                   </Button>
-                  <Button variant="outline" className="h-10 w-10 p-0 text-destructive border-destructive/20" onClick={() => {
-                     if(window.confirm('Excluir convidado?')) onDelete(guest.id);
-                  }}>
-                    <Trash2 size={16} />
-                  </Button>
+                    <Button variant="outline" className="h-10 w-10 p-0 text-destructive border-destructive/20" onClick={async () => {
+                       const isConfirmed = await confirm({
+                         title: "Excluir Convidado?",
+                         description: `Tem certeza que deseja remover este convidado da lista?`,
+                         type: "danger",
+                         confirmLabel: "Excluir",
+                         cancelLabel: "Cancelar"
+                       });
+                       if (isConfirmed) onDelete(guest.id);
+                    }}>
+                      <Trash2 size={16} />
+                    </Button>
                 </div>
               </div>
             </div>
@@ -180,8 +188,15 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                       <Button variant="ghost" className="h-8 w-8 p-0 text-primary" onClick={() => onEdit(guest)}>
                         <Edit2 size={14} />
                       </Button>
-                      <Button variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => {
-                         if(window.confirm('Excluir convidado?')) onDelete(guest.id);
+                      <Button variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={async () => {
+                         const isConfirmed = await confirm({
+                           title: "Excluir Convidado?",
+                           description: `Tem certeza que deseja remover "${guest.nome}"?`,
+                           type: "danger",
+                           confirmLabel: "Excluir",
+                           cancelLabel: "Cancelar"
+                         });
+                         if (isConfirmed) onDelete(guest.id);
                       }}>
                         <Trash2 size={14} />
                       </Button>

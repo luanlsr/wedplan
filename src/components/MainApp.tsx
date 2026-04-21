@@ -14,21 +14,23 @@ import { AddTaskModal } from './tasks/AddTaskModal';
 import { useWeddingData } from '../hooks/useWeddingData';
 import { calculateStats, formatCurrency, formatDate } from '../utils/calculations';
 import type { Supplier, Installment, Guest, Task } from '../types';
-import { Card, Button, Badge, Input } from './ui';
+import { Card, Button, Badge, Input, useConfirm } from './ui';
 import { ChevronLeft, CheckCircle2, Circle, Calendar, Printer, Download, Share2, Heart, DollarSign, FileText, Edit2, Clock, AlertTriangle, Info } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { parseISO, differenceInDays } from "date-fns";
+import { maskCurrency, unmaskCurrency } from '../utils/masks';
 
 export function MainApp() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { 
-    data, loading, 
-    addSupplier, updateSupplier, deleteSupplier, updateInstallment, 
+  const {
+    data, loading,
+    addSupplier, updateSupplier, deleteSupplier, updateInstallment,
     addGuest, updateGuest, deleteGuest,
     addTask, updateTask, deleteTask,
-    updateConfig, updateWeddingInfo, updateSimulation, reorderSuppliers 
+    updateConfig, updateWeddingInfo, updateSimulation, reorderSuppliers
   } = useWeddingData();
-  const { user } = useAuth();
+  const { user, resetPassword } = useAuth();
+  const { confirm, alert: customAlert } = useConfirm();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
@@ -53,10 +55,20 @@ export function MainApp() {
       const { migrateLocalStorageToSupabase } = await import('../services/migrationService');
       const result = await migrateLocalStorageToSupabase(user.id, data);
       if (result.success) {
-        alert('Dados sincronizados com sucesso! Recarregando...');
+        await customAlert({
+          title: "Sincronização Concluída",
+          description: "Dados sincronizados com sucesso na nuvem! O aplicativo será recarregado.",
+          type: "success",
+          confirmLabel: "OK",
+        });
         window.location.reload();
       } else {
-        alert('Erro ao sincronizar. Verifique o console.');
+        await customAlert({
+          title: "Erro na Sincronização",
+          description: "Ocorreu um erro ao sincronizar os dados. Tente novamente mais tarde.",
+          type: "danger",
+          confirmLabel: "Entendido",
+        });
       }
     } catch (e) {
       console.error(e);
@@ -133,17 +145,17 @@ export function MainApp() {
       if (supplier) {
         const remaining = supplier.parcelas.filter(inst => inst.status !== 'pago' && inst.id !== p.id);
         if (remaining.length === 0) {
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3');
-            audio.volume = 0.5;
-            audio.play().catch(e => console.log("Audio play blocked", e));
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3');
+          audio.volume = 0.5;
+          audio.play().catch(e => console.log("Audio play blocked", e));
 
-            confetti({
-              particleCount: 150,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#ffffff'],
-              scalar: 1.2
-            });
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#ffffff'],
+            scalar: 1.2
+          });
         }
       }
     }
@@ -198,6 +210,7 @@ export function MainApp() {
 
     if (currentSupplier) {
       const finalDeadline = currentSupplier.parcelas[currentSupplier.parcelas.length - 1].dataVencimento;
+
       return (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500 pb-20 print:p-0">
           <div className="flex items-center justify-between mb-4 print:hidden">
@@ -225,8 +238,8 @@ export function MainApp() {
                   <div className="text-right">
                     <p className="text-sm font-bold text-muted-foreground uppercase mb-1">Limite de Quitação</p>
                     <div className="flex items-center gap-2 justify-end text-amber-500 font-black text-xl print:text-lg">
-                       <Clock size={20} />
-                       {formatDate(finalDeadline)}
+                      <Clock size={20} />
+                      {formatDate(finalDeadline)}
                     </div>
                   </div>
                 </div>
@@ -243,9 +256,9 @@ export function MainApp() {
                   <div>
                     <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Status Global</p>
                     <div>
-                       {currentSupplier.status === 'pago' ? <Badge variant="success">Liquidado</Badge> : 
+                      {currentSupplier.status === 'pago' ? <Badge variant="success">Liquidado</Badge> :
                         currentSupplier.status === 'parcial' ? <Badge variant="warning" className="bg-amber-500/10 text-amber-500">Parcial</Badge> :
-                        <Badge variant="default" className="bg-slate-500/10 text-slate-500">Pendente</Badge>}
+                          <Badge variant="default" className="bg-slate-500/10 text-slate-500">Pendente</Badge>}
                     </div>
                   </div>
                 </div>
@@ -282,8 +295,8 @@ export function MainApp() {
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-2xl font-black text-foreground print:text-xl">Cronograma de Pagamentos</h3>
                   <div className="flex gap-2 print:hidden">
-                    <Button variant="outline" className="h-10 text-sm" onClick={handlePrint}><Printer size={16}/> Imprimir</Button>
-                    <Button variant="outline" className="h-10 text-sm" onClick={() => handleExportCSV(currentSupplier)}><Download size={16}/> Exportar</Button>
+                    <Button variant="outline" className="h-10 text-sm" onClick={handlePrint}><Printer size={16} /> Imprimir</Button>
+                    <Button variant="outline" className="h-10 text-sm" onClick={() => handleExportCSV(currentSupplier)}><Download size={16} /> Exportar</Button>
                   </div>
                 </div>
 
@@ -291,8 +304,8 @@ export function MainApp() {
                   {currentSupplier.parcelas.map((p) => {
                     const isEditing = editingInstallmentId === p.id;
                     return (
-                      <div 
-                        key={p.id} 
+                      <div
+                        key={p.id}
                         className={cn(
                           "flex flex-col p-5 rounded-2xl border-2 transition-all duration-300",
                           p.status === 'pago' ? "bg-green-500/10 border-green-500/20" : "bg-card border-border hover:border-primary/5"
@@ -300,7 +313,7 @@ export function MainApp() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-5">
-                            <button 
+                            <button
                               onClick={() => handleToggleStatus(currentSupplier.id, p)}
                               className={cn(
                                 "w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-sm",
@@ -325,55 +338,55 @@ export function MainApp() {
                           </div>
 
                           <div className="flex items-center gap-4">
-                             <div className="text-right">
-                               <p className={cn("text-xl font-black font-mono", p.status === 'pago' ? "text-green-600" : "text-foreground")}>
-                                 {formatCurrency(p.valor)}
-                               </p>
-                             </div>
-                             <button 
-                                onClick={() => setEditingInstallmentId(isEditing ? null : p.id)}
-                                className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-primary"
-                             >
-                               <Edit2 size={16} />
-                             </button>
+                            <div className="text-right">
+                              <p className={cn("text-xl font-black font-mono", p.status === 'pago' ? "text-green-600" : "text-foreground")}>
+                                {formatCurrency(p.valor)}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setEditingInstallmentId(isEditing ? null : p.id)}
+                              className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                            >
+                              <Edit2 size={16} />
+                            </button>
                           </div>
                         </div>
 
                         {isEditing && (
                           <div className="mt-6 pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-300">
-                             <div className="space-y-1">
-                               <label className="text-[10px] font-bold uppercase text-muted-foreground">Valor da Parcela</label>
-                               <div className="relative">
-                                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                                 <Input 
-                                   type="number" 
-                                   className="pl-8 h-10 text-sm" 
-                                   value={p.valor}
-                                   onChange={(e) => updateInstallment(currentSupplier.id, p.id, { valor: parseFloat(e.target.value) })}
-                                 />
-                               </div>
-                             </div>
-                             <div className="space-y-1">
-                               <label className="text-[10px] font-bold uppercase text-muted-foreground">Vencimento</label>
-                               <Input 
-                                 type="date" 
-                                 className="h-10 text-sm" 
-                                 value={p.dataVencimento}
-                                 onChange={(e) => updateInstallment(currentSupplier.id, p.id, { dataVencimento: e.target.value })}
-                               />
-                             </div>
-                             <div className="space-y-1">
-                               <label className="text-[10px] font-bold uppercase text-muted-foreground">Data do Pagamento</label>
-                               <Input 
-                                 type="date" 
-                                 className="h-10 text-sm border-primary/20 bg-primary/5" 
-                                 value={p.dataPagamento || ""}
-                                 onChange={(e) => updateInstallment(currentSupplier.id, p.id, { 
-                                   dataPagamento: e.target.value,
-                                   status: e.target.value ? "pago" : "pendente"
-                                 })}
-                               />
-                             </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Valor da Parcela</label>
+                              <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                                <Input
+                                  type="text"
+                                  className="pl-8 h-10 text-sm font-bold"
+                                  value={maskCurrency(p.valor)}
+                                  onChange={(e) => updateInstallment(currentSupplier.id, p.id, { valor: unmaskCurrency(e.target.value) })}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Vencimento</label>
+                              <Input
+                                type="date"
+                                className="h-10 text-sm"
+                                value={p.dataVencimento}
+                                onChange={(e) => updateInstallment(currentSupplier.id, p.id, { dataVencimento: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Data do Pagamento</label>
+                              <Input
+                                type="date"
+                                className="h-10 text-sm border-primary/20 bg-primary/5"
+                                value={p.dataPagamento || ""}
+                                onChange={(e) => updateInstallment(currentSupplier.id, p.id, {
+                                  dataPagamento: e.target.value,
+                                  status: e.target.value ? "pago" : "pendente"
+                                })}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -384,48 +397,55 @@ export function MainApp() {
             </div>
 
             <div className="w-full lg:w-96 space-y-6">
-               <Card className="bg-primary text-white border-none shadow-2xl p-8 overflow-hidden relative">
-                  <Heart className="absolute -right-4 -bottom-4 text-white/10" size={160} />
-                  <h3 className="text-xl font-bold mb-6 relative z-10">Resumo Financeiro</h3>
-                  <div className="space-y-6 relative z-10">
-                    <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                      <span className="text-white/80 font-medium">Contratado</span>
-                      <span className="font-black text-lg font-mono">{formatCurrency(currentSupplier.valorTotal)}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                      <span className="text-white/80 font-medium">Total Pago</span>
-                      <span className="font-black text-lg font-mono text-green-300">
-                        {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pago' ? acc + p.valor : acc, 0))}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-white/80 font-medium">Pendente</span>
-                      <span className="font-black text-xl font-mono">
-                        {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pendente' ? acc + p.valor : acc, 0))}
-                      </span>
-                    </div>
+              <Card className="bg-primary text-white border-none shadow-2xl p-8 overflow-hidden relative">
+                <Heart className="absolute -right-4 -bottom-4 text-white/10" size={160} />
+                <h3 className="text-xl font-bold mb-6 relative z-10">Resumo Financeiro</h3>
+                <div className="space-y-6 relative z-10">
+                  <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                    <span className="text-white/80 font-medium">Contratado</span>
+                    <span className="font-black text-lg font-mono">{formatCurrency(currentSupplier.valorTotal)}</span>
                   </div>
-               </Card>
+                  <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                    <span className="text-white/80 font-medium">Total Pago</span>
+                    <span className="font-black text-lg font-mono text-green-300">
+                      {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pago' ? acc + p.valor : acc, 0))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/80 font-medium">Pendente</span>
+                    <span className="font-black text-xl font-mono">
+                      {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pendente' ? acc + p.valor : acc, 0))}
+                    </span>
+                  </div>
+                </div>
+              </Card>
 
-               <Card className="border-none shadow-xl bg-card p-6">
-                 <h4 className="font-bold mb-4">Ações do Fornecedor</h4>
-                 <div className="space-y-3">
-                   <Button variant="outline" className="w-full justify-start font-bold h-12">
-                     <FileText size={18} /> Ver Contrato
-                   </Button>
-                   <Button variant="outline" className="w-full justify-start font-bold h-12">
-                     <Share2 size={18} /> Compartilhar Dados
-                   </Button>
-                   <Button variant="destructive" className="w-full justify-start font-bold h-12" onClick={() => {
-                     if(window.confirm('Excluir fornecedor? Isso removerá todos os dados e parcelas associadas.')) {
-                       deleteSupplier(currentSupplier.id);
-                       setSelectedSupplier(null);
-                     }
-                   }}>
-                     Remover Fornecedor
-                   </Button>
-                 </div>
-               </Card>
+              <Card className="border-none shadow-xl bg-card p-6">
+                <h4 className="font-bold mb-4">Ações do Fornecedor</h4>
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start font-bold h-12">
+                    <FileText size={18} /> Ver Contrato
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start font-bold h-12">
+                    <Share2 size={18} /> Compartilhar Dados
+                  </Button>
+                  <Button variant="destructive" className="w-full justify-start font-bold h-12" onClick={async () => {
+                    const isConfirmed = await confirm({
+                      title: "Excluir Fornecedor?",
+                      description: `Tem certeza que deseja excluir "${currentSupplier.fornecedor}"? Isso removerá todos os dados e parcelas associadas permanentemente.`,
+                      type: "danger",
+                      confirmLabel: "Sim, Excluir",
+                      cancelLabel: "Cancelar",
+                    });
+                    if (isConfirmed) {
+                      deleteSupplier(currentSupplier.id);
+                      setSelectedSupplier(null);
+                    }
+                  }}>
+                    Remover Fornecedor
+                  </Button>
+                </div>
+              </Card>
             </div>
           </div>
         </div>
@@ -436,29 +456,29 @@ export function MainApp() {
       case 'dashboard':
         return (
           <div className="space-y-6">
-             {notifications.length > 0 && (
-               <div className="space-y-3">
-                 {notifications.map((n, i) => (
-                   <div key={i} className={cn(
-                     "flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-top-4 duration-500",
-                     n.type === 'warning' ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
-                   )}>
-                     <AlertTriangle size={20} />
-                     <div className="flex-1">
-                        <span className="font-black uppercase text-[10px] block leading-none mb-1">Alerta de Quitação</span>
-                        <p className="text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             )}
-             <Dashboard stats={stats} onAction={handleDashboardAction} />
+            {notifications.length > 0 && (
+              <div className="space-y-3">
+                {notifications.map((n, i) => (
+                  <div key={i} className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-top-4 duration-500",
+                    n.type === 'warning' ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
+                  )}>
+                    <AlertTriangle size={20} />
+                    <div className="flex-1">
+                      <span className="font-black uppercase text-[10px] block leading-none mb-1">Alerta de Quitação</span>
+                      <p className="text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Dashboard stats={stats} onAction={handleDashboardAction} />
           </div>
         );
       case 'suppliers':
         return (
-          <SuppliersList 
-            suppliers={data.fornecedores} 
+          <SuppliersList
+            suppliers={data.fornecedores}
             onAdd={() => setIsModalOpen(true)}
             onSelect={setSelectedSupplier}
             onReorder={reorderSuppliers}
@@ -468,109 +488,148 @@ export function MainApp() {
         return <FinancialView suppliers={data.fornecedores} />;
       case 'guests':
         return (
-          <GuestsList 
-            guests={data.convidados || []} 
-            onAdd={() => setIsGuestModalOpen(true)} 
-            onEdit={handleEditGuest} 
-            onUpdate={updateGuest} 
-            onDelete={deleteGuest} 
+          <GuestsList
+            guests={data.convidados || []}
+            onAdd={() => setIsGuestModalOpen(true)}
+            onEdit={handleEditGuest}
+            onUpdate={updateGuest}
+            onDelete={deleteGuest}
           />
         );
       case 'tasks':
         return (
-          <TasksList 
-            tasks={data.tarefas || []} 
-            onAdd={() => setIsTaskModalOpen(true)} 
-            onEdit={handleEditTask} 
-            onUpdate={updateTask} 
-            onDelete={deleteTask} 
+          <TasksList
+            tasks={data.tarefas || []}
+            onAdd={() => setIsTaskModalOpen(true)}
+            onEdit={handleEditTask}
+            onUpdate={updateTask}
+            onDelete={deleteTask}
           />
         );
       case 'planning':
         return (
-          <PlanningView 
-            suppliers={data.fornecedores} 
-            weddingDate={data.casal.data} 
+          <PlanningView
+            suppliers={data.fornecedores}
+            weddingDate={data.casal.data}
             simulation={data.simulation}
             onUpdateSimulation={updateSimulation}
           />
         );
       case 'settings':
-         return (
-           <div className="max-w-2xl space-y-6">
-              <Card className="bg-card">
-                <h3 className="text-xl font-bold mb-6">Configurações do Casamento</h3>
-                <div className="space-y-4">
+        return (
+          <div className="max-w-2xl space-y-6">
+            <Card className="bg-card">
+              <h3 className="text-xl font-bold mb-6">Configurações do Casamento</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Orçamento Total (R$)</label>
+                  <Input
+                    type="text"
+                    className="font-bold"
+                    value={maskCurrency(data.configuracoes.orcamentoTotal)}
+                    onChange={(e) => updateConfig({ orcamentoTotal: unmaskCurrency(e.target.value) })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground">Orçamento Total</label>
-                    <Input 
-                      type="number" 
-                      value={data.configuracoes.orcamentoTotal} 
-                      onChange={(e) => updateConfig({ orcamentoTotal: parseFloat(e.target.value) })}
+                    <label className="text-sm font-bold text-muted-foreground">Nome 1</label>
+                    <Input
+                      value={data.casal.nome1}
+                      onChange={(e) => updateWeddingInfo({ nome1: e.target.value })}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-muted-foreground">Nome 1</label>
-                      <Input 
-                        value={data.casal.nome1} 
-                        onChange={(e) => updateWeddingInfo({ nome1: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-muted-foreground">Nome 2</label>
-                      <Input 
-                        value={data.casal.nome2} 
-                        onChange={(e) => updateWeddingInfo({ nome2: e.target.value })}
-                      />
-                    </div>
-                  </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground">Data do Grande Dia</label>
-                    <Input 
-                      type="date" 
-                      value={data.casal.data} 
-                      onChange={(e) => updateWeddingInfo({ data: e.target.value })}
+                    <label className="text-sm font-bold text-muted-foreground">Nome 2</label>
+                    <Input
+                      value={data.casal.nome2}
+                      onChange={(e) => updateWeddingInfo({ nome2: e.target.value })}
                     />
                   </div>
-                  
-                  {user && (
-                    <div className="pt-6 border-t border-border space-y-4">
-                      <h4 className="font-bold text-foreground">Sincronização Supabase</h4>
-                      <p className="text-sm text-muted-foreground">Você está logado como {user.email}. Seus dados locais podem ser enviados para a nuvem para acesso em outros dispositivos.</p>
-                      <Button 
-                        onClick={handleSyncData}
-                        disabled={isSyncing}
-                        className="w-full h-12 bg-primary text-white font-bold"
-                      >
-                        {isSyncing ? "Sincronizando..." : "Sincronizar Dados Atuais com a Nuvem"}
-                      </Button>
-                    </div>
-                  )}
-                  
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Data do Grande Dia</label>
+                  <Input
+                    type="date"
+                    value={data.casal.data}
+                    onChange={(e) => updateWeddingInfo({ data: e.target.value })}
+                  />
+                </div>
+
+                {user && (
                   <div className="pt-6 border-t border-border space-y-4">
-                    <h4 className="font-bold text-foreground">Gerenciamento de Dados</h4>
-                    <p className="text-sm text-muted-foreground">Cuidado: Esta ação irá apagar todos os fornecedores, pagamentos e configurações personalizadas.</p>
-                    <Button 
-                      variant="destructive" 
-                      className="w-full h-12"
-                      onClick={() => {
-                        const confirmacao = window.prompt('PÁGINA DE SEGURANÇA: Para apagar TODOS os seus dados definitivamente, digite a palavra "APAGAR" abaixo:');
-                        if (confirmacao === "APAGAR") {
-                           localStorage.removeItem("wedding_manager_data");
-                           window.location.reload();
-                        } else if (confirmacao !== null) {
-                           alert("Palavra incorreta. Ação cancelada.");
+                    <h4 className="font-bold text-foreground">Segurança</h4>
+                    <p className="text-sm text-muted-foreground">Clique no botão abaixo para receber um e-mail de redefinição de senha.</p>
+                    <Button
+                      variant="outline"
+                      className="w-full h-12 border-primary/20 hover:bg-primary/5 text-primary"
+                      onClick={async () => {
+                        if (!user?.email) return;
+                        const { error } = await resetPassword(user.email);
+                        if (!error) {
+                          await customAlert({
+                            title: "E-mail Enviado!",
+                            description: "Um link para redefinição de senha foi enviado para o seu e-mail cadastrado.",
+                            type: "success",
+                            confirmLabel: "Entendido"
+                          });
+                        } else {
+                          await customAlert({
+                            title: "Erro ao Enviar",
+                            description: error.message || "Ocorreu um erro ao enviar o e-mail de redefinição de senha.",
+                            type: "danger",
+                            confirmLabel: "Tentar Novamente"
+                          });
                         }
                       }}
                     >
-                      Limpar Todos os Dados (Reset)
+                      Redefinir Minha Senha
                     </Button>
                   </div>
+                )}
+
+                {user && (
+                  <div className="pt-6 border-t border-border space-y-4">
+                    <h4 className="font-bold text-foreground">Sincronização Supabase</h4>
+                    <p className="text-sm text-muted-foreground">Você está logado como {user.email}. Seus dados locais podem ser enviados para a nuvem para acesso em outros dispositivos.</p>
+                    <Button
+                      onClick={handleSyncData}
+                      disabled={isSyncing}
+                      className="w-full h-12 bg-primary text-white font-bold"
+                    >
+                      {isSyncing ? "Sincronizando..." : "Sincronizar Dados Atuais com a Nuvem"}
+                    </Button>
+                  </div>
+                )}
+
+                <div className="pt-6 border-t border-border space-y-4">
+                  <h4 className="font-bold text-foreground">Gerenciamento de Dados</h4>
+                  <p className="text-sm text-muted-foreground">Cuidado: Esta ação irá apagar todos os fornecedores, pagamentos e configurações personalizadas.</p>
+                  <Button
+                    variant="destructive"
+                    className="w-full h-12"
+                    onClick={async () => {
+                      const isConfirmed = await confirm({
+                        title: "AÇÃO IRREVERSÍVEL",
+                        description: "Esta ação irá apagar TODOS os seus dados definitivamente. Para continuar, confirme com a palavra abaixo.",
+                        type: "danger",
+                        requireString: "APAGAR",
+                        confirmLabel: "Apagar Tudo",
+                        cancelLabel: "Cancelar",
+                      });
+
+                      if (isConfirmed) {
+                        localStorage.removeItem("wedding_manager_data");
+                        window.location.reload();
+                      }
+                    }}
+                  >
+                    Limpar Todos os Dados (Reset)
+                  </Button>
                 </div>
-              </Card>
-           </div>
-         );
+              </div>
+            </Card>
+          </div>
+        );
       default:
         return <Dashboard stats={stats} onAction={handleDashboardAction} />;
     }
@@ -579,21 +638,21 @@ export function MainApp() {
 
   return (
     <div className={cn("min-h-screen transition-colors duration-500 flex flex-col lg:flex-row", isDark ? "dark bg-background text-foreground" : "bg-slate-50 text-slate-900")}>
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={(tab) => { setActiveTab(tab); setSelectedSupplier(null); }} 
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={(tab) => { setActiveTab(tab); setSelectedSupplier(null); }}
         isDark={isDark}
         toggleTheme={toggleTheme}
       />
-      
+
       <main className="flex-1 lg:ml-72 min-h-screen pb-24 lg:pb-10">
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10">
-          <Header title={selectedSupplier ? "Detalhes do Fornecedor" : 
-                        activeTab === 'dashboard' ? "Visão Geral" : 
-                        activeTab === 'suppliers' ? "Lista de Fornecedores" : 
-                        activeTab === 'financial' ? "Fluxo de Caixa" : 
-                        activeTab === 'planning' ? "Planejamento Financeiro" : "Configurações"} />
-          
+          <Header title={selectedSupplier ? "Detalhes do Fornecedor" :
+            activeTab === 'dashboard' ? "Visão Geral" :
+              activeTab === 'suppliers' ? "Lista de Fornecedores" :
+                activeTab === 'financial' ? "Fluxo de Caixa" :
+                  activeTab === 'planning' ? "Planejamento Financeiro" : "Configurações"} />
+
           {renderContent()}
         </div>
       </main>
@@ -602,9 +661,9 @@ export function MainApp() {
 
       {isModalOpen && (
         <SupplierModal
-          weddingDate={data.casal.data} 
-          onClose={clearModal} 
-          onAdd={addSupplier} 
+          weddingDate={data.casal.data}
+          onClose={clearModal}
+          onAdd={addSupplier}
           onUpdate={updateSupplier}
           editSupplier={supplierToEdit}
         />

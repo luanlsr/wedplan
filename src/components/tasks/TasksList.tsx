@@ -1,5 +1,5 @@
 import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2 } from 'lucide-react';
-import { Card, Button } from '../ui';
+import { Card, Button, useConfirm } from '../ui';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ interface TasksListProps {
 }
 
 export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksListProps) => {
+  const { confirm } = useConfirm();
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'pendente' | 'em_progresso' | 'concluido'>('Todos');
 
   const filteredTasks = tasks.filter(t => filterStatus === 'Todos' || t.status === filterStatus);
@@ -118,8 +119,15 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
                <Button variant="ghost" className="h-8 w-8 p-0 text-primary" onClick={() => onEdit(task)}>
                  <Edit2 size={14} />
                </Button>
-               <Button variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => {
-                  if (window.confirm('Excluir tarefa?')) onDelete(task.id);
+               <Button variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={async () => {
+                  const isConfirmed = await confirm({
+                    title: "Excluir Tarefa?",
+                    description: `Deseja realmente remover esta tarefa?`,
+                    type: "danger",
+                    confirmLabel: "Remover",
+                    cancelLabel: "Cancelar"
+                  });
+                  if (isConfirmed) onDelete(task.id);
                }}>
                  <Trash2 size={14} />
                </Button>
