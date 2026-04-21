@@ -1,8 +1,8 @@
-import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, Button, useConfirm } from '../ui';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface TasksListProps {
   tasks: Task[];
@@ -19,6 +19,15 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'pendente' | 'em_progresso' | 'concluido'>('Todos');
   const [sortBy, setSortBy] = useState<SortOption>('dataLimite');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  // Reset page when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, sortBy, sortDirection]);
 
   const handleSort = (option: SortOption) => {
     if (sortBy === option) {
@@ -49,6 +58,12 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
 
     return result;
   }, [tasks, filterStatus, sortBy, sortDirection]);
+
+  const totalPages = Math.ceil(sortedTasks.length / itemsPerPage);
+  const paginatedTasks = sortedTasks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const stats = {
     total: tasks.length,
@@ -124,7 +139,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {sortedTasks.map((task) => (
+        {paginatedTasks.map((task) => (
           <Card key={task.id} className={cn(
             "p-4 border-none shadow-md transition-all hover:shadow-lg group flex items-center gap-4",
             task.status === 'concluido' ? "bg-muted/50 opacity-75" : "bg-card"
@@ -180,6 +195,75 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
             </div>
           </Card>
         ))}
+
+        {/* Pagination Bar */}
+        {totalPages > 1 && (
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-6 bg-secondary/5 rounded-2xl border border-white/5 mt-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+              Mostrando <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span>-
+              <span className="text-foreground">{Math.min(currentPage * itemsPerPage, sortedTasks.length)}</span> de 
+              <span className="text-foreground">{sortedTasks.length}</span> tarefas
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Button 
+                variant="outline" 
+                className="h-9 w-9 p-0 rounded-lg border-white/10" 
+                onClick={() => setCurrentPage(1)} 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={16} className="-mr-1.5" /><ChevronLeft size={16} />
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-9 w-9 p-0 rounded-lg border-white/10" 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              
+              <div className="flex items-center gap-1 mx-2">
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
+                    if (page === 2 || page === totalPages - 1) return <span key={page} className="text-muted-foreground opacity-30">•</span>;
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={cn(
+                        "w-8 h-8 rounded-lg text-xs font-black transition-all",
+                        currentPage === page ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground hover:bg-white/5"
+                      )}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button 
+                variant="outline" 
+                className="h-9 w-9 p-0 rounded-lg border-white/10" 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight size={16} />
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-9 w-9 p-0 rounded-lg border-white/10" 
+                onClick={() => setCurrentPage(totalPages)} 
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight size={16} /><ChevronRight size={16} className="-ml-1.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {sortedTasks.length === 0 && (
           <div className="p-20 text-center border-2 border-dashed rounded-3xl">
              <p className="text-muted-foreground font-bold">Nenhuma tarefa encontrada.</p>

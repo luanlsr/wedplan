@@ -1,7 +1,7 @@
-import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown, ChevronDown, Filter, Briefcase } from 'lucide-react';
+import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown, ChevronDown, Filter, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, Button, Input, Badge, useConfirm } from '../ui';
 import type { Guest } from '../../types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -18,6 +18,10 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const categories = ['Todos', 'Noivos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Staff', 'Outros'];
   const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
 
@@ -28,6 +32,11 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     }
     setSortConfig({ key, direction });
   };
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory, filterStatus]);
 
   const sortedAndFilteredGuests = useMemo(() => {
     let items = guests.filter(g => {
@@ -55,6 +64,12 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
     return items;
   }, [guests, searchTerm, filterCategory, filterStatus, sortConfig]);
+
+  const totalPages = Math.ceil(sortedAndFilteredGuests.length / itemsPerPage);
+  const paginatedItems = sortedAndFilteredGuests.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const totals = {
     total: guests.length,
@@ -124,7 +139,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
       <Card className="border-none shadow-xl overflow-hidden rounded-3xl">
         {/* Mobile List View */}
         <div className="md:hidden divide-y divide-border">
-          {sortedAndFilteredGuests.map((guest) => (
+          {paginatedItems.map((guest) => (
             <div key={guest.id} className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -212,7 +227,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {sortedAndFilteredGuests.map((guest) => (
+              {paginatedItems.map((guest) => (
                 <tr key={guest.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-4 font-bold">{guest.nome}</td>
                   <td className="px-6 py-4">
@@ -267,6 +282,75 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               ))}
             </tbody>
           </table>
+          
+          {/* Pagination Bar */}
+          {totalPages > 1 && (
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-4 bg-muted/20 border-t border-border">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Exibindo <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="text-foreground">{Math.min(currentPage * itemsPerPage, sortedAndFilteredGuests.length)}</span> de <span className="text-foreground">{sortedAndFilteredGuests.length}</span> convidados
+              </p>
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="outline" 
+                  className="h-9 w-9 p-0 rounded-lg" 
+                  onClick={() => setCurrentPage(1)} 
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={16} className="-mr-1" /><ChevronLeft size={16} />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-9 w-9 p-0 rounded-lg" 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+                
+                <div className="flex items-center gap-1 mx-2">
+                  {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    // Lógica para mostrar apenas algumas páginas se houver muitas
+                    if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
+                      if (page === 2 || page === totalPages - 1) return <span key={page} className="text-muted-foreground text-xs mx-1">...</span>;
+                      return null;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "primary" : "ghost"}
+                        className={cn(
+                          "h-9 w-9 p-0 rounded-lg text-sm font-bold",
+                          currentPage === page ? "shadow-md" : "hover:bg-secondary"
+                        )}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  className="h-9 w-9 p-0 rounded-lg" 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight size={16} />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-9 w-9 p-0 rounded-lg" 
+                  onClick={() => setCurrentPage(totalPages)} 
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight size={16} /><ChevronRight size={16} className="-ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {sortedAndFilteredGuests.length === 0 && (
             <div className="p-20 text-center space-y-4">
                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">

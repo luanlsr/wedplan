@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button, Badge } from "../ui";
 import { formatCurrency, formatDate } from "../../utils/calculations";
 import { 
   Search, Plus, ChevronRight, Briefcase, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
   DollarSign as DollarIcon, Calendar, CheckCircle2, 
-  AlertCircle, GripVertical
+  AlertCircle, GripVertical, ChevronLeft, ChevronRight
 } from "lucide-react";
 import type { Supplier } from "../../types";
 import { Reorder, useDragControls, motion, AnimatePresence } from "framer-motion";
@@ -25,9 +25,18 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [sortBy, setSortBy] = useState<SortOption>("manual");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const categories = ["Todas", ...Array.from(new Set(suppliers.map((s) => s.categoria))).sort((a, b) => a.localeCompare(b))];
   const statuses = ["Todos", "pago", "pendente", "parcial", "atrasado"];
+
+  // Reset page on filter/sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, statusFilter, sortBy, sortDirection]);
 
   const handleSort = (option: SortOption) => {
     if (sortBy === option) {
@@ -68,6 +77,12 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [suppliers, searchTerm, categoryFilter, statusFilter, sortBy, sortDirection]);
+
+  const totalPages = Math.ceil(sortedSuppliers.length / itemsPerPage);
+  const paginatedSuppliers = sortedSuppliers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -165,7 +180,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
         className="space-y-4"
       >
         <AnimatePresence mode="popLayout">
-          {sortedSuppliers.map((supplier) => (
+          {paginatedSuppliers.map((supplier) => (
             <ReorderItem 
               key={supplier.id} 
               supplier={supplier} 
@@ -175,6 +190,86 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
           ))}
         </AnimatePresence>
       </Reorder.Group>
+
+      {/* Pagination Bar */}
+      {totalPages > 1 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 bg-card/40 backdrop-blur-xl rounded-[2rem] border border-white/5 shadow-xl mt-8"
+        >
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Progresso da Lista</p>
+            <p className="text-sm font-bold text-foreground/80">
+              Mostrando <span className="text-primary">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-primary">{Math.min(currentPage * itemsPerPage, sortedSuppliers.length)}</span> de <span className="text-primary">{sortedSuppliers.length}</span> fornecedores
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 mr-4">
+              <Button 
+                variant="ghost" 
+                className="h-10 w-10 p-0 rounded-xl bg-secondary/20 hover:bg-primary/20 hover:text-primary transition-all" 
+                onClick={() => setCurrentPage(1)} 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={18} className="-mr-2" /><ChevronLeft size={18} />
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="h-10 w-10 p-0 rounded-xl bg-secondary/20 hover:bg-primary/20 hover:text-primary transition-all" 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={18} />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-secondary/10 rounded-2xl border border-white/5">
+              {[...Array(totalPages)].map((_, i) => {
+                const page = i + 1;
+                if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
+                  if (page === 2 || page === totalPages - 1) return <span key={page} className="text-muted-foreground opacity-30">•</span>;
+                  return null;
+                }
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-xs font-black transition-all duration-300",
+                      currentPage === page 
+                        ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" 
+                        : "text-muted-foreground hover:bg-white/5"
+                    )}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5 ml-4">
+              <Button 
+                variant="ghost" 
+                className="h-10 w-10 p-0 rounded-xl bg-secondary/20 hover:bg-primary/20 hover:text-primary transition-all" 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight size={18} />
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="h-10 w-10 p-0 rounded-xl bg-secondary/20 hover:bg-primary/20 hover:text-primary transition-all" 
+                onClick={() => setCurrentPage(totalPages)} 
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight size={18} /><ChevronRight size={18} className="-ml-2" />
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {sortedSuppliers.length === 0 && (
         <motion.div 
