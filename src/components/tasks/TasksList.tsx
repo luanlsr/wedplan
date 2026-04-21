@@ -1,8 +1,8 @@
-import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2 } from 'lucide-react';
+import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, Button, useConfirm } from '../ui';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface TasksListProps {
   tasks: Task[];
@@ -12,11 +12,43 @@ interface TasksListProps {
   onDelete: (id: string) => void;
 }
 
+type SortOption = 'titulo' | 'categoria' | 'dataLimite' | 'status';
+
 export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksListProps) => {
   const { confirm } = useConfirm();
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'pendente' | 'em_progresso' | 'concluido'>('Todos');
+  const [sortBy, setSortBy] = useState<SortOption>('dataLimite');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const filteredTasks = tasks.filter(t => filterStatus === 'Todos' || t.status === filterStatus);
+  const handleSort = (option: SortOption) => {
+    if (sortBy === option) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(option);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedTasks = useMemo(() => {
+    let result = tasks.filter(t => filterStatus === 'Todos' || t.status === filterStatus);
+    
+    result.sort((a, b) => {
+      let valA: any = a[sortBy] || '';
+      let valB: any = b[sortBy] || '';
+
+      if (sortBy === 'status') {
+         const statusOrder = { pendente: 0, em_progresso: 1, concluido: 2 };
+         valA = statusOrder[a.status as keyof typeof statusOrder] ?? 0;
+         valB = statusOrder[b.status as keyof typeof statusOrder] ?? 0;
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [tasks, filterStatus, sortBy, sortDirection]);
 
   const stats = {
     total: tasks.length,
@@ -27,6 +59,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Stats Cards - Remains Same */}
         <Card className="p-6 bg-card border-none shadow-lg flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
             <CheckCircle2 size={24} />
@@ -56,29 +89,42 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
         </Card>
       </div>
 
-      <div className="flex justify-between items-center bg-card p-4 rounded-2xl shadow-sm border">
-        <div className="flex gap-2">
-          {(['Todos', 'pendente', 'em_progresso', 'concluido'] as const).map(status => (
-            <Button
-              key={status}
-              variant={filterStatus === status ? "primary" : "outline"}
-              className="rounded-full px-4 font-bold h-10 capitalize"
-              onClick={() => setFilterStatus(status)}
-            >
-              {status === 'pendente' ? 'Pendentes' : 
-               status === 'em_progresso' ? 'Em Progresso' :
-               status === 'concluido' ? 'Concluídas' : 'Todas'}
-            </Button>
-          ))}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-card p-4 rounded-2xl shadow-sm border gap-4">
+          <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-2 md:pb-0">
+            {(['Todos', 'pendente', 'em_progresso', 'concluido'] as const).map(status => (
+              <Button
+                key={status}
+                variant={filterStatus === status ? "primary" : "outline"}
+                className="rounded-full px-4 font-bold h-10 capitalize shrink-0"
+                onClick={() => setFilterStatus(status)}
+              >
+                {status === 'pendente' ? 'Pendentes' : 
+                 status === 'em_progresso' ? 'Em Progresso' :
+                 status === 'concluido' ? 'Concluídas' : 'Todas'}
+              </Button>
+            ))}
+          </div>
+          <Button className="gap-2 h-10 px-6 rounded-xl font-bold shadow-lg shadow-primary/20 w-full md:w-auto" onClick={onAdd}>
+            <Plus size={18} />
+            Nova Tarefa
+          </Button>
         </div>
-        <Button className="gap-2 h-10 px-6 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={onAdd}>
-          <Plus size={18} />
-          Nova Tarefa
-        </Button>
+
+        {/* Sorting Bar */}
+        <div className="flex items-center gap-2 p-2 px-4 bg-secondary/10 rounded-xl overflow-x-auto no-scrollbar border border-white/5">
+           <span className="text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap mr-2">Ordenar por:</span>
+           <div className="flex gap-2">
+             <SortTab active={sortBy === 'titulo'} onClick={() => handleSort('titulo')} label="Título" direction={sortBy === 'titulo' ? sortDirection : null} />
+             <SortTab active={sortBy === 'categoria'} onClick={() => handleSort('categoria')} label="Categoria" direction={sortBy === 'categoria' ? sortDirection : null} />
+             <SortTab active={sortBy === 'dataLimite'} onClick={() => handleSort('dataLimite')} label="Data" direction={sortBy === 'dataLimite' ? sortDirection : null} />
+             <SortTab active={sortBy === 'status'} onClick={() => handleSort('status')} label="Status" direction={sortBy === 'status' ? sortDirection : null} />
+           </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {filteredTasks.map((task) => (
+        {sortedTasks.map((task) => (
           <Card key={task.id} className={cn(
             "p-4 border-none shadow-md transition-all hover:shadow-lg group flex items-center gap-4",
             task.status === 'concluido' ? "bg-muted/50 opacity-75" : "bg-card"
@@ -134,7 +180,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
             </div>
           </Card>
         ))}
-        {filteredTasks.length === 0 && (
+        {sortedTasks.length === 0 && (
           <div className="p-20 text-center border-2 border-dashed rounded-3xl">
              <p className="text-muted-foreground font-bold">Nenhuma tarefa encontrada.</p>
           </div>
@@ -143,3 +189,17 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
     </div>
   );
 };
+
+const SortTab = ({ active, onClick, label, direction }: any) => (
+  <button 
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+      active ? "bg-primary text-white" : "bg-card text-muted-foreground border border-white/5 hover:bg-secondary"
+    )}
+  >
+    {label}
+    {!direction ? <ArrowUpDown size={10} className="opacity-30" /> : 
+     direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+  </button>
+);

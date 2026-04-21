@@ -4,7 +4,7 @@ import { formatCurrency, formatDate } from '../../utils/calculations';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { Search, Filter, Calendar, DollarSign, ChevronDown, CheckCircle, Clock } from "lucide-react";
+import { Search, Filter, Calendar, DollarSign, ChevronDown, CheckCircle, Clock, ArrowUp, ArrowDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from '../ui';
@@ -19,6 +19,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
   const [statusFilter, setStatusFilter] = useState<"all" | "pago" | "pendente">("all");
   const [categoryFilter, setCategoryFilter] = useState("Todas");
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
+  const [installmentSort, setInstallmentSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'dataVencimento', direction: 'asc' });
 
   const [showPastMonths, setShowPastMonths] = useState(true);
 
@@ -79,10 +80,29 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
       });
     });
 
+    // Sort installments inside each month based on installmentSort
+    Object.keys(data).forEach(key => {
+      data[key].installments.sort((a, b) => {
+        let valA: any = a[installmentSort.key as keyof typeof a];
+        let valB: any = b[installmentSort.key as keyof typeof b];
+
+        if (valA < valB) return installmentSort.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return installmentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    });
+
     return Object.entries(data)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([key, value]) => ({ key, ...value }));
-  }, [suppliers, searchTerm, categoryFilter, statusFilter, showPastMonths]);
+  }, [suppliers, searchTerm, categoryFilter, statusFilter, showPastMonths, installmentSort]);
+
+  const toggleSort = (key: string) => {
+    setInstallmentSort(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   const toggleMonth = (monthKey: string) => {
     setExpandedMonths(prev => 
@@ -290,9 +310,21 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-muted-foreground uppercase font-black tracking-tighter border-b border-white/5">
-                          <th className="pb-3 text-left pl-2">Fornecedor / Parcela</th>
-                          <th className="pb-3 text-center">Vencimento</th>
-                          <th className="pb-3 text-right pr-2">Valor</th>
+                          <th className="pb-3 text-left pl-2">
+                            <button onClick={() => toggleSort('supplierName')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                              Fornecedor {installmentSort.key === 'supplierName' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                            </button>
+                          </th>
+                          <th className="pb-3 text-center">
+                            <button onClick={() => toggleSort('dataVencimento')} className="flex items-center justify-center gap-1 w-full hover:text-primary transition-colors">
+                              Vencimento {installmentSort.key === 'dataVencimento' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                            </button>
+                          </th>
+                          <th className="pb-3 text-right pr-2">
+                             <button onClick={() => toggleSort('valor')} className="flex items-center justify-end gap-1 w-full hover:text-primary transition-colors">
+                              Valor {installmentSort.key === 'valor' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                            </button>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>

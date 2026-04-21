@@ -15,12 +15,26 @@ import { useWeddingData } from '../hooks/useWeddingData';
 import { calculateStats, formatCurrency, formatDate } from '../utils/calculations';
 import type { Supplier, Installment, Guest, Task } from '../types';
 import { Card, Button, Badge, Input, useConfirm } from './ui';
-import { ChevronLeft, CheckCircle2, Circle, Calendar, Printer, Download, Share2, Heart, DollarSign, FileText, Edit2, Clock, AlertTriangle, Info } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, Circle, Calendar, Printer, Download, Share2, Heart, DollarSign, FileText, Edit2, Clock, AlertTriangle, Info, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { parseISO, differenceInDays } from "date-fns";
 import { maskCurrency, unmaskCurrency } from '../utils/masks';
 
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
+
+const SortButton = ({ active, onClick, label, direction }: any) => (
+  <button 
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+      active ? "bg-primary text-white" : "bg-card text-muted-foreground border border-white/5 hover:bg-secondary"
+    )}
+  >
+    {label}
+    {!direction ? <ArrowUpDown size={10} className="opacity-30" /> : 
+     direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+  </button>
+);
 
 export function MainApp() {
   const navigate = useNavigate();
@@ -191,10 +205,24 @@ export function MainApp() {
   };
 
   const SupplierDetailsWrapper = () => {
-    const { id } = useParams();
-    const currentSupplier = data.fornecedores.find(s => s.id === id);
+    const [instSort, setInstSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'numero', direction: 'asc' });
 
     if (!currentSupplier) return <Navigate to="/fornecedores" />;
+
+    const sortedInstallments = [...currentSupplier.parcelas].sort((a, b) => {
+      let valA: any = a[instSort.key as keyof typeof a];
+      let valB: any = b[instSort.key as keyof typeof b];
+      if (valA < valB) return instSort.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return instSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    const toggleInstSort = (key: string) => {
+      setInstSort(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      }));
+    };
 
     const handlePrint = () => window.print();
     const handleExportCSV = (supplier: Supplier) => {
@@ -296,7 +324,14 @@ export function MainApp() {
 
             <Card className="border-none shadow-xl bg-card p-8 print:shadow-none print:border print:p-4">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-black text-foreground print:text-xl">Cronograma de Pagamentos</h3>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <h3 className="text-2xl font-black text-foreground print:text-xl">Cronograma</h3>
+                  <div className="flex gap-1 p-1 bg-secondary/20 rounded-xl border border-white/5 print:hidden">
+                    <SortButton active={instSort.key === 'numero'} onClick={() => toggleInstSort('numero')} label="#" direction={instSort.key === 'numero' ? instSort.direction : null} />
+                    <SortButton active={instSort.key === 'dataVencimento'} onClick={() => toggleInstSort('dataVencimento')} label="Data" direction={instSort.key === 'dataVencimento' ? instSort.direction : null} />
+                    <SortButton active={instSort.key === 'valor'} onClick={() => toggleInstSort('valor')} label="Valor" direction={instSort.key === 'valor' ? instSort.direction : null} />
+                  </div>
+                </div>
                 <div className="flex gap-2 print:hidden">
                   <Button variant="outline" className="h-10 text-sm" onClick={handlePrint}><Printer size={16} /> Imprimir</Button>
                   <Button variant="outline" className="h-10 text-sm" onClick={() => handleExportCSV(currentSupplier)}><Download size={16} /> Exportar</Button>
@@ -304,7 +339,7 @@ export function MainApp() {
               </div>
 
               <div className="space-y-4">
-                {currentSupplier.parcelas.map((p) => {
+                {sortedInstallments.map((p) => {
                   const isEditing = editingInstallmentId === p.id;
                   return (
                     <div

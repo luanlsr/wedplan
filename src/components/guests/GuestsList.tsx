@@ -1,7 +1,7 @@
-import { Users, UserPlus, Trash2, Edit2, Search } from 'lucide-react';
+import { Users, UserPlus, Trash2, Edit2, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, Button, Input, Badge, useConfirm } from '../ui';
 import type { Guest } from '../../types';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -15,14 +15,43 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
 
   const categories = ['Todos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Outros'];
 
-  const filteredGuests = guests.filter(g => {
-    const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'Todos' || g.categoria === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const requestSort = (key: keyof Guest | 'total_pessoas') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedAndFilteredGuests = useMemo(() => {
+    let items = guests.filter(g => {
+      const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = filterCategory === 'Todos' || g.categoria === filterCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    if (sortConfig) {
+      items.sort((a, b) => {
+        let valA: any = a[sortConfig.key as keyof Guest];
+        let valB: any = b[sortConfig.key as keyof Guest];
+
+        if (sortConfig.key === 'total_pessoas') {
+          valA = (a.adultos || 0) + (a.criancas || 0);
+          valB = (b.adultos || 0) + (b.criancas || 0);
+        }
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return items;
+  }, [guests, searchTerm, filterCategory, sortConfig]);
 
   const totals = {
     total: guests.length,
@@ -87,7 +116,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
       <Card className="border-none shadow-xl overflow-hidden rounded-3xl">
         {/* Mobile List View */}
         <div className="md:hidden divide-y divide-border">
-          {filteredGuests.map((guest) => (
+          {sortedAndFilteredGuests.map((guest) => (
             <div key={guest.id} className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -145,16 +174,32 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Convidado</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Categoria</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Pessoas</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4">
+                  <button onClick={() => requestSort('nome')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
+                    Convidado {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button onClick={() => requestSort('categoria')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
+                    Categoria {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button onClick={() => requestSort('total_pessoas')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
+                    Pessoas {sortConfig?.key === 'total_pessoas' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button onClick={() => requestSort('status')} className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-primary transition-colors">
+                    Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                  </button>
+                </th>
                 <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Contato</th>
                 <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredGuests.map((guest) => (
+              {sortedAndFilteredGuests.map((guest) => (
                 <tr key={guest.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-4 font-bold">{guest.nome}</td>
                   <td className="px-6 py-4">
@@ -206,7 +251,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               ))}
             </tbody>
           </table>
-          {filteredGuests.length === 0 && (
+          {sortedAndFilteredGuests.length === 0 && (
             <div className="p-20 text-center space-y-4">
                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">
                   <Users size={40} />
