@@ -3,7 +3,7 @@ import { Button } from "../ui";
 import { 
   Search, Plus, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
-  DollarSign as DollarIcon, Calendar, CheckCircle2, 
+  DollarSign as DollarIcon, CheckCircle2, 
   ChevronLeft
 } from "lucide-react";
 import type { Supplier } from "../../types";

@@ -49,7 +49,7 @@ export function MainApp() {
 
   const stats = useMemo(() => calculateStats(data), [data]);
   const isDark = data.configuracoes.tema === 'dark';
-  const isNewWedding = !loading && data.id && (data.casal.nome1 === 'Cônjuge 1' || !data.casal.nome1) && data.role === 'couple';
+  const isNewWedding = !!(!loading && data.id && (data.casal.nome1 === 'Cônjuge 1' || !data.casal.nome1) && data.role === 'couple');
 
   const toggleTheme = () => {
     updateConfig({ tema: isDark ? 'light' : 'dark' });
@@ -211,10 +211,10 @@ export function MainApp() {
     <AppLayout
       isDark={isDark}
       toggleTheme={toggleTheme}
-      userRole={data.role}
+      userRole={data.role || 'couple'}
       isSidebarCollapsed={isSidebarCollapsed}
       setIsSidebarCollapsed={setIsSidebarCollapsed}
-      isNewWedding={isNewWedding}
+      isNewWedding={!!isNewWedding}
       onOnboardingComplete={handleOnboardingComplete}
       pageTitle={getPageTitle()}
     >

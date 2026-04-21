@@ -1,4 +1,3 @@
-import React from 'react';
 import { SupplierModal } from '../suppliers/AddSupplierModal';
 import { AddGuestModal } from '../guests/AddGuestModal';
 import { AddTaskModal } from '../tasks/AddTaskModal';
