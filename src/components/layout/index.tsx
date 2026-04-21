@@ -1,17 +1,15 @@
 import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
 
 interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   isDark: boolean;
   toggleTheme: () => void;
 }
 
-export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: SidebarProps) => {
+export const Sidebar = ({ isDark, toggleTheme }: SidebarProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -21,18 +19,18 @@ export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: Sideba
   };
 
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "suppliers", label: "Fornecedores", icon: Briefcase },
-    { id: "guests", label: "Convidados", icon: Heart },
-    { id: "tasks", label: "Tarefas", icon: CheckCircle2 },
-    { id: "financial", label: "Financeiro", icon: DollarSign },
-    { id: "planning", label: "Planejamento", icon: TrendingUp },
-    { id: "settings", label: "Configurações", icon: Settings },
+    { id: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+    { id: "suppliers", path: "/dashboard/fornecedores", label: "Fornecedores", icon: Briefcase },
+    { id: "guests", path: "/dashboard/convidados", label: "Convidados", icon: Heart },
+    { id: "tasks", path: "/dashboard/tarefas", icon: CheckCircle2, label: "Tarefas" },
+    { id: "financial", path: "/dashboard/financeiro", label: "Financeiro", icon: DollarSign },
+    { id: "planning", path: "/dashboard/planejamento", label: "Planejamento", icon: TrendingUp },
+    { id: "settings", path: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
   ];
 
   return (
     <div className="hidden lg:flex w-72 h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex-col z-50">
-      <div className="flex items-center gap-3 mb-10 px-2 group cursor-pointer">
+      <div className="flex items-center gap-3 mb-10 px-2 group cursor-pointer" onClick={() => navigate('/dashboard')}>
         <div className="w-12 h-12 rounded-2xl bg-white overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-500">
           <img src="/logo-wedplan.png" alt="WedPlan Logo" className="w-full h-full object-cover" />
         </div>
@@ -43,22 +41,27 @@ export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: Sideba
 
       <nav className="flex-1 space-y-2">
         {menuItems.map((item) => (
-          <button
+          <NavLink
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={cn(
+            to={item.path}
+            end={item.end}
+            className={({ isActive }) => cn(
               "w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group relative",
-              activeTab === item.id 
+              isActive 
                 ? "bg-primary text-white shadow-xl shadow-primary/20" 
                 : "hover:bg-primary/10 text-muted-foreground hover:text-primary"
             )}
           >
-            <item.icon size={22} className={cn(activeTab === item.id ? "text-white" : "group-hover:text-primary")} />
-            <span className="font-semibold tracking-wide">{item.label}</span>
-            {activeTab === item.id && (
-              <div className="absolute right-2 w-1.5 h-1.2 rounded-full bg-white/50" />
+            {({ isActive }) => (
+              <>
+                <item.icon size={22} className={cn(isActive ? "text-white" : "group-hover:text-primary")} />
+                <span className="font-semibold tracking-wide">{item.label}</span>
+                {isActive && (
+                  <div className="absolute right-2 w-1.5 h-6 rounded-full bg-white/50" />
+                )}
+              </>
             )}
-          </button>
+          </NavLink>
         ))}
       </nav>
 
@@ -83,31 +86,39 @@ export const Sidebar = ({ activeTab, setActiveTab, isDark, toggleTheme }: Sideba
   );
 };
 
-export const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (tab: string) => void }) => {
+export const BottomNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const mainActions = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Início" },
-    { id: "suppliers", icon: Briefcase, label: "Fornec." },
-    { id: "guests", icon: Heart, label: "Convid." },
-    { id: "tasks", icon: CheckCircle2, label: "Tarefas" },
+    { id: "dashboard", path: "/dashboard", icon: LayoutDashboard, label: "Início", end: true },
+    { id: "suppliers", path: "/dashboard/fornecedores", icon: Briefcase, label: "Fornec." },
+    { id: "guests", path: "/dashboard/convidados", icon: Heart, label: "Convid." },
+    { id: "tasks", path: "/dashboard/tarefas", icon: CheckCircle2, label: "Tarefas" },
+  ];
+
+  const moreActions = [
+    { id: "financial", path: "/dashboard/financeiro", icon: DollarSign, label: "Financeiro" },
+    { id: "planning", path: "/dashboard/planejamento", icon: TrendingUp, label: "Planejamento" },
+    { id: "settings", path: "/dashboard/configuracoes", icon: Settings, label: "Configurações" },
   ];
 
   return (
     <>
       <div className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-4 py-2 flex items-center justify-between z-[60] safe-area-bottom">
         {mainActions.map((item) => (
-          <button
+          <NavLink
             key={item.id}
-            onClick={() => { setActiveTab(item.id); setIsMenuOpen(false); }}
-            className={cn(
+            to={item.path}
+            end={item.end}
+            onClick={() => setIsMenuOpen(false)}
+            className={({ isActive }) => cn(
               "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[64px]",
-              activeTab === item.id ? "text-primary scale-110" : "text-muted-foreground"
+              isActive ? "text-primary scale-110" : "text-muted-foreground"
             )}
           >
             <item.icon size={24} />
             <span className="text-[10px] font-bold">{item.label}</span>
-          </button>
+          </NavLink>
         ))}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -127,33 +138,22 @@ export const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setA
           <div className="p-8 pt-20 space-y-6">
             <h3 className="text-2xl font-black mb-8">Outras Ferramentas</h3>
             <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={() => { setActiveTab('financial'); setIsMenuOpen(false); }}
-                className="p-6 rounded-3xl bg-secondary/50 flex flex-col gap-3 font-bold text-left"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center">
-                  <DollarSign size={24} />
-                </div>
-                Financeiro
-              </button>
-              <button 
-                onClick={() => { setActiveTab('planning'); setIsMenuOpen(false); }}
-                className="p-6 rounded-3xl bg-secondary/50 flex flex-col gap-3 font-bold text-left"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center">
-                  <TrendingUp size={24} />
-                </div>
-                Planejamento
-              </button>
-              <button 
-                onClick={() => { setActiveTab('settings'); setIsMenuOpen(false); }}
-                className="p-6 rounded-3xl bg-secondary/50 flex flex-col gap-3 font-bold text-left"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-500 flex items-center justify-center">
-                  <Settings size={24} />
-                </div>
-                Configurações
-              </button>
+              {moreActions.map((item) => (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={({ isActive }) => cn(
+                    "p-6 rounded-3xl flex flex-col gap-3 font-bold text-left transition-all",
+                    isActive ? "bg-primary text-white" : "bg-secondary/50"
+                  )}
+                >
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
+                    <item.icon size={24} />
+                  </div>
+                  <span className="text-sm">{item.label}</span>
+                </NavLink>
+              ))}
             </div>
           </div>
         </div>
