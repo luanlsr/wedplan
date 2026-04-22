@@ -73,7 +73,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' || isPublicMode },
     { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'staff' || isPublicMode },
     { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'staff' || isPublicMode },
-    { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck },
+    { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck, hidden: isPublicMode },
     { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'staff' || isPublicMode },
   ] as MenuItem[]).filter(item => {
     if (item.hidden) return false;
@@ -196,9 +196,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userR
 
   const mainActions = ([
     { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'staff' || isPublicMode },
-    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true, hidden: isPublicMode }, // hide here to show as main if public? 
-    // Wait, if isPublicMode, I want checkin to be the ONLY main action.
-    { id: "public_checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: !isPublicMode },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true, hidden: isPublicMode },
     { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec.", hidden: userRole === 'staff' || isPublicMode },
     { id: "guests", path: "/convidados", icon: Heart, label: "Convid.", hidden: isPublicMode },
     { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' || isPublicMode },
