@@ -154,7 +154,7 @@ export const useWeddingData = () => {
 
       const transformedData: WeddingData = {
         id: wedding.id,
-        role: (profileData?.data?.role || 'staff') as UserRole,
+        role: (profileData?.role || 'staff') as UserRole,
         public_checkin_token: wedding.public_checkin_token,
         casal: {
           nome1: wedding.couple_name1 || '',
