@@ -196,6 +196,11 @@ export function MainApp() {
     return "Visão Geral";
   };
 
+  const isPublicMode = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return !!params.get('token') && !user;
+  }, [user]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -216,29 +221,37 @@ export function MainApp() {
       setIsSidebarCollapsed={setIsSidebarCollapsed}
       isNewWedding={!!isNewWedding}
       onOnboardingComplete={handleOnboardingComplete}
-      pageTitle={getPageTitle()}
+      pageTitle={isPublicMode ? "Check-in de Convidados" : getPageTitle()}
+      isPublicMode={isPublicMode}
     >
       <Routes>
         <Route index element={
-          <div className="space-y-6">
-            {notifications.length > 0 && (
-              <div className="space-y-3">
-                {notifications.map((n, i) => (
-                  <div key={i} className={cn(
-                    "flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-top-4 duration-500",
-                    n.type === 'warning' ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
-                  )}>
-                    <AlertTriangle size={20} />
-                    <div className="flex-1">
-                      <span className="font-black uppercase text-[10px] block leading-none mb-1">Alerta de Quitação</span>
-                      <p className="text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
+          isPublicMode ? (
+            <CheckInView
+              guests={data.convidados || []}
+              onTogglePresence={updateGuest}
+            />
+          ) : (
+            <div className="space-y-6">
+              {notifications.length > 0 && (
+                <div className="space-y-3">
+                  {notifications.map((n, i) => (
+                    <div key={i} className={cn(
+                      "flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-top-4 duration-500",
+                      n.type === 'warning' ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
+                    )}>
+                      <AlertTriangle size={20} />
+                      <div className="flex-1">
+                        <span className="font-black uppercase text-[10px] block leading-none mb-1">Alerta de Quitação</span>
+                        <p className="text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Dashboard stats={stats} onAction={handleDashboardAction} />
-          </div>
+                  ))}
+                </div>
+              )}
+              <Dashboard stats={stats} onAction={handleDashboardAction} />
+            </div>
+          )
         } />
 
         <Route path="fornecedores" element={

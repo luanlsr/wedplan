@@ -14,6 +14,7 @@ import { ConfirmProvider } from './components/ui';
 function AppRoutes() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const hasToken = new URLSearchParams(window.location.search).has('token');
 
   if (loading) {
     return (
@@ -23,17 +24,17 @@ function AppRoutes() {
     );
   }
 
-  if (user) {
-    return (
-      <Routes>
-        <Route path="/reset-password" element={<ResetPassword onSuccess={() => navigate('/login')} />} />
-        <Route path="/*" element={<MainApp />} />
-      </Routes>
-    );
-  }
-
   return (
     <Routes>
+      {/* Rotas protegidas ou via token */}
+      {(user || hasToken) && (
+        <>
+          <Route path="/reset-password" element={<ResetPassword onSuccess={() => navigate('/login')} />} />
+          <Route path="/*" element={<MainApp />} />
+        </>
+      )}
+
+      {/* Rotas públicas */}
       <Route path="/" element={
         <LandingPage 
           onGetStarted={() => navigate('/signup')} 

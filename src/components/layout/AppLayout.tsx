@@ -14,6 +14,7 @@ interface AppLayoutProps {
   isNewWedding: boolean;
   onOnboardingComplete: (data: { nome1: string; nome2: string; data: string; orcamento: number; }) => Promise<void>;
   pageTitle: string;
+  isPublicMode?: boolean;
 }
 
 export const AppLayout = ({
@@ -25,7 +26,8 @@ export const AppLayout = ({
   setIsSidebarCollapsed,
   isNewWedding,
   onOnboardingComplete,
-  pageTitle
+  pageTitle,
+  isPublicMode = false
 }: AppLayoutProps) => {
   return (
     <div className={cn(
@@ -38,6 +40,7 @@ export const AppLayout = ({
         userRole={userRole}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isPublicMode={isPublicMode}
       />
 
       {isNewWedding && (
@@ -54,7 +57,7 @@ export const AppLayout = ({
         </div>
       </main>
 
-      <BottomNav userRole={userRole} />
+      <BottomNav userRole={userRole} isPublicMode={isPublicMode} />
     </div>
   );
 };

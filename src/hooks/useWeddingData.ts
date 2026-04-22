@@ -88,7 +88,10 @@ export const useWeddingData = () => {
   }, [user?.created_at]);
 
   const loadData = useCallback(async () => {
-    if (!user) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const publicToken = searchParams.get('token');
+
+    if (!user && !publicToken) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) setData(JSON.parse(stored));
       setLoading(false);
@@ -98,7 +101,25 @@ export const useWeddingData = () => {
     if (!data.id) setLoading(true);
 
     try {
-      const weddingId = await ensureWeddingExists(user.id);
+      let weddingId = null;
+
+      if (user) {
+        weddingId = await ensureWeddingExists(user.id);
+      } else if (publicToken) {
+        const { data: weddingByToken, error: tokenError } = await supabase
+          .from('weddings')
+          .select('id')
+          .eq('public_checkin_token', publicToken)
+          .maybeSingle();
+        
+        if (tokenError) {
+          console.error('Erro ao buscar casamento pelo token:', tokenError);
+        } else if (weddingByToken) {
+          weddingId = weddingByToken.id;
+        } else {
+          console.warn('Nenhum casamento encontrado para o token fornecido.');
+        }
+      }
 
       if (!weddingId) {
         setData(INITIAL_DATA);
@@ -110,9 +131,14 @@ export const useWeddingData = () => {
         .from('weddings')
         .select('*')
         .eq('id', weddingId)
-        .single();
+        .maybeSingle();
 
-      if (weddingError) throw weddingError;
+      if (weddingError || !wedding) {
+        if (weddingError) console.error('Erro ao buscar dados do casamento:', weddingError);
+        setData(INITIAL_DATA);
+        setLoading(false);
+        return;
+      }
 
       const [
         { data: suppliersData },
@@ -123,12 +149,12 @@ export const useWeddingData = () => {
         supabase.from('suppliers').select('*, parcelas:installments(*)').eq('wedding_id', weddingId),
         supabase.from('guests').select('*').eq('wedding_id', weddingId).order('nome'),
         supabase.from('tasks').select('*').eq('wedding_id', weddingId).order('ordem'),
-        supabase.from('profiles').select('role').eq('id', user.id).single()
+        user ? supabase.from('profiles').select('role').eq('id', user.id).maybeSingle() : Promise.resolve({ data: { role: 'staff' } })
       ]);
 
       const transformedData: WeddingData = {
         id: wedding.id,
-        role: profileData?.role as UserRole,
+        role: (profileData?.data?.role || 'staff') as UserRole,
         public_checkin_token: wedding.public_checkin_token,
         casal: {
           nome1: wedding.couple_name1 || '',
@@ -292,7 +318,10 @@ export const useWeddingData = () => {
   };
 
   const updateGuest = async (id: string, updated: Partial<Guest>) => {
-    if (!user) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const publicToken = searchParams.get('token');
+    
+    if (!user && !publicToken) return;
     try {
       const payload: any = {};
       if (updated.nome) payload.nome = updated.nome;

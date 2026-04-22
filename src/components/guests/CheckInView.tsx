@@ -176,7 +176,7 @@ export const CheckInView = ({ guests, onTogglePresence }: Omit<CheckInViewProps,
                 </Card>
               ))}
             {filteredGuests.length === 0 && (
-              <div className="py-20 text-center opacity-50">
+              <div className="col-span-full py-20 text-center opacity-50">
                 <Users size={48} className="mx-auto mb-4" />
                 <p className="font-bold">Nenhum convidado encontrado.</p>
               </div>
@@ -225,7 +225,7 @@ export const CheckInView = ({ guests, onTogglePresence }: Omit<CheckInViewProps,
               </Card>
             ))}
             {staffGuests.length === 0 && (
-              <div className="py-20 text-center opacity-50">
+              <div className="col-span-full py-20 text-center opacity-50">
                 <Briefcase size={48} className="mx-auto mb-4" />
                 <p className="font-bold">Nenhum staff encontrado nos convidados.</p>
               </div>

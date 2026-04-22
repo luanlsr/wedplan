@@ -54,9 +54,10 @@ interface SidebarProps {
   userRole?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  isPublicMode?: boolean;
 }
 
-export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse }: SidebarProps) => {
+export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse, isPublicMode }: SidebarProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -66,14 +67,14 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
   };
 
   const menuItems = ([
-    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true, hidden: userRole === 'staff' },
-    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase, hidden: userRole === 'staff' },
-    { id: "guests", path: "/convidados", label: "Convidados", icon: Heart },
-    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' },
-    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'staff' },
-    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'staff' },
+    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true, hidden: userRole === 'staff' || isPublicMode },
+    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase, hidden: userRole === 'staff' || isPublicMode },
+    { id: "guests", path: "/convidados", label: "Convidados", icon: Heart, hidden: isPublicMode },
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' || isPublicMode },
+    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'staff' || isPublicMode },
+    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'staff' || isPublicMode },
     { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck },
-    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'staff' },
+    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'staff' || isPublicMode },
   ] as MenuItem[]).filter(item => {
     if (item.hidden) return false;
     if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
@@ -166,37 +167,41 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
           </span>
         </button>
         
-        <button 
-          onClick={handleSignOut}
-          data-tooltip={isCollapsed ? "Sair" : undefined}
-          className={cn(
-            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-500 ease-in-out relative",
-            isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
-          )}
-        >
-          <div className="shrink-0 transition-transform duration-500"><LogOut size={20} /></div>
-          <span className={cn(
-            "font-medium whitespace-nowrap transition-all duration-500 ease-in-out",
-            isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0"
-          )}>
-            Sair
-          </span>
-        </button>
+        {!isPublicMode && (
+          <button 
+            onClick={handleSignOut}
+            data-tooltip={isCollapsed ? "Sair" : undefined}
+            className={cn(
+              "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-500 ease-in-out relative",
+              isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
+            )}
+          >
+            <div className="shrink-0 transition-transform duration-500"><LogOut size={20} /></div>
+            <span className={cn(
+              "font-medium whitespace-nowrap transition-all duration-500 ease-in-out",
+              isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0"
+            )}>
+              Sair
+            </span>
+          </button>
+        )}
       </div>
     </div>
     </>
   );
 };
 
-export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
+export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userRole?: string; isPublicMode?: boolean }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const mainActions = ([
-    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'staff' },
-    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true },
-    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec.", hidden: userRole === 'staff' },
-    { id: "guests", path: "/convidados", icon: Heart, label: "Convid." },
-    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' },
+    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'staff' || isPublicMode },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true, hidden: isPublicMode }, // hide here to show as main if public? 
+    // Wait, if isPublicMode, I want checkin to be the ONLY main action.
+    { id: "public_checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: !isPublicMode },
+    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec.", hidden: userRole === 'staff' || isPublicMode },
+    { id: "guests", path: "/convidados", icon: Heart, label: "Convid.", hidden: isPublicMode },
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' || isPublicMode },
   ] as MenuItem[]).filter(item => {
     if (item.hidden) return false;
     if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
@@ -204,10 +209,10 @@ export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
   });
 
   const moreActions = ([
-    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'staff' },
-    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'staff' },
-    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: userRole === 'staff' },
-    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'staff' },
+    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'staff' || isPublicMode },
+    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'staff' || isPublicMode },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: userRole === 'staff' || isPublicMode },
+    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'staff' || isPublicMode },
   ] as MenuItem[]).filter(item => !item.hidden);
 
   return (
@@ -228,16 +233,18 @@ export const BottomNav = ({ userRole = 'couple' }: { userRole?: string }) => {
             <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
           </NavLink>
         ))}
-        <button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={cn(
-            "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[50px] xs:min-w-[64px]",
-            isMenuOpen ? "text-primary scale-110" : "text-muted-foreground"
-          )}
-        >
-          {isMenuOpen ? <X size={20} className="xs:w-[24px] xs:h-[24px]" /> : <Menu size={20} className="xs:w-[24px] xs:h-[24px]" />}
-          <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-tighter">Mais</span>
-        </button>
+        {!isPublicMode && (
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[50px] xs:min-w-[64px]",
+              isMenuOpen ? "text-primary scale-110" : "text-muted-foreground"
+            )}
+          >
+            {isMenuOpen ? <X size={20} className="xs:w-[24px] xs:h-[24px]" /> : <Menu size={20} className="xs:w-[24px] xs:h-[24px]" />}
+            <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-tighter">Mais</span>
+          </button>
+        )}
       </div>
 
       {/* Mobile Over-Menu */}
