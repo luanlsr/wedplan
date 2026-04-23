@@ -78,7 +78,9 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     confirmados: guests.filter(g => g.status === 'confirmado').length,
     pendentes: guests.filter(g => g.status === 'pendente').length,
     adultos: guests.reduce((acc, g) => acc + (g.adultos || 0), 0),
-    criancas: guests.reduce((acc, g) => acc + (g.criancas || 0), 0)
+    criancas: guests.reduce((acc, g) => acc + (g.criancas || 0), 0),
+    noiva: guests.reduce((acc, g) => g.categoria.includes('Noiva') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
+    noivo: guests.reduce((acc, g) => g.categoria.includes('Noivo') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
   }), [guests]);
 
   return (
