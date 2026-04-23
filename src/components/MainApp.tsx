@@ -38,7 +38,7 @@ export function MainApp() {
     updateConfig, updateWeddingInfo, reorderSuppliers
   } = useWeddingData();
   
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
   const {
     isModalOpen, setIsModalOpen, supplierToEdit,
@@ -62,13 +62,6 @@ export function MainApp() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
-
-  useEffect(() => {
-    if (!loading && user && !data.id) {
-      console.warn('Sessão órfã detectada. Realizando logout automático...');
-      signOut().then(() => navigate('/login'));
-    }
-  }, [loading, user, data.id, signOut, navigate]);
 
   const handleSyncData = async () => {
     if (!user) return;

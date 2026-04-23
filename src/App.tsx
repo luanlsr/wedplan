@@ -26,45 +26,50 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Rotas protegidas ou via token */}
-      {(user || hasToken) && (
-        <>
-          <Route path="/reset-password" element={<ResetPassword onSuccess={() => navigate('/login')} />} />
-          <Route path="/*" element={<MainApp />} />
-        </>
-      )}
-
-      {/* Rotas públicas */}
       <Route path="/" element={
+        (user || hasToken) ? <MainApp /> : 
         <LandingPage 
           onGetStarted={() => navigate('/signup')} 
           onLogin={() => navigate('/login')} 
         />
       } />
+
       <Route path="/login" element={
+        user ? <Navigate to="/" replace /> :
         <LoginForm 
           onSuccess={() => navigate('/')} 
           onNavigateToSignUp={() => navigate('/signup')}
           onNavigateToForgot={() => navigate('/forgot-password')}
         />
       } />
+
       <Route path="/signup" element={
+        user ? <Navigate to="/" replace /> :
         <SignUpForm 
           onSuccess={() => navigate('/')} 
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
+
       <Route path="/forgot-password" element={
         <ForgotPassword 
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
+
       <Route path="/reset-password" element={
         <ResetPassword 
           onSuccess={() => navigate('/login')}
         />
       } />
-      <Route path="*" element={<Navigate to="/" replace />} />
+
+      {/* Rota para o check-in direto via token */}
+      {hasToken && <Route path="/checkin" element={<MainApp />} />}
+
+      {/* Rota catch-all: Se logado ou com token, vai pro MainApp. Se não, volta pro Início */}
+      <Route path="/*" element={
+        (user || hasToken) ? <MainApp /> : <Navigate to="/" replace />
+      } />
     </Routes>
   );
 }
