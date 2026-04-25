@@ -193,6 +193,13 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
 
 export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userRole?: string; isPublicMode?: boolean }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const mainActions = ([
     { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'staff' || isPublicMode },
@@ -277,6 +284,15 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userR
             </div>
             
             <div className="mt-auto pb-24 border-t border-white/10 pt-6">
+               {!isPublicMode && (
+                 <button 
+                   onClick={handleSignOut}
+                   className="w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] bg-destructive/10 text-destructive font-black uppercase tracking-tighter transition-all active:scale-95 mb-6"
+                 >
+                   <LogOut size={22} />
+                   <span>Encerrar Sessão</span>
+                 </button>
+               )}
                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-center opacity-30">WedPlan Premium Suite</p>
             </div>
           </div>
