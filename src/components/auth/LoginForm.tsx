@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
-import { Mail, Lock, Loader2, ArrowRight, Globe } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess?: () => void;
