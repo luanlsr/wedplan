@@ -175,6 +175,7 @@ export const useWeddingData = () => {
             id: p.id,
             numero: p.numero,
             dataVencimento: p.data_venc_original || p.data_vencimento,
+            dataPagamento: p.data_pagamento,
             valor: parseFloat(p.valor),
             status: p.status as "pago" | "pendente"
           })).sort((a: Installment, b: Installment) => a.numero - b.numero)
@@ -241,6 +242,7 @@ export const useWeddingData = () => {
           supplier_id: sData.id,
           numero: p.numero,
           data_vencimento: p.dataVencimento,
+          data_pagamento: p.dataPagamento || null,
           valor: p.valor,
           status: p.status
         }));
@@ -288,6 +290,7 @@ export const useWeddingData = () => {
       if (updated.status) payload.status = updated.status;
       if (updated.valor !== undefined) payload.valor = updated.valor;
       if (updated.dataVencimento) payload.data_vencimento = updated.dataVencimento;
+      if (updated.dataPagamento !== undefined) payload.data_pagamento = updated.dataPagamento;
 
       await supabase.from('installments').update(payload).eq('id', installmentId);
       loadData();
