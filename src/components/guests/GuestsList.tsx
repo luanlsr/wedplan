@@ -25,7 +25,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  const categories = ['Todos', 'Noivos', 'Família Noiva', 'Família Noivo', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Staff', 'Outros'];
+  const categories = ['Todos', 'Noivos', 'Família', 'Família Noiva', 'Família Noivo', 'Amigos', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Staff', 'Outros'];
   const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
 
   const requestSort = (key: keyof Guest | 'total_pessoas') => {
@@ -43,7 +43,11 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const sortedAndFilteredGuests = useMemo(() => {
     let items = guests.filter(g => {
       const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = filterCategory === 'Todos' || g.categoria === filterCategory;
+      const matchesCategory = filterCategory === 'Todos' || 
+        (filterCategory === 'Padrinhos' ? g.categoria.includes('Padrinho') : 
+         filterCategory === 'Família' ? g.categoria.includes('Família') :
+         filterCategory === 'Amigos' ? g.categoria.includes('Amigos') :
+         g.categoria === filterCategory);
       const matchesStatus = filterStatus === 'Todos' || g.status === filterStatus;
       return matchesSearch && matchesCategory && matchesStatus;
     });
@@ -102,21 +106,29 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               </div>
               
               <div className="flex items-center gap-2 w-full md:w-auto">
-                 <Button 
-                   variant="outline" 
-                   className={cn("md:hidden h-12 w-full rounded-2xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
-                   onClick={() => setShowMobileFilters(!showMobileFilters)}
-                 >
-                   <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-                 </Button>
+                <div className="flex flex-col w-full gap-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <Button 
+                      variant="outline" 
+                      className={cn("md:hidden h-12 flex-1 rounded-2xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
+                      onClick={() => setShowMobileFilters(!showMobileFilters)}
+                    >
+                      <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+                    </Button>
+                    <div className="px-4 py-2 bg-secondary/10 rounded-xl border border-border shrink-0">
+                       <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
+                       <span className="text-xs font-black text-primary">{sortedAndFilteredGuests.length}</span>
+                    </div>
+                  </div>
 
-                 <div className={cn(
-                   "md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto",
-                   showMobileFilters ? "flex absolute top-[100%] left-0 right-0 z-50 p-4 bg-background border-b border-border shadow-2xl animate-in slide-in-from-top-2" : "hidden"
-                 )}>
+                  <div className={cn(
+                    "md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto",
+                    showMobileFilters ? "flex animate-in slide-in-from-top-2 pt-4 md:pt-0 border-t md:border-none border-border" : "hidden"
+                  )}>
                     <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
                     <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
-                 </div>
+                  </div>
+                </div>
               </div>
             </div>
 

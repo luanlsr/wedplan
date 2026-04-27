@@ -66,6 +66,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [sortBy, setSortBy] = useState<SortOption>("manual");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -139,9 +140,28 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
               />
             </div>
             
-            <div className="flex gap-4 w-full md:w-auto">
-              <FilterSelect value={categoryFilter} onChange={setCategoryFilter} options={categories} icon={<Filter size={18}/>} />
-              <FilterSelect value={statusFilter} onChange={setStatusFilter} options={statuses} icon={<CheckCircle2 size={18}/>} isStatus />
+            <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+              <div className="flex items-center justify-between w-full h-full gap-4">
+                <Button 
+                  variant="outline" 
+                  className={cn("md:hidden h-12 flex-1 rounded-2xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                >
+                  <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+                </Button>
+                <div className="px-4 py-2 bg-secondary/10 rounded-xl border border-white/5 shrink-0 flex items-center h-12 md:h-14">
+                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
+                   <span className="text-xs font-black text-primary">{sortedSuppliers.length}</span>
+                </div>
+              </div>
+
+              <div className={cn(
+                "md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto",
+                showMobileFilters ? "flex animate-in slide-in-from-top-2 mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-none border-white/5" : "hidden"
+              )}>
+                <FilterSelect value={categoryFilter} onChange={setCategoryFilter} options={categories} icon={<Filter size={18}/>} />
+                <FilterSelect value={statusFilter} onChange={setStatusFilter} options={statuses} icon={<CheckCircle2 size={18}/>} isStatus />
+              </div>
             </div>
           </div>
 
@@ -151,7 +171,10 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
+        <div className={cn(
+          "flex-wrap items-center gap-2 pt-4 border-t border-white/5",
+          showMobileFilters ? "flex" : "hidden md:flex"
+        )}>
           <SortBtn active={sortBy === 'manual'} onClick={() => handleSort('manual')} icon={<ArrowUpDown size={14}/>} label="Ordem Manual" />
           <SortBtn active={sortBy === 'alphabetical'} onClick={() => handleSort('alphabetical')} icon={<Search size={14}/>} label="A-Z" direction={sortBy === 'alphabetical' ? sortDirection : null} />
           <SortBtn active={sortBy === 'value'} onClick={() => handleSort('value')} icon={<DollarIcon size={14}/>} label="Valor" direction={sortBy === 'value' ? sortDirection : null} />

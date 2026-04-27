@@ -1,5 +1,6 @@
-import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, Button, useConfirm } from '../ui';
+import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Card, Button, useConfirm, Input } from '../ui';
+import { Search, ChevronDown, Filter as FilterIcon } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
 import { useState, useMemo, useEffect } from 'react';
@@ -19,6 +20,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'pendente' | 'em_progresso' | 'concluido'>('Todos');
   const [sortBy, setSortBy] = useState<SortOption>('dataLimite');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,20 +108,35 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
 
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-center bg-card p-4 rounded-2xl shadow-sm border gap-4">
-          <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-2 md:pb-0">
-            {(['Todos', 'pendente', 'em_progresso', 'concluido'] as const).map(status => (
-              <Button
-                key={status}
-                variant={filterStatus === status ? "primary" : "outline"}
-                className="rounded-full px-4 font-bold h-10 capitalize shrink-0"
-                onClick={() => setFilterStatus(status)}
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="flex items-center justify-between w-full gap-4">
+              <Button 
+                variant="outline" 
+                className={cn("md:hidden h-10 flex-1 rounded-xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
               >
-                {status === 'pendente' ? 'Pendentes' : 
-                 status === 'em_progresso' ? 'Em Progresso' :
-                 status === 'concluido' ? 'Concluídas' : 'Todas'}
+                <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
               </Button>
-            ))}
+              <div className="px-3 py-2 bg-secondary/10 rounded-xl border border-border shrink-0 flex items-center h-10">
+                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden xs:inline">Encontrados:</span>
+                 <span className="text-xs font-black text-primary">{sortedTasks.length}</span>
+              </div>
+            </div>
+
+            <div className={cn(
+              "md:flex flex-col md:flex-row items-center gap-2 w-full md:w-auto",
+              showMobileFilters ? "flex animate-in slide-in-from-top-2 pt-2 md:pt-0 border-t md:border-none border-border" : "hidden"
+            )}>
+              <FilterSelect 
+                value={filterStatus} 
+                onChange={(v: any) => setFilterStatus(v)} 
+                options={['Todos', 'pendente', 'em_progresso', 'concluido']} 
+                icon={<CheckCircle2 size={18}/>} 
+                isStatus 
+              />
+            </div>
           </div>
+
           <Button className="gap-2 h-10 px-6 rounded-xl font-bold shadow-lg shadow-primary/20 w-full md:w-auto" onClick={onAdd}>
             <Plus size={18} />
             Nova Tarefa
@@ -127,9 +144,12 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
         </div>
 
         {/* Sorting Bar - Fixed Horizontal Scroll and Cutoff */}
-        <div className="flex items-center gap-3 p-3 bg-secondary/10 rounded-2xl overflow-x-auto no-scrollbar border border-white/5 w-full">
-           <span className="text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap shrink-0 opacity-60">Ordenar por:</span>
-           <div className="flex gap-2 shrink-0 pr-4">
+        <div className={cn(
+          "items-center gap-3 p-3 bg-secondary/10 rounded-2xl overflow-hidden border border-white/5 w-full",
+          showMobileFilters ? "flex" : "hidden md:flex"
+        )}>
+           <span className="text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap shrink-0 opacity-60">Ordenar:</span>
+           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 w-full">
              <SortTab active={sortBy === 'titulo'} onClick={() => handleSort('titulo')} label="Título" direction={sortBy === 'titulo' ? sortDirection : null} />
              <SortTab active={sortBy === 'categoria'} onClick={() => handleSort('categoria')} label="Categoria" direction={sortBy === 'categoria' ? sortDirection : null} />
              <SortTab active={sortBy === 'dataLimite'} onClick={() => handleSort('dataLimite')} label="Data" direction={sortBy === 'dataLimite' ? sortDirection : null} />
@@ -286,4 +306,27 @@ const SortTab = ({ active, onClick, label, direction }: any) => (
     {!direction ? <ArrowUpDown size={10} className="opacity-30" /> : 
      direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
   </button>
+);
+
+const FilterSelect = ({ value, onChange, options, icon, isStatus }: { value: string, onChange: (v: string) => void, options: string[], icon: React.ReactNode, isStatus?: boolean }) => (
+  <div className="relative w-full md:min-w-[240px] md:w-fit">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-colors">
+      {icon}
+    </div>
+    <select
+      className="h-10 w-full pl-12 pr-10 rounded-xl bg-secondary/10 border border-border text-foreground text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer hover:bg-secondary/20"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map((o: string) => (
+        <option key={o} value={o} className="bg-slate-900 border-none px-4 py-2 capitalize font-medium">
+          {o === "Todos" ? "Todos os Status" : 
+           o === "pendente" ? "Pendentes" : 
+           o === "em_progresso" ? "Em Progresso" : 
+           "Concluídas"}
+        </option>
+      ))}
+    </select>
+    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+  </div>
 );
