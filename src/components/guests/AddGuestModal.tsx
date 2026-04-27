@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { Guest } from "../../types";
 import { Card, Button, Input } from "../ui";
 import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus, Plus, Trash2, ChevronDown } from "lucide-react";
+import { cn } from "../../lib/utils";
 
 import { maskPhone } from "../../utils/masks";
 
@@ -73,7 +74,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
         setFormData({ ...formData, children_names: newList.join(", ") });
     };
 
-    const categories = ["Noivos", "Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Staff", "Outros"];
+    const categories = ["Noivos", "Padrinhos Noiva", "Padrinhos Noivo", "Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Staff", "Outros"];
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -262,9 +263,9 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                   value={formData.observacoes}
                   onChange={e => setFormData({...formData, observacoes: e.target.value})}
                 />
-              </div>
             </div>
           </div>
+        </div>
 
           <div className="flex gap-4 pt-4 border-t border-border">
             <Button type="button" variant="outline" className="flex-1 h-14" onClick={onClose}>

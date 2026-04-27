@@ -9,12 +9,13 @@ interface GuestStatsProps {
     criancas: number;
     noiva: number;
     noivo: number;
+    convitesEnviados: number;
   };
 }
 
 export const GuestStats = ({ totals }: GuestStatsProps) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
       <Card className="p-3 sm:p-4 bg-primary/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
         <p className="text-[8px] sm:text-xs font-black text-primary uppercase tracking-widest">Total</p>
         <div>
@@ -45,6 +46,10 @@ export const GuestStats = ({ totals }: GuestStatsProps) => {
       <Card className="p-3 sm:p-4 bg-blue-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
         <p className="text-[8px] sm:text-xs font-black text-blue-500 uppercase tracking-widest">Noivo</p>
         <p className="text-base sm:text-2xl font-black leading-none">{totals.noivo}</p>
+      </Card>
+      <Card className="p-3 sm:p-4 bg-purple-500/10 border-none flex flex-col justify-between h-20 sm:h-auto transition-all">
+        <p className="text-[8px] sm:text-xs font-black text-purple-600 uppercase tracking-widest">Convites</p>
+        <p className="text-base sm:text-2xl font-black leading-none">{totals.convitesEnviados}</p>
       </Card>
     </div>
   );

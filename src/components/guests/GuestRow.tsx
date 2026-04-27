@@ -1,4 +1,5 @@
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Send, Check } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { Button, Badge } from '../ui';
 import type { Guest } from '../../types';
 
@@ -41,6 +42,29 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
            guest.status === 'pendente' ? <Badge variant="warning">Pendente</Badge> :
            <Badge variant="error">Recusado</Badge>}
         </button>
+      </td>
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onUpdate(guest.id, { invitation_sent: !guest.invitation_sent })}
+            className={cn(
+              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              guest.invitation_sent ? "bg-primary" : "bg-muted"
+            )}
+          >
+            <span
+              className={cn(
+                "pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+                guest.invitation_sent ? "translate-x-5" : "translate-x-0.5"
+              )}
+            />
+          </button>
+          {guest.invitation_sent ? (
+            <Badge variant="success" className="text-[9px] px-2 py-0">Enviado</Badge>
+          ) : (
+            <Badge variant="outline" className="text-[9px] px-2 py-0 opacity-50">Pendente</Badge>
+          )}
+        </div>
       </td>
       <td className="px-6 py-4 text-sm font-medium text-muted-foreground">{guest.telefone || '-'}</td>
       <td className="px-6 py-4 text-right">

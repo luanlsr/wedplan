@@ -1,10 +1,11 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { Card, Button, Input, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { GuestStats } from './GuestStats';
 import { GuestRow } from './GuestRow';
+import { GuestCard } from './GuestCard';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -19,13 +20,28 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
+  const [filterInvitation, setFilterInvitation] = useState('Todos');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const itemsPerPage = 15;
 
-  const categories = ['Todos', 'Noivos', 'Família', 'Família Noiva', 'Família Noivo', 'Amigos', 'Amigos Noiva', 'Amigos Noivo', 'Padrinhos', 'Staff', 'Outros'];
+  const categories = [
+    'Todos', 
+    'Convidados da Noiva', 
+    'Convidados do Noivo', 
+    'Padrinhos Noiva', 
+    'Padrinhos Noivo',
+    'Família Noiva', 
+    'Família Noivo', 
+    'Amigos Noiva', 
+    'Amigos Noivo',
+    'Padrinhos', 
+    'Staff', 
+    'Outros'
+  ];
   const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
 
   const requestSort = (key: keyof Guest | 'total_pessoas') => {
@@ -38,18 +54,36 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory, filterStatus]);
-
+  }, [searchTerm, filterCategory, filterStatus, filterInvitation]);
   const sortedAndFilteredGuests = useMemo(() => {
     let items = guests.filter(g => {
       const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = filterCategory === 'Todos' || 
-        (filterCategory === 'Padrinhos' ? g.categoria.includes('Padrinho') : 
-         filterCategory === 'Família' ? g.categoria.includes('Família') :
-         filterCategory === 'Amigos' ? g.categoria.includes('Amigos') :
-         g.categoria === filterCategory);
+      
+      let matchesCategory = false;
+      if (filterCategory === 'Todos') {
+        matchesCategory = true;
+      } else if (filterCategory === 'Convidados da Noiva') {
+        matchesCategory = g.categoria.toLocaleLowerCase().includes('noiva');
+      } else if (filterCategory === 'Convidados do Noivo') {
+        matchesCategory = g.categoria.toLocaleLowerCase().includes('noivo');
+      } else if (filterCategory === 'Padrinhos') {
+        // Filtro Geral: Pega qualquer categoria que comece ou contenha Padrinho
+        matchesCategory = g.categoria.includes('Padrinho');
+      } else if (filterCategory === 'Família') {
+        matchesCategory = g.categoria.includes('Família');
+      } else if (filterCategory === 'Amigos') {
+        matchesCategory = g.categoria.includes('Amigos');
+      } else {
+        // Filtros Específicos (Padrinhos Noiva, Padrinhos Noivo, etc): Comparação exata
+        matchesCategory = g.categoria === filterCategory;
+      }
+
       const matchesStatus = filterStatus === 'Todos' || g.status === filterStatus;
-      return matchesSearch && matchesCategory && matchesStatus;
+      
+      const matchesInvitation = filterInvitation === 'Todos' || 
+        (filterInvitation === 'Enviados' ? g.invitation_sent === true : g.invitation_sent === false);
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesInvitation;
     });
 
     if (sortConfig) {
@@ -69,10 +103,22 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     }
 
     return items;
-  }, [guests, searchTerm, filterCategory, filterStatus, sortConfig]);
+  }, [guests, searchTerm, filterCategory, filterStatus, filterInvitation, sortConfig]);
 
-  const totalPages = Math.ceil(sortedAndFilteredGuests.length / itemsPerPage);
-  const paginatedItems = sortedAndFilteredGuests.slice(
+  // Effect to update orderedIds only when criteria change OR guests are added/removed
+  useEffect(() => {
+    setOrderedIds(sortedAndFilteredGuests.map(g => g.id));
+  }, [searchTerm, filterCategory, filterStatus, filterInvitation, sortConfig, guests.length]);
+
+  // The actual guests to display, in the frozen order, with latest data
+  const displayGuests = useMemo(() => {
+    return orderedIds
+      .map(id => guests.find(g => g.id === id))
+      .filter((g): g is Guest => !!g);
+  }, [orderedIds, guests]);
+
+  const totalPages = Math.ceil(displayGuests.length / itemsPerPage);
+  const paginatedItems = displayGuests.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -85,6 +131,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     criancas: guests.reduce((acc, g) => acc + (g.criancas || 0), 0),
     noiva: guests.reduce((acc, g) => g.categoria.includes('Noiva') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
     noivo: guests.reduce((acc, g) => g.categoria.includes('Noivo') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
+    convitesEnviados: guests.filter(g => g.invitation_sent).length,
   }), [guests]);
 
   return (
@@ -115,10 +162,10 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                     >
                       <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
                     </Button>
-                    <div className="px-4 py-2 bg-secondary/10 rounded-xl border border-border shrink-0">
-                       <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
-                       <span className="text-xs font-black text-primary">{sortedAndFilteredGuests.length}</span>
-                    </div>
+                     <div className="px-4 py-2 bg-secondary/10 rounded-xl border border-border shrink-0">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
+                        <span className="text-xs font-black text-primary">{displayGuests.length}</span>
+                     </div>
                   </div>
 
                   <div className={cn(
@@ -127,6 +174,18 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                   )}>
                     <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
                     <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
+                    <FilterSelect value={filterInvitation} onChange={setFilterInvitation} options={['Todos', 'Enviados', 'Pendentes']} icon={<Send size={18}/>} label="Convite" />
+                    
+                    {/* Sort Selector for Mobile */}
+                    <div className="md:hidden w-full">
+                      <FilterSelect 
+                        value={sortConfig?.key || 'nome'} 
+                        onChange={(val) => setSortConfig({ key: val as any, direction: 'asc' })} 
+                        options={['nome', 'categoria', 'status', 'total_pessoas', 'invitation_sent']} 
+                        icon={<ArrowUp size={18}/>} 
+                        label="Ordenar por" 
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -138,31 +197,40 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-muted/30 border-b border-border">
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('nome')}>
                   <div className="flex items-center gap-2">
-                    NOME {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                    NOME {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
                   </div>
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('categoria')}>
                   <div className="flex items-center gap-2">
-                    CATEGORIA {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                    CATEGORIA {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
                   </div>
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('total_pessoas')}>
                   <div className="flex items-center gap-2">
-                    A/C {sortConfig?.key === 'total_pessoas' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                    A/C {sortConfig?.key === 'total_pessoas' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
                   </div>
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('status')}>
                   <div className="flex items-center gap-2">
-                    STATUS {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
+                    STATUS {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">CONTATO</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('invitation_sent')}>
+                  <div className="flex items-center gap-2">
+                    CONVITE {sortConfig?.key === 'invitation_sent' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('telefone')}>
+                  <div className="flex items-center gap-2">
+                    CONTATO {sortConfig?.key === 'telefone' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-right"></th>
               </tr>
             </thead>
@@ -179,6 +247,23 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:p-6 bg-muted/5">
+            {paginatedItems.map((guest) => (
+              <GuestCard 
+                key={guest.id} 
+                guest={guest} 
+                onEdit={onEdit} 
+                onUpdate={onUpdate} 
+                onDelete={onDelete} 
+                confirm={confirm}
+              />
+            ))}
+          </div>
+        </div>
           
           {totalPages > 1 && (
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-4 bg-muted/20 border-t border-border">
@@ -231,7 +316,6 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                <p className="font-bold text-muted-foreground">Nenhum convidado encontrado.</p>
             </div>
           )}
-        </div>
       </Card>
     </div>
   );
@@ -249,7 +333,11 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { val
     >
       {options.map((o: string) => (
         <option key={o} value={o} className="bg-slate-900 border-none px-4 py-2 capitalize font-medium">
-          {o === "Todos" ? (isStatus ? "Todos os Status" : `Todas as ${label}s`) : (isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : o)}
+          {o === "Todos" ? (isStatus ? "Todos os Status" : `Todas as ${label}s`) : 
+           isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : 
+           o === "total_pessoas" ? "Acompanhantes" :
+           o === "invitation_sent" ? "Status do Convite" :
+           o}
         </option>
       ))}
     </select>

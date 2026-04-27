@@ -47,6 +47,7 @@ export interface Guest {
   telefone?: string;
   observacoes?: string;
   is_present?: boolean;
+  invitation_sent?: boolean;
 }
 
 export interface Task {

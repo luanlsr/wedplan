@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Input, Badge, cn, useConfirm } from './ui';
-import { Save, UserPlus, Shield, Database, RefreshCw, Copy, Check } from 'lucide-react';
+import { Save, UserPlus, Shield, Database, RefreshCw, Copy, Check, Lock, Eye, EyeOff } from 'lucide-react';
 import { maskCurrency, unmaskCurrency } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 
@@ -21,7 +21,7 @@ export const SettingsView = ({
   isSyncing,
   customAlert
 }: SettingsViewProps) => {
-  const { user, resetPassword } = useAuth();
+  const { user, resetPassword, updatePassword } = useAuth();
   const { confirm } = useConfirm();
 
   // Local state for the form
@@ -35,6 +35,14 @@ export const SettingsView = ({
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Update local state when data changes (initial load)
   useEffect(() => {
@@ -87,6 +95,49 @@ export const SettingsView = ({
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+  
+  const handleUpdatePassword = async () => {
+    if (!passwordData.newPassword) return;
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      await customAlert({
+        title: "Erro",
+        description: "As senhas não coincidem.",
+        type: "error"
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      await customAlert({
+        title: "Senha Curta",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        type: "error"
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { error } = await updatePassword(passwordData.newPassword);
+      if (error) throw error;
+      
+      await customAlert({
+        title: "Sucesso!",
+        description: "Sua senha foi alterada com sucesso.",
+        type: "success"
+      });
+      setPasswordData({ newPassword: "", confirmPassword: "" });
+    } catch (err: any) {
+      await customAlert({
+        title: "Erro ao alterar",
+        description: err.message || "Não foi possível alterar sua senha no momento.",
+        type: "error"
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const tabs = [
@@ -261,8 +312,57 @@ export const SettingsView = ({
                   }
                 }}
               >
-                Solicitar Reset de Senha
+                Solicitar Reset de Senha via E-mail
               </Button>
+            </Card>
+
+            <Card className="p-5 sm:p-8 border-white/5 shadow-lg space-y-6">
+              <div className="flex items-center gap-3 text-primary">
+                <Lock size={24} />
+                <h4 className="font-black uppercase italic tracking-tight">Alterar Senha</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 italic text-left block">Nova Senha</label>
+                  <div className="relative group">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Mínimo 6 caracteres"
+                      className="h-14 bg-secondary/30 border-white/5 rounded-2xl font-bold transition-all focus:bg-secondary/50 pr-12"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 italic text-left block">Confirmar Nova Senha</label>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Repita a nova senha"
+                    className="h-14 bg-secondary/30 border-white/5 rounded-2xl font-bold transition-all focus:bg-secondary/50"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleUpdatePassword}
+                  disabled={isChangingPassword || !passwordData.newPassword}
+                  className="w-full h-14 bg-primary text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg shadow-primary/20"
+                >
+                  {isChangingPassword ? <RefreshCw className="animate-spin mr-2" size={18} /> : <Save className="mr-2" size={18} />}
+                  {isChangingPassword ? "Alterando..." : "Atualizar Senha"}
+                </Button>
+              </div>
             </Card>
 
             {user && (

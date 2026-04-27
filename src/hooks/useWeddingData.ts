@@ -190,7 +190,8 @@ export const useWeddingData = () => {
           children_names: g.children_names,
           telefone: g.telefone,
           observacoes: g.observacoes,
-          is_present: g.is_present
+          is_present: g.is_present,
+          invitation_sent: g.invitation_sent
         })),
         tarefas: (tasksData || []).map((t) => ({
           id: t.id,
@@ -312,7 +313,8 @@ export const useWeddingData = () => {
         children_names: guest.children_names,
         telefone: guest.telefone,
         observacoes: guest.observacoes,
-        is_present: guest.is_present || false
+        is_present: guest.is_present || false,
+        invitation_sent: guest.invitation_sent || false
       });
       loadData();
     } catch (err) {
@@ -336,6 +338,7 @@ export const useWeddingData = () => {
       if (updated.telefone !== undefined) payload.telefone = updated.telefone;
       if (updated.observacoes !== undefined) payload.observacoes = updated.observacoes;
       if (updated.is_present !== undefined) payload.is_present = updated.is_present;
+      if (updated.invitation_sent !== undefined) payload.invitation_sent = updated.invitation_sent;
 
       await supabase.from('guests').update(payload).eq('id', id);
       loadData();
