@@ -1,6 +1,6 @@
 import { CheckCircle2, Plus, Trash2, GripVertical, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { Card, Button, useConfirm, Input } from '../ui';
-import { Search, ChevronDown, Filter as FilterIcon } from 'lucide-react';
+import { Card, Button, useConfirm } from '../ui';
+import { ChevronDown } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
 import { useState, useMemo, useEffect } from 'react';
@@ -308,7 +308,7 @@ const SortTab = ({ active, onClick, label, direction }: any) => (
   </button>
 );
 
-const FilterSelect = ({ value, onChange, options, icon, isStatus }: { value: string, onChange: (v: string) => void, options: string[], icon: React.ReactNode, isStatus?: boolean }) => (
+const FilterSelect = ({ value, onChange, options, icon }: { value: string, onChange: (v: string) => void, options: string[], icon: React.ReactNode, isStatus?: boolean }) => (
   <div className="relative w-full md:min-w-[240px] md:w-fit">
     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-colors">
       {icon}
