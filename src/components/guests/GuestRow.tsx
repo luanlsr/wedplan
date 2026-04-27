@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Send, Check } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button, Badge } from '../ui';
 import type { Guest } from '../../types';

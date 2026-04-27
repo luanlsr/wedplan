@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import type { Guest } from "../../types";
 import { Card, Button, Input } from "../ui";
 import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus, Plus, Trash2, ChevronDown } from "lucide-react";
-import { cn } from "../../lib/utils";
 
 import { maskPhone } from "../../utils/masks";
 
