@@ -1,4 +1,4 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, Send, Printer } from 'lucide-react';
 import { Card, Button, Input, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils';
 import { GuestStats } from './GuestStats';
 import { GuestRow } from './GuestRow';
 import { GuestCard } from './GuestCard';
+import { generateGuestsPdf } from '../../utils/pdfGenerator';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -136,64 +137,70 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <GuestStats totals={totals} />
+      <div>
+        <GuestStats totals={totals} />
+      </div>
 
       <Card className="border-none shadow-2xl overflow-hidden bg-card/60 backdrop-blur-xl rounded-[2rem]">
         <div className="p-6 sm:p-8 border-b border-border bg-muted/20">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex flex-col md:flex-row items-center gap-4 flex-1">
-              <div className="relative w-full md:w-96 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
-                <Input
-                  placeholder="Buscar convidado..."
-                  className="h-12 pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-2xl font-bold"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <div className="flex items-center gap-2 w-full md:w-auto">
-                <div className="flex flex-col w-full gap-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <Button 
-                      variant="outline" 
-                      className={cn("md:hidden h-12 flex-1 rounded-2xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
-                      onClick={() => setShowMobileFilters(!showMobileFilters)}
-                    >
-                      <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-                    </Button>
-                     <div className="px-4 py-2 bg-secondary/10 rounded-xl border border-border shrink-0">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
-                        <span className="text-xs font-black text-primary">{displayGuests.length}</span>
-                     </div>
-                  </div>
-
-                  <div className={cn(
-                    "md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto",
-                    showMobileFilters ? "flex animate-in slide-in-from-top-2 pt-4 md:pt-0 border-t md:border-none border-border" : "hidden"
-                  )}>
-                    <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
-                    <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
-                    <FilterSelect value={filterInvitation} onChange={setFilterInvitation} options={['Todos', 'Enviados', 'Pendentes']} icon={<Send size={18}/>} label="Convite" />
-                    
-                    {/* Sort Selector for Mobile */}
-                    <div className="md:hidden w-full">
-                      <FilterSelect 
-                        value={sortConfig?.key || 'nome'} 
-                        onChange={(val) => setSortConfig({ key: val as any, direction: 'asc' })} 
-                        options={['nome', 'categoria', 'status', 'total_pessoas', 'invitation_sent']} 
-                        icon={<ArrowUp size={18}/>} 
-                        label="Ordenar por" 
-                      />
-                    </div>
-                  </div>
+          <div className="flex flex-col gap-6">
+            {/* PRIMEIRA LINHA: BUSCA E AÇÕES */}
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+              <div className="flex gap-3 w-full xl:w-[480px]">
+                <div className="relative w-full group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+                  <Input
+                    placeholder="Buscar convidado..."
+                    className="h-12 pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-2xl font-bold w-full"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
+                <Button 
+                  variant="outline" 
+                  className={cn("xl:hidden h-12 w-12 px-0 shrink-0 rounded-2xl transition-colors", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                >
+                  <Filter size={20} />
+                </Button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto mt-2 xl:mt-0">
+                <Button onClick={() => generateGuestsPdf(sortedAndFilteredGuests)} variant="outline" className="h-12 flex-1 sm:flex-none px-6 rounded-2xl font-black uppercase tracking-widest gap-2 bg-background hover:bg-muted whitespace-nowrap border-primary/20 text-primary">
+                  <Printer size={18} className="shrink-0" /> <span className="hidden sm:inline">Imprimir Lista</span><span className="sm:hidden">Imprimir</span>
+                </Button>
+                <Button onClick={onAdd} className="h-12 flex-1 sm:flex-none px-6 rounded-2xl font-black uppercase tracking-widest gap-2 shadow-[0_10px_20px_rgba(var(--primary-rgb),0.2)] whitespace-nowrap">
+                  <UserPlus size={18} className="shrink-0" /> Adicionar Grupo
+                </Button>
               </div>
             </div>
 
-            <Button onClick={onAdd} className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest gap-2 shadow-[0_10px_20px_rgba(var(--primary-rgb),0.2)]">
-              <UserPlus size={18} /> Adicionar Grupo
-            </Button>
+            {/* SEGUNDA LINHA: FILTROS E CONTAGEM */}
+            <div className={cn(
+              "flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 transition-all w-full",
+              showMobileFilters ? "flex" : "hidden xl:flex"
+            )}>
+              <div className="flex flex-col md:flex-row flex-wrap items-center gap-3 w-full xl:w-auto">
+                <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
+                <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
+                <FilterSelect value={filterInvitation} onChange={setFilterInvitation} options={['Todos', 'Enviados', 'Pendentes']} icon={<Send size={18}/>} label="Convite" />
+                
+                <div className="md:hidden w-full mt-2">
+                  <FilterSelect 
+                    value={sortConfig?.key || 'nome'} 
+                    onChange={(val) => setSortConfig({ key: val as any, direction: 'asc' })} 
+                    options={['nome', 'categoria', 'status', 'total_pessoas', 'invitation_sent']} 
+                    icon={<ArrowUp size={18}/>} 
+                    label="Ordenar por" 
+                  />
+                </div>
+              </div>
+
+              <div className="px-5 py-3 h-12 bg-secondary/10 rounded-xl border border-border text-center shadow-sm w-full md:w-auto self-end xl:self-auto shrink-0 flex items-center justify-center">
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2">Encontrados:</span>
+                <span className="text-sm font-black text-primary">{displayGuests.length}</span>
+              </div>
+            </div>
           </div>
         </div>
 
