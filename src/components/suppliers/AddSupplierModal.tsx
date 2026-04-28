@@ -281,20 +281,22 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-muted-foreground">Quitação (dias antes do casamento)</label>
-              <div className="relative">
-                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input
-                  type="number"
-                  min="0"
-                  max="365"
-                  className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
-                  value={formData.finalPaymentDaysBeforeWedding}
-                  onChange={e => setFormData({ ...formData, finalPaymentDaysBeforeWedding: (e.target as HTMLInputElement).value })}
-                />
+            {formData.tipoPagamento === "entrada_quitacao" && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="text-sm font-bold text-muted-foreground">Quitação (dias antes do casamento)</label>
+                <div className="relative">
+                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                  <Input
+                    type="number"
+                    min="0"
+                    max="365"
+                    className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
+                    value={formData.finalPaymentDaysBeforeWedding}
+                    onChange={e => setFormData({ ...formData, finalPaymentDaysBeforeWedding: (e.target as HTMLInputElement).value })}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {formData.tipoPagamento === "parcelado_fixo" && (
               <div className="space-y-2">
