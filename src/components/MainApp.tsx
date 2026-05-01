@@ -41,7 +41,7 @@ export function MainApp() {
   const { user } = useAuth();
   const { confirm, alert: customAlert } = useConfirm();
   const {
-    isModalOpen, setIsModalOpen, supplierToEdit,
+    isModalOpen, setIsModalOpen, supplierToEdit, handleEditSupplier,
     isGuestModalOpen, setIsGuestModalOpen, guestToEdit, handleEditGuest,
     isTaskModalOpen, setIsTaskModalOpen, taskToEdit, handleEditTask,
     clearModals
@@ -263,6 +263,7 @@ export function MainApp() {
             deleteSupplier={deleteSupplier}
             confirm={confirm}
             onToggleStatus={handleToggleStatus}
+            onEdit={handleEditSupplier}
           />
         } />
 

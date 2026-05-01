@@ -5,7 +5,7 @@ import {
   ChevronLeft, CheckCircle2, Circle, Calendar, Printer,
   Download, Heart, DollarSign, FileText, Edit2, Info,
   ArrowUp, ArrowDown, ArrowUpDown,
-  Share2
+  Share2, Phone, Mail, MapPin, Building
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatCurrency, formatDate } from '../../utils/calculations';
@@ -18,6 +18,7 @@ interface SupplierDetailsProps {
   deleteSupplier: (id: string) => void;
   confirm: (options: any) => Promise<boolean>;
   onToggleStatus: (supplierId: string, installment: Installment) => void;
+  onEdit: (supplier: Supplier) => void;
 }
 
 const SortButton = ({ active, onClick, label, direction }: { active: boolean, onClick: () => void, label: string, direction?: 'asc' | 'desc' | null }) => (
@@ -39,7 +40,8 @@ export const SupplierDetails = ({
   updateInstallment,
   deleteSupplier,
   confirm,
-  onToggleStatus
+  onToggleStatus,
+  onEdit
 }: SupplierDetailsProps) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -126,6 +128,12 @@ export const SupplierDetails = ({
             <Badge className="bg-primary/10 text-primary border-none text-xs sm:text-sm px-4 py-1 self-start mt-2">
               {currentSupplier.categoria}
             </Badge>
+            <button 
+              onClick={() => onEdit(currentSupplier)}
+              className="p-2 ml-auto text-muted-foreground hover:bg-secondary hover:text-primary rounded-xl transition-colors"
+            >
+              <Edit2 size={24} />
+            </button>
           </div>
           <p className="text-muted-foreground font-medium text-lg italic tracking-tight">{currentSupplier.servico}</p>
         </div>
@@ -133,8 +141,42 @@ export const SupplierDetails = ({
 
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-8">
-          {(currentSupplier.regraPagamento || currentSupplier.observacoes) && (
+          {(currentSupplier.regraPagamento || currentSupplier.observacoes || currentSupplier.phone || currentSupplier.email || currentSupplier.cnpj_cpf || currentSupplier.address) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
+              {(currentSupplier.phone || currentSupplier.email || currentSupplier.cnpj_cpf || currentSupplier.address) && (
+                <Card className="border-none shadow-lg bg-card p-6 border-l-4 border-blue-500">
+                  <div className="flex items-center gap-2 mb-4 text-blue-500">
+                    <Building size={18} />
+                    <h4 className="font-extrabold text-sm uppercase tracking-wider">Dados do Fornecedor</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {currentSupplier.cnpj_cpf && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <FileText size={14} className="text-muted-foreground" />
+                        <span className="text-foreground font-medium">{currentSupplier.cnpj_cpf}</span>
+                      </div>
+                    )}
+                    {currentSupplier.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone size={14} className="text-muted-foreground" />
+                        <span className="text-foreground font-medium">{currentSupplier.phone}</span>
+                      </div>
+                    )}
+                    {currentSupplier.email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail size={14} className="text-muted-foreground" />
+                        <span className="text-foreground font-medium">{currentSupplier.email}</span>
+                      </div>
+                    )}
+                    {currentSupplier.address && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin size={14} className="text-muted-foreground" />
+                        <span className="text-foreground font-medium">{currentSupplier.address}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
               {currentSupplier.regraPagamento && (
                 <Card className="border-none shadow-lg bg-card p-6 border-l-4 border-primary">
                   <div className="flex items-center gap-2 mb-3 text-primary">
@@ -150,7 +192,7 @@ export const SupplierDetails = ({
                 <Card className="border-none shadow-lg bg-card p-6 border-l-4 border-amber-500">
                   <div className="flex items-center gap-2 mb-3 text-amber-500">
                     <Info size={18} />
-                    <h4 className="font-extrabold text-sm uppercase tracking-wider">Observações do Contrato</h4>
+                    <h4 className="font-extrabold text-sm uppercase tracking-wider">Observações</h4>
                   </div>
                   <p className="text-sm font-medium text-foreground leading-relaxed whitespace-pre-wrap">
                     {currentSupplier.observacoes}
@@ -299,7 +341,19 @@ export const SupplierDetails = ({
           <Card className="border-none shadow-xl bg-card p-6">
             <h4 className="font-bold mb-4">Ações do Fornecedor</h4>
             <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start font-bold h-12">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start font-bold h-12"
+                onClick={() => onEdit(currentSupplier)}
+              >
+                <Edit2 size={18} /> Editar Fornecedor
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start font-bold h-12"
+                disabled={!currentSupplier.contract_url}
+                onClick={() => currentSupplier.contract_url && window.open(currentSupplier.contract_url, '_blank')}
+              >
                 <FileText size={18} /> Ver Contrato
               </Button>
               <Button variant="outline" className="w-full justify-start font-bold h-12">

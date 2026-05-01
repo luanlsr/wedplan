@@ -39,3 +39,24 @@ export const unmaskCurrency = (value: string): number => {
   const digits = value.replace(/\D/g, "");
   return Number(digits) / 100;
 };
+
+export const maskCPFOrCNPJ = (value: string) => {
+  if (!value) return "";
+  const digits = value.replace(/\D/g, "");
+  
+  if (digits.length <= 11) {
+    // CPF
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  } else {
+    // CNPJ
+    return digits
+      .slice(0, 14)
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+  }
+};

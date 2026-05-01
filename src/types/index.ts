@@ -34,6 +34,11 @@ export interface Supplier {
   entradaEmParcelas?: number;
   diasPagamentoFinalAntesCasamento?: number;
   staff_names?: string;
+  phone?: string;
+  email?: string;
+  cnpj_cpf?: string;
+  address?: string;
+  contract_url?: string;
 }
 
 export interface Guest {

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Supplier, PaymentType } from "../../types";
 import { Card, Button, Input } from "../ui";
-import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock, ChevronDown, Users } from "lucide-react";
+import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock, ChevronDown, Users, Phone, Mail, FileText, MapPin, Upload, FileCheck } from "lucide-react";
 import { generateInstallments, formatCurrency } from "../../utils/calculations";
-import { maskCurrency, unmaskCurrency } from "../../utils/masks";
+import { maskCurrency, unmaskCurrency, maskPhone, maskCPFOrCNPJ } from "../../utils/masks";
+import { supabase } from "../../lib/supabase";
 
 interface SupplierModalProps {
   onClose: () => void;
@@ -15,6 +16,8 @@ interface SupplierModalProps {
 
 export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSupplier }: SupplierModalProps) => {
   const isEditing = !!editSupplier;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contractFile, setContractFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     fornecedor: "",
@@ -30,7 +33,12 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     finalPaymentDaysBeforeWedding: "15",
     observacoes: "",
     regraPagamento: "",
-    staff_names: ""
+    staff_names: "",
+    phone: "",
+    email: "",
+    cnpj_cpf: "",
+    address: "",
+    contract_url: ""
   });
 
   useEffect(() => {
@@ -50,6 +58,11 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
         observacoes: editSupplier.observacoes || "",
         regraPagamento: editSupplier.regraPagamento || "",
         staff_names: editSupplier.staff_names || "",
+        phone: editSupplier.phone || "",
+        email: editSupplier.email || "",
+        cnpj_cpf: editSupplier.cnpj_cpf || "",
+        address: editSupplier.address || "",
+        contract_url: editSupplier.contract_url || "",
       });
     }
   }, [editSupplier]);
@@ -121,8 +134,9 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     };
   }, [formData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     const total = unmaskCurrency(formData.valorTotal);
 
     const config: any = {
@@ -141,6 +155,36 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
 
     const installments = generateInstallments(weddingDate, total, formData.tipoPagamento, config);
 
+    let contractUrl = formData.contract_url;
+
+    if (contractFile) {
+      if (contractFile.size > 10 * 1024 * 1024) {
+        alert("O contrato deve ter no máximo 10MB");
+        setIsSubmitting(false);
+        return;
+      }
+      const fileExt = contractFile.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error } = await supabase.storage
+        .from('contracts')
+        .upload(filePath, contractFile);
+        
+      if (error) {
+        console.error("Error uploading contract:", error);
+        alert("Erro ao fazer upload do contrato. Tente novamente.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('contracts')
+        .getPublicUrl(filePath);
+        
+      contractUrl = publicUrl;
+    }
+
     const supplierData: Supplier = {
       id: editSupplier?.id || Math.random().toString(36).substr(2, 9),
       fornecedor: formData.fornecedor,
@@ -158,7 +202,12 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
       porcentagemEntrada: parseFloat(formData.entryPercentage) || 0,
       entradaEmParcelas: parseInt(formData.entryInInstallments) || 1,
       diasPagamentoFinalAntesCasamento: parseInt(formData.finalPaymentDaysBeforeWedding) || 15,
-      staff_names: formData.staff_names
+      staff_names: formData.staff_names,
+      phone: formData.phone,
+      email: formData.email,
+      cnpj_cpf: formData.cnpj_cpf,
+      address: formData.address,
+      contract_url: contractUrl
     };
 
     if (isEditing && onUpdate) {
@@ -166,6 +215,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     } else {
       onAdd(supplierData);
     }
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -207,6 +257,62 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                 value={formData.servico}
                 onChange={e => setFormData({ ...formData, servico: (e.target as HTMLInputElement).value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-muted-foreground">E-mail</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input
+                  type="email"
+                  placeholder="contato@fornecedor.com"
+                  className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: (e.target as HTMLInputElement).value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-muted-foreground">Telefone</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input
+                  type="text"
+                  placeholder="(00) 00000-0000"
+                  className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: maskPhone((e.target as HTMLInputElement).value) })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-muted-foreground">CNPJ ou CPF</label>
+              <div className="relative">
+                <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input
+                  type="text"
+                  placeholder="00.000.000/0000-00"
+                  className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
+                  value={formData.cnpj_cpf}
+                  onChange={e => setFormData({ ...formData, cnpj_cpf: maskCPFOrCNPJ((e.target as HTMLInputElement).value) })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-bold text-muted-foreground">Endereço Completo</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input
+                  type="text"
+                  placeholder="Rua, Número, Bairro, Cidade - Estado"
+                  className="pl-12 bg-secondary/50 border-none focus:bg-card transition-all"
+                  value={formData.address}
+                  onChange={e => setFormData({ ...formData, address: (e.target as HTMLInputElement).value })}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -410,6 +516,57 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
             <p className="text-[10px] text-muted-foreground">Liste os nomes dos funcionários que estarão presentes no dia do evento.</p>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+              <Upload size={16} className="text-primary" /> Contrato em PDF (Max 10MB)
+            </label>
+            <div className="mt-2 flex justify-center rounded-xl border border-dashed border-border px-6 py-8 hover:bg-secondary/30 transition-colors">
+              <div className="text-center">
+                {contractFile || formData.contract_url ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <FileCheck className="mx-auto h-12 w-12 text-primary" aria-hidden="true" />
+                    <div className="text-sm font-medium text-foreground">
+                      {contractFile ? contractFile.name : 'Contrato anexado'}
+                    </div>
+                    {contractFile && (
+                      <button 
+                        type="button" 
+                        onClick={() => setContractFile(null)}
+                        className="text-xs text-red-500 hover:text-red-400 font-bold"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" aria-hidden="true" />
+                    <div className="mt-4 flex text-sm leading-6 justify-center">
+                      <label
+                        htmlFor="file-upload"
+                        className="relative cursor-pointer rounded-md font-semibold text-primary hover:text-primary/80"
+                      >
+                        <span>Selecione um arquivo PDF</span>
+                        <input 
+                          id="file-upload" 
+                          name="file-upload" 
+                          type="file" 
+                          className="sr-only" 
+                          accept="application/pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setContractFile(file);
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground">PDF até 10MB</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Real-time Preview Section */}
           {preview && (
             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -446,11 +603,11 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
           )}
 
           <div className="flex gap-4 pt-4 border-t border-border">
-            <Button type="button" variant="outline" className="flex-1 h-14" onClick={onClose}>
+            <Button type="button" variant="outline" className="flex-1 h-14" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-[2] h-14 text-lg shadow-lg shadow-primary/20">
-              {isEditing ? "Salvar Alterações" : "Cadastrar Fornecedor"}
+            <Button type="submit" className="flex-[2] h-14 text-lg shadow-lg shadow-primary/20" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Fornecedor"}
             </Button>
           </div>
         </form>

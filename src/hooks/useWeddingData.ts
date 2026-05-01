@@ -171,6 +171,11 @@ export const useWeddingData = () => {
           status: 'pendente', // Calculado em tempo de execução geralmente
           dataContrato: s.data_contrato,
           staff_names: s.staff_names,
+          phone: s.phone,
+          email: s.email,
+          cnpj_cpf: s.cnpj_cpf,
+          address: s.address,
+          contract_url: s.contract_url,
           parcelas: (s.parcelas || []).map((p: any) => ({
             id: p.id,
             numero: p.numero,
@@ -233,7 +238,12 @@ export const useWeddingData = () => {
         valor_total: supplier.valorTotal,
         tipo_pagamento: supplier.tipoPagamento,
         data_contrato: supplier.dataContrato,
-        staff_names: supplier.staff_names
+        staff_names: supplier.staff_names,
+        phone: supplier.phone,
+        email: supplier.email,
+        cnpj_cpf: supplier.cnpj_cpf,
+        address: supplier.address,
+        contract_url: supplier.contract_url
       }).select().single();
 
       if (sError) throw sError;
@@ -266,6 +276,11 @@ export const useWeddingData = () => {
       if (updated.staff_names !== undefined) payload.staff_names = updated.staff_names;
       if (updated.tipoPagamento) payload.tipo_pagamento = updated.tipoPagamento;
       if (updated.dataContrato) payload.data_contrato = updated.dataContrato;
+      if (updated.phone !== undefined) payload.phone = updated.phone;
+      if (updated.email !== undefined) payload.email = updated.email;
+      if (updated.cnpj_cpf !== undefined) payload.cnpj_cpf = updated.cnpj_cpf;
+      if (updated.address !== undefined) payload.address = updated.address;
+      if (updated.contract_url !== undefined) payload.contract_url = updated.contract_url;
 
       await supabase.from('suppliers').update(payload).eq('id', id);
       loadData();
