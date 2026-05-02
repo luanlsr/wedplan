@@ -64,7 +64,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Todas");
   const [statusFilter, setStatusFilter] = useState("Todos");
-  const [sortBy, setSortBy] = useState<SortOption>("manual");
+  const [sortBy, setSortBy] = useState<SortOption>("alphabetical");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   

@@ -25,7 +25,7 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
             value={supplier}
-            dragListener={isManual}
+            dragListener={false}
             dragControls={dragControls}
             className="group"
         >
