@@ -131,36 +131,37 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+          <div className="relative w-full md:w-80 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
             <Input 
               placeholder="Buscar fornecedor no fluxo..." 
-              className="pl-12 h-12 bg-secondary/30 border-none"
+              className="pl-12 h-12 bg-secondary/30 border-none w-full focus:ring-2 focus:ring-primary/20"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <div className="relative w-full md:w-40 group">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={16} />
             <select 
-              className="w-full h-12 pl-12 pr-4 rounded-xl bg-secondary/30 border-none focus:outline-none text-sm font-bold appearance-none text-foreground"
+              className="w-full h-12 pl-12 pr-10 rounded-xl bg-secondary/30 border-none focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-bold appearance-none text-foreground cursor-pointer"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               {categories.map(c => <option key={c} value={c} className="bg-card text-foreground">{c}</option>)}
             </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
           </div>
 
-          <div className="flex bg-secondary/30 rounded-xl p-1 gap-1">
+          <div className="flex bg-secondary/30 rounded-xl p-1 gap-1 w-full md:w-auto shrink-0">
             {(["all", "pago", "pendente"] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={cn(
-                  "flex-1 text-[10px] font-black uppercase tracking-wider h-10 rounded-lg transition-all",
+                  "flex-1 md:flex-none px-4 text-[10px] font-black uppercase tracking-wider h-10 rounded-lg transition-all whitespace-nowrap",
                   statusFilter === s ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground hover:bg-white/5"
                 )}
               >
@@ -170,25 +171,27 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-2">
+        <div className="flex items-center justify-between xl:justify-end gap-4 sm:gap-6 w-full xl:w-auto bg-card/40 border border-white/5 rounded-xl px-4 h-14 sm:h-12 shrink-0">
           <div className="flex items-center gap-3">
               <div 
                 role="button"
                 onClick={() => setShowPastMonths(!showPastMonths)}
                 className={cn(
-                  "w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 flex items-center",
+                  "w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 flex items-center shrink-0",
                   showPastMonths ? "bg-primary" : "bg-secondary"
                 )}
               >
                 <div className={cn(
-                  "w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-300",
-                  showPastMonths ? "translate-x-6" : "translate-x-0"
+                  "w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white shadow-md transition-transform duration-300",
+                  showPastMonths ? "translate-x-5 sm:translate-x-6" : "translate-x-0"
                 )} />
               </div>
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Mostrar Meses Passados</span>
+              <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Mostrar Meses Passados</span>
            </div>
            
-           <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50">
+           <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
+           
+           <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 whitespace-nowrap">
              {monthlyData.length} meses visíveis
            </p>
         </div>
