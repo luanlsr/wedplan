@@ -161,30 +161,48 @@ export const useWeddingData = () => {
           nome2: wedding.couple_name2 || '',
           data: wedding.wedding_date || '',
         },
-        fornecedores: (suppliersData || []).map((s) => ({
-          id: s.id,
-          fornecedor: s.fornecedor,
-          servico: s.servico,
-          categoria: s.categoria,
-          valorTotal: parseFloat(s.valor_total),
-          tipoPagamento: s.tipo_pagamento,
-          status: 'pendente', // Calculado em tempo de execução geralmente
-          dataContrato: s.data_contrato,
-          staff_names: s.staff_names,
-          phone: s.phone,
-          email: s.email,
-          cnpj_cpf: s.cnpj_cpf,
-          address: s.address,
-          contract_url: s.contract_url,
-          parcelas: (s.parcelas || []).map((p: any) => ({
+        fornecedores: (suppliersData || []).map((s) => {
+          const parcelasFormatadas = (s.parcelas || []).map((p: any) => ({
             id: p.id,
             numero: p.numero,
             dataVencimento: p.data_venc_original || p.data_vencimento,
             dataPagamento: p.data_pagamento,
             valor: parseFloat(p.valor),
             status: p.status as "pago" | "pendente"
-          })).sort((a: Installment, b: Installment) => a.numero - b.numero)
-        })),
+          })).sort((a: Installment, b: Installment) => a.numero - b.numero);
+
+          let statusCalc: "pago" | "parcial" | "pendente" | "atrasado" = 'pendente';
+          if (parcelasFormatadas.length > 0) {
+            const allPaid = parcelasFormatadas.every((p: any) => p.status === 'pago');
+            const somePaid = parcelasFormatadas.some((p: any) => p.status === 'pago');
+            
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            const someOverdue = parcelasFormatadas.some((p: any) => p.status !== 'pago' && new Date(p.dataVencimento) < hoje);
+
+            if (allPaid) statusCalc = 'pago';
+            else if (someOverdue) statusCalc = 'atrasado';
+            else if (somePaid) statusCalc = 'parcial';
+          }
+
+          return {
+            id: s.id,
+            fornecedor: s.fornecedor,
+            servico: s.servico,
+            categoria: s.categoria,
+            valorTotal: parseFloat(s.valor_total),
+            tipoPagamento: s.tipo_pagamento,
+            status: statusCalc,
+            dataContrato: s.data_contrato,
+            staff_names: s.staff_names,
+            phone: s.phone,
+            email: s.email,
+            cnpj_cpf: s.cnpj_cpf,
+            address: s.address,
+            contract_url: s.contract_url,
+            parcelas: parcelasFormatadas
+          };
+        }),
         convidados: (guestsData || []).map((g) => ({
           id: g.id,
           nome: g.nome,

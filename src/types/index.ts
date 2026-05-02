@@ -10,7 +10,7 @@ export interface Installment {
   valor: number;
   dataVencimento: string;
   status: "pago" | "pendente";
-  dataPagamento?: string;
+  dataPagamento?: string | null;
 }
 
 export interface Supplier {

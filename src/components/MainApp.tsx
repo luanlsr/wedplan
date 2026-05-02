@@ -138,7 +138,7 @@ export function MainApp() {
     const newStatus = p.status === 'pago' ? 'pendente' : 'pago';
     updateInstallment(supplierId, p.id, {
       status: newStatus,
-      dataPagamento: newStatus === 'pago' ? new Date().toISOString().split("T")[0] : undefined
+      dataPagamento: newStatus === 'pago' ? new Date().toISOString().split("T")[0] : null
     });
 
     if (newStatus === 'pago') {
