@@ -87,14 +87,18 @@ Input.displayName = "Input";
 
 export const Badge = ({ children, variant = "default", className }: { children: React.ReactNode; variant?: "default" | "success" | "warning" | "error" | "outline"; className?: string }) => {
   const styles = {
-    default: "bg-secondary text-secondary-foreground",
-    success: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    warning: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    error: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    outline: "border border-border bg-transparent text-muted-foreground",
+    default: "bg-secondary/50 text-secondary-foreground border-transparent",
+    success: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+    warning: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    error: "bg-red-500/10 text-red-500 border-red-500/20",
+    outline: "border border-primary/20 bg-primary/5 text-primary",
   };
   return (
-    <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider", styles[variant], className)}>
+    <span className={cn(
+      "inline-flex items-center justify-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] text-center border leading-none shrink-0", 
+      styles[variant], 
+      className
+    )}>
       {children}
     </span>
   );

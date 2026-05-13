@@ -46,6 +46,12 @@ export const SupplierDetails = ({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [editingInstallmentId, setEditingInstallmentId] = useState<string | null>(null);
+
+  // Força o scroll para o topo ao trocar de fornecedor
+  useState(() => {
+    window.scrollTo(0, 0);
+  });
+
   const [instSort, setInstSort] = useState<{ key: keyof Installment; direction: 'asc' | 'desc' }>({
     key: 'numero',
     direction: 'asc'
@@ -116,28 +122,31 @@ export const SupplierDetails = ({
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 print:hidden">
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           <button
             onClick={() => navigate('/fornecedores')}
             className="flex items-center gap-2 text-muted-foreground hover:text-primary font-black uppercase text-[10px] tracking-widest transition-all group"
           >
             <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Voltar
           </button>
-          <div className="flex items-center gap-4">
-            <h2 className="text-4xl sm:text-6xl font-black text-foreground uppercase tracking-tighter leading-none italic">{currentSupplier.fornecedor}</h2>
-            <Badge className="bg-primary/10 text-primary border-none text-xs sm:text-sm px-4 py-1 self-start mt-2">
-              {currentSupplier.categoria}
-            </Badge>
-            <button 
-              onClick={() => onEdit(currentSupplier)}
-              className="p-2 ml-auto text-muted-foreground hover:bg-secondary hover:text-primary rounded-xl transition-colors"
-            >
-              <Edit2 size={24} />
-            </button>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground uppercase tracking-tight leading-none break-words max-w-full">{currentSupplier.fornecedor}</h2>
+            <div className="flex items-center gap-2 ml-auto sm:ml-0">
+              <Badge className="bg-primary/10 text-primary border-none text-[10px] sm:text-sm px-3 sm:px-4 py-1">
+                {currentSupplier.categoria}
+              </Badge>
+              <button 
+                onClick={() => onEdit(currentSupplier)}
+                className="p-2 text-muted-foreground hover:bg-secondary hover:text-primary rounded-xl transition-colors"
+              >
+                <Edit2 size={20} className="sm:w-6 sm:h-6" />
+              </button>
+            </div>
           </div>
-          <p className="text-muted-foreground font-medium text-lg italic tracking-tight">{currentSupplier.servico}</p>
+          <p className="text-muted-foreground font-semibold text-sm sm:text-base tracking-tight uppercase opacity-70">{currentSupplier.servico}</p>
         </div>
       </div>
+
 
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-8">
@@ -202,62 +211,62 @@ export const SupplierDetails = ({
             </div>
           )}
 
-          <Card className="border-none shadow-xl bg-card p-8 print:shadow-none print:border print:p-4">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <h3 className="text-2xl font-black text-foreground print:text-xl">Cronograma</h3>
-                <div className="flex gap-1 p-1 bg-secondary/20 rounded-xl border border-white/5 print:hidden">
+          <Card className="border-none shadow-xl bg-card p-4 sm:p-8 print:shadow-none print:border print:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+              <div className="flex flex-col gap-4">
+                <h3 className="text-xl sm:text-2xl font-black text-foreground print:text-xl uppercase italic tracking-tighter">Cronograma</h3>
+                <div className="flex flex-wrap gap-1 p-1 bg-secondary/20 rounded-xl border border-white/5 print:hidden">
                   <SortButton active={instSort.key === 'numero'} onClick={() => toggleInstSort('numero')} label="#" direction={instSort.key === 'numero' ? instSort.direction : null} />
                   <SortButton active={instSort.key === 'dataVencimento'} onClick={() => toggleInstSort('dataVencimento')} label="Data" direction={instSort.key === 'dataVencimento' ? instSort.direction : null} />
                   <SortButton active={instSort.key === 'valor'} onClick={() => toggleInstSort('valor')} label="Valor" direction={instSort.key === 'valor' ? instSort.direction : null} />
                 </div>
               </div>
               <div className="flex gap-2 print:hidden">
-                <Button variant="outline" className="h-10 text-sm" onClick={handlePrint}><Printer size={16} /> Imprimir</Button>
-                <Button variant="outline" className="h-10 text-sm" onClick={() => handleExportCSV(currentSupplier)}><Download size={16} /> Exportar</Button>
+                <Button variant="outline" className="flex-1 sm:flex-none h-10 text-[10px] sm:text-sm font-black uppercase" onClick={handlePrint}><Printer size={16} /> Imprimir</Button>
+                <Button variant="outline" className="flex-1 sm:flex-none h-10 text-[10px] sm:text-sm font-black uppercase" onClick={() => handleExportCSV(currentSupplier)}><Download size={16} /> Exportar</Button>
               </div>
             </div>
-
-            <div className="space-y-4">
+ 
+            <div className="space-y-3 sm:space-y-4">
               {sortedInstallments.map((p) => {
                 const isEditing = editingInstallmentId === p.id;
                 return (
                   <div
                     key={p.id}
                     className={cn(
-                      "flex flex-col p-5 rounded-2xl border-2 transition-all duration-300",
+                      "flex flex-col p-4 sm:p-5 rounded-2xl border-2 transition-all duration-300",
                       p.status === 'pago' ? "bg-green-500/10 border-green-500/20" : "bg-card border-border hover:border-primary/5"
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 sm:gap-5">
                         <button
                           onClick={() => onToggleStatus(currentSupplier.id, p)}
                           className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-sm",
+                            "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all shadow-sm shrink-0",
                             p.status === 'pago' ? "bg-green-500 text-white" : "bg-secondary text-muted-foreground hover:bg-primary/10 hover:text-primary"
                           )}
                         >
-                          {p.status === 'pago' ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                          {p.status === 'pago' ? <CheckCircle2 size={20} className="sm:w-6 sm:h-6" /> : <Circle size={20} className="sm:w-6 sm:h-6" />}
                         </button>
-                        <div>
-                          <p className="font-black text-lg text-foreground">Parcela {p.numero}</p>
-                          <div className="flex items-center gap-4 text-sm font-medium">
+                        <div className="min-w-0">
+                          <p className="font-black text-base sm:text-lg text-foreground leading-tight">Parcela {p.numero}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-sm font-medium">
                             <span className="text-muted-foreground flex items-center gap-1">
-                              <Calendar size={14} /> Venc: {formatDate(p.dataVencimento)}
+                              <Calendar size={12} /> {formatDate(p.dataVencimento)}
                             </span>
                             {p.dataPagamento && (
                               <span className="text-green-600 flex items-center gap-1">
-                                <DollarSign size={14} /> Pago em: {formatDate(p.dataPagamento)}
+                                <DollarSign size={12} /> Pago: {formatDate(p.dataPagamento)}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className={cn("text-xl font-black font-mono", p.status === 'pago' ? "text-green-600" : "text-foreground")}>
+ 
+                      <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-3 sm:pt-0 border-border/50">
+                        <div className="text-left sm:text-right">
+                          <p className={cn("text-lg sm:text-xl font-black font-mono", p.status === 'pago' ? "text-green-600" : "text-foreground")}>
                             {formatCurrency(p.valor)}
                           </p>
                         </div>
@@ -269,6 +278,7 @@ export const SupplierDetails = ({
                         </button>
                       </div>
                     </div>
+
 
                     {isEditing && (
                       <div className="mt-6 pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-300">
@@ -315,28 +325,29 @@ export const SupplierDetails = ({
         </div>
 
         <div className="w-full lg:w-96 space-y-6">
-          <Card className="bg-primary text-white border-none shadow-2xl p-8 overflow-hidden relative">
+          <Card className="bg-primary text-white border-none shadow-2xl p-6 sm:p-8 overflow-hidden relative">
             <Heart className="absolute -right-4 -bottom-4 text-white/10" size={160} />
-            <h3 className="text-xl font-bold mb-6 relative z-10">Resumo Financeiro</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-6 relative z-10 uppercase italic tracking-tighter">Resumo Financeiro</h3>
             <div className="space-y-6 relative z-10">
-              <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                <span className="text-white/80 font-medium">Contratado</span>
-                <span className="font-black text-lg font-mono">{formatCurrency(currentSupplier.valorTotal)}</span>
+              <div className="flex justify-between items-center pb-4 border-b border-white/20 gap-4">
+                <span className="text-white/80 font-medium text-sm sm:text-base">Contratado</span>
+                <span className="font-black text-base sm:text-lg font-mono whitespace-nowrap">{formatCurrency(currentSupplier.valorTotal)}</span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                <span className="text-white/80 font-medium">Total Pago</span>
-                <span className="font-black text-lg font-mono text-green-300">
-                  {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pago' ? acc + p.valor : acc, 0))}
+              <div className="flex justify-between items-center pb-4 border-b border-white/20 gap-4">
+                <span className="text-white/80 font-medium text-sm sm:text-base">Total Pago</span>
+                <span className="font-black text-base sm:text-lg font-mono text-green-300 whitespace-nowrap">
+                   {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pago' ? acc + p.valor : acc, 0))}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/80 font-medium">Pendente</span>
-                <span className="font-black text-xl font-mono">
-                  {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pendente' ? acc + p.valor : acc, 0))}
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-white/80 font-medium text-sm sm:text-base">Pendente</span>
+                <span className="font-black text-lg sm:text-xl font-mono whitespace-nowrap">
+                   {formatCurrency(currentSupplier.parcelas.reduce((acc, p) => p.status === 'pendente' ? acc + p.valor : acc, 0))}
                 </span>
               </div>
             </div>
           </Card>
+
 
           <Card className="border-none shadow-xl bg-card p-6">
             <h4 className="font-bold mb-4">Ações do Fornecedor</h4>

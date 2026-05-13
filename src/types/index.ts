@@ -1,5 +1,5 @@
 export type PaymentStatus = "pago" | "parcial" | "pendente" | "atrasado";
-export type UserRole = "master" | "couple" | "staff";
+export type UserRole = "master" | "couple" | "staff" | "admin";
 
 export type PaymentType = "parcelado_fixo" | "entrada_parcelas" | "entrada_quitacao" | "percentual_restante" | "pagamento_unico";
 
@@ -69,6 +69,10 @@ export interface WeddingData {
   id?: string;
   role?: UserRole;
   public_checkin_token?: string;
+  asaas_subscription_id?: string;
+  subscription_status?: "trial" | "active" | "past_due" | "canceled";
+  account_status?: "trial" | "active" | "pending_payment" | "past_due" | "canceled";
+  userName?: string;
   casal: {
     nome1: string;
     nome2: string;
@@ -82,6 +86,14 @@ export interface WeddingData {
     tema: "light" | "dark";
   };
   simulation?: Record<string, unknown>;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name?: string;
+  role: UserRole;
+  asaas_customer_id?: string;
 }
 
 export interface FinancialStats {

@@ -1,4 +1,4 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, Send, Printer } from 'lucide-react';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { Card, Button, Input, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
@@ -6,7 +6,6 @@ import { cn } from '../../lib/utils';
 import { GuestStats } from './GuestStats';
 import { GuestRow } from './GuestRow';
 import { GuestCard } from './GuestCard';
-import { generateGuestsPdf } from '../../utils/pdfGenerator';
 
 interface GuestsListProps {
   guests: Guest[];
@@ -23,6 +22,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterInvitation, setFilterInvitation] = useState('Todos');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,11 +138,32 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <GuestStats totals={totals} />
+        <div className="flex items-center justify-between mb-4 sm:hidden px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Users size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-muted-foreground leading-none mb-1">Total Geral</p>
+              <p className="text-xl font-black">{totals.adultos + totals.criancas} <span className="text-[10px] text-muted-foreground italic">({totals.total} Grupos)</span></p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-primary font-black uppercase text-[10px] gap-1 px-3 bg-primary/5 rounded-lg"
+            onClick={() => setShowStats(!showStats)}
+          >
+            {showStats ? 'Ocultar' : 'Detalhes'}
+          </Button>
+        </div>
+        <div className={cn("sm:block", !showStats && "hidden sm:block")}>
+          <GuestStats totals={totals} />
+        </div>
       </div>
 
-      <Card className="border-none shadow-2xl overflow-hidden bg-card/60 backdrop-blur-xl rounded-[2rem]">
-        <div className="p-6 sm:p-8 border-b border-border bg-muted/20">
+      <Card className="border-none sm:border border-border shadow-none sm:shadow-2xl overflow-hidden bg-transparent sm:bg-card/60 sm:backdrop-blur-xl rounded-none sm:rounded-[2rem] -mx-4 sm:mx-0">
+        <div className="p-4 sm:p-8 border-b border-border/50 bg-muted/20 sm:bg-transparent">
           <div className="flex flex-col gap-6">
             {/* PRIMEIRA LINHA: BUSCA E AÇÕES */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
@@ -151,7 +172,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
                   <Input
                     placeholder="Buscar convidado..."
-                    className="h-12 pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-2xl font-bold w-full"
+                    className="h-10 sm:h-12 pl-10 sm:pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-xl sm:rounded-2xl font-bold w-full text-sm"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -166,11 +187,8 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto mt-2 xl:mt-0">
-                <Button onClick={() => generateGuestsPdf(sortedAndFilteredGuests)} variant="outline" className="h-12 flex-1 sm:flex-none px-6 rounded-2xl font-black uppercase tracking-widest gap-2 bg-background hover:bg-muted whitespace-nowrap border-primary/20 text-primary">
-                  <Printer size={18} className="shrink-0" /> <span className="hidden sm:inline">Imprimir Lista</span><span className="sm:hidden">Imprimir</span>
-                </Button>
-                <Button onClick={onAdd} className="h-12 flex-1 sm:flex-none px-6 rounded-2xl font-black uppercase tracking-widest gap-2 shadow-[0_10px_20px_rgba(var(--primary-rgb),0.2)] whitespace-nowrap">
-                  <UserPlus size={18} className="shrink-0" /> Adicionar Grupo
+                <Button onClick={onAdd} className="h-12 flex-1 sm:flex-none px-6 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest gap-2 shadow-[0_10px_20px_rgba(var(--primary-rgb),0.2)] whitespace-nowrap text-xs sm:text-sm">
+                  <UserPlus size={18} className="shrink-0" /> Adicionar Convidado
                 </Button>
               </div>
             </div>
@@ -208,37 +226,32 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-muted/30 border-b border-border">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('nome')}>
+                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('nome')}>
                   <div className="flex items-center gap-2">
-                    NOME {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                    NOME {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('categoria')}>
+                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('categoria')}>
                   <div className="flex items-center gap-2">
-                    CATEGORIA {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                    CATEGORIA {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('total_pessoas')}>
+                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('status')}>
                   <div className="flex items-center gap-2">
-                    A/C {sortConfig?.key === 'total_pessoas' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                    STATUS {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('status')}>
+                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('invitation_sent')}>
                   <div className="flex items-center gap-2">
-                    STATUS {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                    CONVITE {sortConfig?.key === 'invitation_sent' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('invitation_sent')}>
+                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('telefone')}>
                   <div className="flex items-center gap-2">
-                    CONVITE {sortConfig?.key === 'invitation_sent' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
+                    CONTATO {sortConfig?.key === 'telefone' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('telefone')}>
-                  <div className="flex items-center gap-2">
-                    CONTATO {sortConfig?.key === 'telefone' && (sortConfig.direction === 'asc' ? <ArrowDown size={12}/> : <ArrowUp size={12}/>)}
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-right"></th>
+                <th className="px-8 py-5 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -258,7 +271,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
         {/* Mobile View */}
         <div className="md:hidden">
-          <div className="grid grid-cols-1 gap-4 p-4 sm:p-6 bg-muted/5">
+          <div className="flex flex-col bg-background/50 backdrop-blur-sm divide-y divide-border/10">
             {paginatedItems.map((guest) => (
               <GuestCard 
                 key={guest.id} 

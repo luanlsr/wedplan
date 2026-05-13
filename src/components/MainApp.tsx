@@ -15,6 +15,11 @@ import { GuestsList } from './guests/GuestsList';
 import { TasksList } from './tasks/TasksList';
 import { CheckInView } from './guests/CheckInView';
 import { SettingsView } from './SettingsView';
+import { AdminDashboard } from './admin/AdminDashboard';
+import { AdminUsers } from './admin/AdminUsers';
+import { AdminSubscriptions } from './admin/AdminSubscriptions';
+import { AdminSettings } from './admin/AdminSettings';
+import { PaymentGate } from './auth/PaymentGate';
 
 import { useWeddingData } from '../hooks/useWeddingData';
 import { useAuth } from '../hooks/useAuth';
@@ -49,7 +54,10 @@ export function MainApp() {
 
   const stats = useMemo(() => calculateStats(data), [data]);
   const isDark = data.configuracoes.tema === 'dark';
-  const isNewWedding = !!(!loading && data.id && (data.casal.nome1 === 'Cônjuge 1' || !data.casal.nome1) && data.role === 'couple');
+  const isNewWedding = useMemo(() => {
+    if (loading || !data.casal || data.role === 'master') return false;
+    return !data.casal.nome1 && !data.casal.nome2;
+  }, [data.casal, loading, data.role]);
 
   const toggleTheme = () => {
     updateConfig({ tema: isDark ? 'light' : 'dark' });
@@ -205,6 +213,24 @@ export function MainApp() {
     );
   }
 
+  if (data.account_status === 'pending_payment' && data.role !== 'master') {
+    return (
+      <AppLayout
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        userRole={data.role || 'couple'}
+        isSidebarCollapsed={isSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+        weddingId={data.id}
+        isNewWedding={false}
+        onOnboardingComplete={handleOnboardingComplete}
+        pageTitle="Ativação de Conta"
+      >
+        <PaymentGate email={user?.email} />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout
       isDark={isDark}
@@ -216,6 +242,8 @@ export function MainApp() {
       onOnboardingComplete={handleOnboardingComplete}
       pageTitle={isPublicMode ? "Check-in de Convidados" : getPageTitle()}
       isPublicMode={isPublicMode}
+      weddingId={data.id}
+      userName={data.userName}
     >
       <Routes>
         <Route index element={
@@ -224,6 +252,8 @@ export function MainApp() {
               guests={data.convidados || []}
               onTogglePresence={updateGuest}
             />
+          ) : data.role === 'master' ? (
+            <AdminDashboard />
           ) : (
             <div className="space-y-6">
               {notifications.length > 0 && (
@@ -246,6 +276,15 @@ export function MainApp() {
             </div>
           )
         } />
+
+        {/* Rotas Administrativas */}
+        {data.role === 'master' && (
+          <>
+            <Route path="usuarios" element={<AdminUsers />} />
+            <Route path="assinaturas" element={<AdminSubscriptions />} />
+            <Route path="configuracoes-master" element={<AdminSettings />} />
+          </>
+        )}
 
         <Route path="fornecedores" element={
           <SuppliersList
@@ -315,6 +354,8 @@ export function MainApp() {
             customAlert={customAlert}
           />
         } />
+
+
       </Routes>
 
       <GlobalModals

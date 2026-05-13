@@ -31,51 +31,66 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
       {/* Summary Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {summaryCards.map((card, i) => (
-          <Card key={i} className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 border-none shadow-lg bg-card p-3 sm:p-6 overflow-hidden relative">
+          <Card key={i} className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 border-none shadow-lg bg-card p-4 sm:p-6 overflow-hidden relative min-w-0">
             <div className={cn("p-2 sm:p-4 rounded-xl sm:rounded-2xl shrink-0", card.bg)}>
               <card.icon className={cn(card.color, "sm:w-[24px] sm:h-[24px]")} size={18} />
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 w-full">
               <p className="text-[9px] sm:text-sm font-black text-muted-foreground uppercase tracking-widest sm:tracking-wider truncate">{card.title}</p>
-              <h3 className="text-base sm:text-2xl font-black text-foreground truncate">{formatCurrency(card.value)}</h3>
+              <h3 className="text-sm sm:text-2xl font-black text-foreground break-all sm:break-normal leading-tight">{formatCurrency(card.value)}</h3>
             </div>
           </Card>
         ))}
       </div>
-
+ 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Statistics Chart */}
-        <Card className="lg:col-span-2 shadow-xl border-none bg-card">
+        <Card className="lg:col-span-2 shadow-xl border-none bg-card p-4 sm:p-6">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-foreground">Resumo por Categoria</h3>
+            <h3 className="text-sm sm:text-lg font-black text-foreground uppercase tracking-widest">Resumo por Categoria</h3>
           </div>
-          <div className="h-[400px] w-full">
+          <div className="h-[250px] sm:h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={pieData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} stroke="currentColor" className="text-muted-foreground/20" />
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} stroke="currentColor" className="text-muted-foreground" />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v/1000}k`} stroke="currentColor" className="text-muted-foreground" />
+              <BarChart data={pieData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
+                <XAxis 
+                  dataKey="name" 
+                  fontSize={8} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tick={{ fill: 'currentColor', opacity: 0.5 }}
+                  minTickGap={10}
+                />
+                <YAxis 
+                  fontSize={8} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickFormatter={(v) => `R$${v/1000}k`}
+                  tick={{ fill: 'currentColor', opacity: 0.5 }}
+                />
                 <Tooltip 
-                  formatter={(v: any) => formatCurrency(Number(v))}
+                  formatter={(v: any) => [formatCurrency(Number(v)), '']}
                   contentStyle={{ 
                     borderRadius: '16px', 
                     border: 'none', 
-                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-                    backgroundColor: 'hsl(var(--card))',
-                    color: 'hsl(var(--card-foreground))'
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                    backgroundColor: '#0f172a',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 'bold'
                   }}
-                  itemStyle={{ color: 'hsl(var(--card-foreground))' }}
+                  itemStyle={{ padding: '0' }}
                 />
-                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} barSize={40} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
-
+ 
         {/* Categories Pie */}
         <Card className="shadow-xl border-none bg-card">
           <h3 className="text-lg font-bold mb-8 text-foreground">Distribuição de Verba</h3>
-          <div className="h-[300px] w-full">
+          <div className="h-[250px] sm:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -102,17 +117,17 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
           <div className="space-y-3 mt-4">
             {pieData.map((item, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="font-medium text-muted-foreground">{item.name}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                  <span className="font-medium text-muted-foreground truncate">{item.name}</span>
                 </div>
-                <span className="font-bold text-foreground">{Math.round((item.value / stats.totalContratado) * 100)}%</span>
+                <span className="font-bold text-foreground shrink-0">{Math.round((item.value / stats.totalContratado) * 100)}%</span>
               </div>
             ))}
           </div>
         </Card>
       </div>
-
+ 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Next Due Dates */}
         <Card className="shadow-xl border-none bg-card">
@@ -120,24 +135,25 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
           <div className="space-y-4">
             {stats.proximosVencimentos.length > 0 ? (
               stats.proximosVencimentos.map((v, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 border border-border">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-background flex items-center justify-center font-black text-primary shadow-sm">
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-secondary/30 border border-border gap-4 min-w-0">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-background flex items-center justify-center font-black text-primary shadow-sm shrink-0">
                       {parseISO(v.data).getDate()}
                     </div>
-                    <div>
-                      <p className="font-bold text-foreground">{v.fornecedor}</p>
-                      <p className="text-xs text-muted-foreground">Parcela {v.parcela}/{v.totalParcelas}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-foreground truncate break-words">{v.fornecedor}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Parcela {v.parcela}/{v.totalParcelas}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-black text-lg text-foreground">{formatCurrency(v.valor)}</p>
-                    <p className="text-xs font-bold uppercase text-amber-500">
-                      {differenceInDays(parseISO(v.data), new Date()) < 0 ? "Atrasado" : `Em ${differenceInDays(parseISO(v.data), new Date())} dias`}
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end border-t sm:border-t-0 pt-3 sm:pt-0 border-border/50">
+                    <p className="font-black text-base sm:text-lg text-foreground whitespace-nowrap">{formatCurrency(v.valor)}</p>
+                    <p className="text-[10px] sm:text-xs font-bold uppercase text-amber-500">
+                      {differenceInDays(parseISO(v.data), new Date()) < 0 ? "Atrasado" : `Em ${differenceInDays(parseISO(v.data), new Date())} d`}
                     </p>
                   </div>
                 </div>
               ))
+
             ) : (
                 <p className="text-center text-muted-foreground py-10 font-medium">Não há vencimentos próximos!</p>
             )}

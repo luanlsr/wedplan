@@ -15,6 +15,8 @@ interface AppLayoutProps {
   onOnboardingComplete: (data: { nome1: string; nome2: string; data: string; orcamento: number; }) => Promise<void>;
   pageTitle: string;
   isPublicMode?: boolean;
+  weddingId?: string;
+  userName?: string;
 }
 
 export const AppLayout = ({
@@ -27,7 +29,9 @@ export const AppLayout = ({
   isNewWedding,
   onOnboardingComplete,
   pageTitle,
-  isPublicMode = false
+  isPublicMode = false,
+  weddingId,
+  userName
 }: AppLayoutProps) => {
   return (
     <div className={cn(
@@ -41,23 +45,25 @@ export const AppLayout = ({
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         isPublicMode={isPublicMode}
+        weddingId={weddingId}
+        userName={userName}
       />
 
-      {isNewWedding && (
+      {isNewWedding && userRole !== 'master' && userName !== 'Luan Master' && (
         <Onboarding onComplete={onOnboardingComplete} />
       )}
 
       <main className={cn(
         "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",
-        isSidebarCollapsed ? "lg:ml-24" : "lg:ml-72"
+        isSidebarCollapsed ? "lg:ml-24" : "lg:ml-80"
       )}>
         <div className="max-w-[1600px] mx-auto p-3 sm:p-6 lg:p-10">
-          <Header title={pageTitle} />
+          <Header title={pageTitle} isDark={isDark} toggleTheme={toggleTheme} />
           {children}
         </div>
       </main>
 
-      <BottomNav userRole={userRole} isPublicMode={isPublicMode} />
+      <BottomNav userRole={userRole} isPublicMode={isPublicMode} userName={userName} />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getSiteUrl } from '../../utils/url';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
@@ -39,7 +40,7 @@ export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }:
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: getSiteUrl(),
         },
       });
       if (error) throw error;

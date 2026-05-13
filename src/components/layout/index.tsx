@@ -1,8 +1,10 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, NavLink } from "react-router-dom";
 import { useState } from "react";
+import { WeddingSwitcher } from "./WeddingSwitcher";
 
 // Estilos customizados para tooltips premium quando colapsado
 const tooltipStyles = `
@@ -55,9 +57,11 @@ interface SidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   isPublicMode?: boolean;
+  weddingId?: string;
+  userName?: string;
 }
 
-export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse, isPublicMode }: SidebarProps) => {
+export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse, isPublicMode, weddingId, userName }: SidebarProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -66,27 +70,42 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     navigate('/');
   };
 
-  const menuItems = ([
-    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true, hidden: userRole === 'staff' || isPublicMode },
-    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase, hidden: userRole === 'staff' || isPublicMode },
-    { id: "guests", path: "/convidados", label: "Convidados", icon: Heart, hidden: isPublicMode },
-    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' || isPublicMode },
-    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'staff' || isPublicMode },
-    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'staff' || isPublicMode },
-    { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck, hidden: isPublicMode },
-    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'staff' || isPublicMode },
-  ] as MenuItem[]).filter(item => {
-    if (item.hidden) return false;
-    if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
-    return true;
-  });
+  const coupleItems = [
+    { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "guests", path: "/convidados", label: "Convidados", icon: Heart, hidden: userRole === 'master' || isPublicMode },
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck, hidden: userRole === 'master' || isPublicMode },
+    { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+  ] as MenuItem[];
+
+  const masterItems = [
+    { id: "admin-dashboard", path: "/", label: "Visão Geral", icon: LayoutDashboard, end: true },
+    { id: "admin-users", path: "/usuarios", label: "Usuários", icon: Users },
+    { id: "admin-subscriptions", path: "/assinaturas", label: "Assinaturas", icon: CreditCard },
+    { id: "admin-settings", path: "/configuracoes-master", label: "Configurações", icon: Settings },
+  ] as MenuItem[];
+
+  let menuItems: MenuItem[] = [];
+  
+  if (userRole === 'master') {
+    menuItems = masterItems.filter(item => !item.hidden);
+  } else {
+    menuItems = coupleItems.filter(item => {
+      if (item.hidden) return false;
+      if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
+      return true;
+    });
+  }
 
   return (
     <>
     <style>{tooltipStyles}</style>
     <div className={cn(
       "hidden lg:flex h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex-col z-50 transition-all duration-500",
-      isCollapsed ? "w-24" : "w-72"
+      isCollapsed ? "w-24" : "w-80"
     )}>
       {/* Collapse Toggle Button */}
       <button 
@@ -99,19 +118,97 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
       </button>
 
       <div className={cn(
-        "flex items-center gap-3 mb-10 px-2 group cursor-pointer overflow-hidden",
-        isCollapsed ? "justify-center" : "justify-start"
+        "flex items-center mb-16 px-2 group cursor-pointer overflow-hidden justify-center transition-all duration-500",
+        isCollapsed ? "mt-2" : "mt-4"
       )} onClick={() => navigate('/dashboard')}>
-        <div className="w-12 h-12 rounded-2xl bg-white shrink-0 overflow-hidden flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10 transition-transform group-hover:scale-110 duration-700 ease-in-out">
-          <img src="/logo-wedplan.png" alt="WedPlan Logo" className="w-full h-full object-cover" />
-        </div>
         <div className={cn(
-          "transition-all duration-500 ease-in-out",
-          isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-10" : "w-auto opacity-100 translate-x-0"
+          "shrink-0 transition-all duration-700 ease-in-out flex items-center justify-center relative",
+          isCollapsed ? "w-12 h-12" : "w-52 h-40"
         )}>
-          <h1 className="font-black text-xl tracking-tighter uppercase italic text-foreground leading-none">Wed<br/><span className="text-primary not-italic">Plan</span></h1>
+          <AnimatePresence mode="wait">
+            {isCollapsed ? (
+              <motion.div
+                key="favicon"
+                initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
+                transition={{ duration: 0.4, ease: "backOut" }}
+                className="w-full h-full flex items-center justify-center"
+              >
+                <img 
+                  src="/image/favicon.png" 
+                  alt="WedPlan" 
+                  className={cn(
+                    "w-full h-full object-contain filter drop-shadow-lg",
+                    isDark && "invert brightness-0"
+                  )} 
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="full-logo"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="w-full h-full"
+              >
+                <img 
+                  src={isDark ? "/image/wedplan_logo_white.png" : "/image/wedplan_logo.png"} 
+                  alt="WedPlan Logo" 
+                  className="w-full h-full object-contain filter drop-shadow-xl" 
+                />
+              </motion.div>
+
+            )}
+          </AnimatePresence>
         </div>
+
       </div>
+
+
+
+      {!isPublicMode && userRole !== 'master' && userRole !== 'staff' && (
+        <WeddingSwitcher 
+          currentWeddingId={weddingId} 
+          isCollapsed={isCollapsed} 
+          onSwitch={() => window.location.reload()} 
+        />
+      )}
+
+      {/* User Profile Info */}
+      {!isPublicMode && (
+        <div className={cn(
+          "mb-8 p-3 rounded-2xl bg-secondary/30 border border-white/5 flex items-center transition-all duration-500 overflow-hidden",
+          isCollapsed ? "justify-center" : "justify-start gap-3"
+        )}>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shrink-0 shadow-lg">
+            <div className="w-full h-full rounded-[0.6rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black text-sm italic">
+              {userName ? userName.substring(0, 2).toUpperCase() : 'US'}
+            </div>
+          </div>
+          
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div 
+                initial={{ opacity: 0, width: 0, x: -10 }}
+                animate={{ opacity: 1, width: "auto", x: 0 }}
+                exit={{ opacity: 0, width: 0, x: -10 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col min-w-0"
+              >
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary leading-none mb-1 truncate">
+                  {userRole}
+                </span>
+                <span className="text-xs font-bold truncate max-w-[150px]">
+                  {userName || 'Usuário WedPlan'}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
 
       <nav className="flex-1 space-y-2">
         {menuItems.map((item) => (
@@ -191,7 +288,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
   );
 };
 
-export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userRole?: string; isPublicMode?: boolean }) => {
+export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName }: { userRole?: string; isPublicMode?: boolean; userName?: string }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -201,24 +298,42 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userR
     navigate('/');
   };
 
-  const mainActions = ([
-    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'staff' || isPublicMode },
-    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true, hidden: isPublicMode },
-    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec.", hidden: userRole === 'staff' || isPublicMode },
-    { id: "guests", path: "/convidados", icon: Heart, label: "Convid.", hidden: isPublicMode },
-    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'staff' || isPublicMode },
-  ] as MenuItem[]).filter(item => {
+  const coupleMainActions = [
+    { id: "dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", visibleOnlyForStaff: true, hidden: userRole === 'master' || isPublicMode },
+    { id: "suppliers", path: "/fornecedores", icon: Briefcase, label: "Fornec.", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "guests", path: "/convidados", icon: Heart, label: "Convid.", hidden: userRole === 'master' || isPublicMode },
+    { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+  ] as MenuItem[];
+
+  const masterMainActions = [
+    { id: "admin-dashboard", path: "/", icon: LayoutDashboard, label: "Início", end: true },
+    { id: "admin-users", path: "/usuarios", icon: Users, label: "Usuários" },
+    { id: "admin-subscriptions", path: "/assinaturas", icon: CreditCard, label: "Assinaturas" },
+  ] as MenuItem[];
+
+  const rawMainActions = userRole === 'master' ? masterMainActions : coupleMainActions;
+
+  const mainActions = rawMainActions.filter(item => {
     if (item.hidden) return false;
     if (item.visibleOnlyForStaff && userRole !== 'staff') return false;
     return true;
   });
 
-  const moreActions = ([
-    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'staff' || isPublicMode },
-    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'staff' || isPublicMode },
-    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: userRole === 'staff' || isPublicMode },
-    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'staff' || isPublicMode },
-  ] as MenuItem[]).filter(item => !item.hidden);
+  const coupleMoreActions = [
+    { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+  ] as MenuItem[];
+
+  const masterMoreActions = [
+    { id: "admin-settings", path: "/configuracoes-master", icon: Settings, label: "Configurações" },
+  ] as MenuItem[];
+
+  const rawMoreActions = userRole === 'master' ? masterMoreActions : coupleMoreActions;
+  
+  const moreActions = rawMoreActions.filter(item => !item.hidden);
 
   return (
     <>
@@ -256,7 +371,19 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userR
       {isMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-[55] bg-background/90 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-10 duration-300">
           <div className="p-6 pt-20 space-y-6 flex flex-col h-full">
-            <h3 className="text-3xl font-black mb-4 italic uppercase tracking-tighter">Outros <span className="text-primary italic not-italic">Apps</span></h3>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-xl">
+                <div className="w-full h-full rounded-[0.9rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black text-2xl italic">
+                  {userName ? userName.substring(0, 2).toUpperCase() : 'US'}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary leading-none mb-1">Bem-vindo(a)</p>
+                <h3 className="text-xl font-extrabold uppercase tracking-tight leading-none truncate max-w-[200px]">{userName || 'Usuário WedPlan'}</h3>
+              </div>
+
+            </div>
+            <h3 className="text-xl font-black mb-2 italic uppercase tracking-tighter opacity-50">Menu do Sistema</h3>
             <div className="grid grid-cols-2 gap-4 flex-1 content-start">
               {moreActions.map((item) => (
                 <NavLink
@@ -302,22 +429,42 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false }: { userR
   );
 };
 
-export const Header = ({ title }: { title: string }) => (
-  <header className="flex items-center justify-between mb-4 sm:mb-8 flex-wrap gap-4 relative">
-    <div className="flex-1 min-w-0">
-      <h2 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase italic leading-none pt-2 truncate">{title}</h2>
-      <div className="h-1 w-12 bg-primary rounded-full mt-2" />
-    </div>
-    <div className="flex items-center gap-3 lg:gap-6">
-      <div className="text-right hidden sm:block">
-        <p className="text-sm font-black uppercase tracking-tighter">WedPlan</p>
-        <p className="text-[10px] text-primary uppercase tracking-widest font-black italic">Wedding Suite</p>
-      </div>
-      <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-lg shadow-primary/20 transition-transform active:scale-95 duration-300">
-        <div className="w-full h-full rounded-[0.9rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black italic text-base sm:text-lg shadow-inner">
-          WP
+export const Header = ({ title, isDark, toggleTheme }: { title: string; isDark: boolean; toggleTheme?: () => void }) => (
+  <header className="flex flex-col gap-4 mb-6 sm:mb-10 w-full">
+    {/* Primeira Linha: Logo e Toggle */}
+    <div className="flex items-center justify-between w-full">
+      {/* Logo Esquerda */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
+          <img 
+            src={isDark ? "/image/favicon.png" : "/image/favicon.png"} 
+            alt="Logo" 
+            className={cn("w-full h-full object-contain filter drop-shadow-md", isDark && "invert brightness-0")} 
+          />
+        </div>
+        <div className="flex flex-col">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary leading-none opacity-50">WedPlan</p>
+          <p className="text-xs font-extrabold uppercase tracking-tight">Premium Suite</p>
         </div>
       </div>
+
+      {/* Toggle Direita */}
+      {toggleTheme && (
+        <button 
+          onClick={toggleTheme}
+          className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center hover:bg-primary/10 transition-all active:scale-90 border border-white/5"
+        >
+          {isDark ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-primary" />}
+        </button>
+      )}
+    </div>
+
+    {/* Segunda Linha: Título da Página */}
+    <div className="flex flex-col">
+      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight uppercase leading-none truncate max-w-full">
+        {title}
+      </h2>
+      <div className="h-1.5 w-16 bg-primary rounded-full mt-3 shadow-[0_2px_10px_rgba(var(--primary-rgb),0.3)]" />
     </div>
   </header>
 );

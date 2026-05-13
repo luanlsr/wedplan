@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getSiteUrl } from '../../utils/url';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
 import { Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
@@ -17,32 +18,64 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signUp({
+    // 1. Criar usuário no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          full_name: name,
-        }
+        data: { full_name: name }
       }
     });
 
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
-    } else {
-      setSuccess(true);
-      setLoading(false);
-      // Wait a bit then success callback or immediate
-      if (onSuccess) {
-          setTimeout(onSuccess, 2000);
+      return;
+    }
+
+    // 2. Fazer login imediato para obter o token (necessário para chamar a Edge Function)
+    const { data: sessionData } = await supabase.auth.signInWithPassword({ email, password });
+    const token = sessionData?.session?.access_token;
+
+    if (token) {
+      try {
+        // 3. Criar cliente no Asaas e gerar link de pagamento
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-asaas-customer`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ name, email }),
+          }
+        );
+
+        const result = await res.json();
+
+        if (res.ok && result.paymentUrl) {
+          setPaymentUrl(result.paymentUrl);
+          setSuccess(true);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Erro ao criar cliente Asaas:', err);
+        // Continua o fluxo normalmente sem bloquear o cadastro
       }
     }
+
+    setSuccess(true);
+    setLoading(false);
+    if (onSuccess) setTimeout(onSuccess, 2000);
   };
 
   const handleGoogleLogin = async () => {
@@ -50,7 +83,7 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: getSiteUrl(),
         },
       });
       if (error) throw error;
@@ -62,17 +95,45 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
   if (success) {
     return (
       <AuthLayout 
-        title="Quase lá!" 
-        subtitle="Verifique seu e-mail para confirmar o cadastro e começar a planejar."
+        title={paymentUrl ? "Quase lá! 🎉" : "Verifique seu e-mail!"} 
+        subtitle={paymentUrl 
+          ? "Sua conta foi criada! Finalize o pagamento para ter acesso completo ao WedPlan." 
+          : "Verifique seu e-mail para confirmar o cadastro e começar a planejar."}
       >
         <div className="flex flex-col items-center justify-center py-10 text-center space-y-6 animate-in zoom-in duration-500">
-          <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center ${paymentUrl ? 'bg-primary/10 text-primary' : 'bg-green-500/10 text-green-500'}`}>
             <Mail size={40} />
           </div>
-          <p className="text-muted-foreground font-medium">
-            Enviamos um link de confirmação para <br/>
-            <strong className="text-foreground">{email}</strong>
-          </p>
+          {paymentUrl ? (
+            <>
+              <div className="space-y-2">
+                <p className="text-muted-foreground font-medium">
+                  Conta criada para <strong className="text-foreground">{email}</strong>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Clique abaixo para pagar <strong className="text-primary">R$ 5,00</strong> via PIX, boleto ou cartão e liberar seu acesso.
+                </p>
+              </div>
+              <a
+                href={paymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 flex items-center justify-center gap-2 transition-all"
+              >
+                Pagar e Ativar Minha Conta →
+              </a>
+              <p className="text-xs text-muted-foreground">
+                Após o pagamento, sua conta será ativada automaticamente.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground font-medium">
+                Enviamos um link de confirmação para <br/>
+                <strong className="text-foreground">{email}</strong>
+              </p>
+            </>
+          )}
           <Button onClick={onNavigateToLogin} variant="outline" className="w-full h-14 rounded-2xl">
             Voltar para o Login
           </Button>

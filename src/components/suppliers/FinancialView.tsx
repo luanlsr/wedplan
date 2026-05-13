@@ -21,7 +21,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const [installmentSort, setInstallmentSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'dataVencimento', direction: 'asc' });
 
-  const [showPastMonths, setShowPastMonths] = useState(true);
+  const [showPastMonths, setShowPastMonths] = useState(false);
 
   const categories = useMemo(() => 
     ["Todas", ...Array.from(new Set(suppliers.map(s => s.categoria))).sort()], 
@@ -161,38 +161,38 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={cn(
-                  "flex-1 md:flex-none px-4 text-[10px] font-black uppercase tracking-wider h-10 rounded-lg transition-all whitespace-nowrap",
+                  "flex-1 md:flex-none px-3 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-wider h-9 sm:h-10 rounded-lg transition-all whitespace-nowrap",
                   statusFilter === s ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground hover:bg-white/5"
                 )}
               >
-                {s === 'all' ? 'Tudo' : s === 'pago' ? 'Pago' : 'Pendente'}
+                {s === 'all' ? 'Tudo' : s === 'pago' ? 'Pago' : 'Pend.'}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center justify-between xl:justify-end gap-4 sm:gap-6 w-full xl:w-auto bg-card/40 border border-white/5 rounded-xl px-4 h-14 sm:h-12 shrink-0">
+        <div className="flex items-center justify-between xl:justify-end gap-4 sm:gap-6 w-full xl:w-auto bg-card/40 border border-white/5 rounded-xl px-4 h-11 sm:h-12 shrink-0">
           <div className="flex items-center gap-3">
               <div 
                 role="button"
                 onClick={() => setShowPastMonths(!showPastMonths)}
                 className={cn(
-                  "w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 flex items-center shrink-0",
+                  "w-8 h-4 sm:w-12 sm:h-6 rounded-full p-0.5 sm:p-1 cursor-pointer transition-colors duration-300 flex items-center shrink-0",
                   showPastMonths ? "bg-primary" : "bg-secondary"
                 )}
               >
                 <div className={cn(
                   "w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white shadow-md transition-transform duration-300",
-                  showPastMonths ? "translate-x-5 sm:translate-x-6" : "translate-x-0"
+                  showPastMonths ? "translate-x-4 sm:translate-x-6" : "translate-x-0"
                 )} />
               </div>
-              <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Mostrar Meses Passados</span>
+              <span className="text-[9px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Mostrar Passados</span>
            </div>
            
-           <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
+           <div className="w-px h-5 sm:h-6 bg-white/10 hidden xs:block"></div>
            
-           <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 whitespace-nowrap">
-             {monthlyData.length} meses visíveis
+           <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-50 whitespace-nowrap hidden xs:block">
+             {monthlyData.length} meses
            </p>
         </div>
       </div>
@@ -202,7 +202,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
         <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
           <Card className="bg-card/40 border-none justify-between flex flex-col p-4 sm:p-6 h-28 sm:h-32">
              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Total no Filtro</p>
-             <h4 className="text-2xl sm:text-3xl font-black text-foreground">{formatCurrency(stats.total)}</h4>
+             <h4 className="text-lg sm:text-3xl font-black text-foreground">{formatCurrency(stats.total)}</h4>
              <div className="h-1 w-full bg-secondary/30 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-primary w-full opacity-30" />
              </div>
@@ -211,7 +211,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
              <p className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] flex items-center gap-2">
                <CheckCircle size={12} /> Total Pago
              </p>
-             <h4 className="text-2xl sm:text-3xl font-black text-green-500">{formatCurrency(stats.paid)}</h4>
+             <h4 className="text-lg sm:text-3xl font-black text-green-500">{formatCurrency(stats.paid)}</h4>
              <div className="h-1 w-full bg-green-500/20 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-green-500" style={{ width: `${(stats.paid / stats.total * 100) || 0}%` }} />
              </div>
@@ -220,7 +220,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
              <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
                <Clock size={12} /> Saldo Pendente
              </p>
-             <h4 className="text-2xl sm:text-3xl font-black text-amber-500">{formatCurrency(stats.pending)}</h4>
+             <h4 className="text-lg sm:text-3xl font-black text-amber-500">{formatCurrency(stats.pending)}</h4>
              <div className="h-1 w-full bg-amber-500/20 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-amber-500" style={{ width: `${(stats.pending / stats.total * 100) || 0}%` }} />
              </div>
@@ -228,27 +228,61 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
         </div>
 
         {/* Visual Chart */}
-        <Card className="lg:col-span-3 h-80 bg-card border-none shadow-xl p-8">
-          <div className="flex items-center justify-between mb-8">
-             <h3 className="text-lg font-black text-foreground uppercase tracking-widest flex items-center gap-3">
-               <Calendar className="text-primary" /> Fluxo Temporal de Caixa
+        <Card className="lg:col-span-3 h-[350px] sm:h-[450px] bg-card border-none shadow-xl p-4 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-8">
+             <h3 className="text-sm sm:text-lg font-black text-foreground uppercase tracking-widest flex items-center gap-3">
+               <Calendar className="text-primary shrink-0" size={20} /> Fluxo Temporal de Caixa
              </h3>
+             <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-tighter">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-[#10b981]" />
+                  <span className="text-muted-foreground">Pago</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-[#3b82f6]" />
+                  <span className="text-muted-foreground">Pendente</span>
+                </div>
+             </div>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
-              <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-              <YAxis fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v/1000}k`} />
-              <Tooltip 
-                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                contentStyle={{ borderRadius: '16px', border: 'none', backgroundColor: '#0f172a', color: 'white' }}
-                formatter={(v: any) => formatCurrency(v as number)}
-              />
-              <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }} />
-              <Bar dataKey="Pago" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={24} />
-              <Bar dataKey="Pendente" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[240px] sm:h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
+                <XAxis 
+                  dataKey="name" 
+                  fontSize={8} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'currentColor', opacity: 0.5 }}
+                  minTickGap={10}
+                />
+                <YAxis 
+                  fontSize={8} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickFormatter={(v) => `R$${v/1000}k`}
+                  tick={{ fill: 'currentColor', opacity: 0.5 }}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: 'none', 
+                    backgroundColor: '#0f172a', 
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                    padding: '8px 12px'
+                  }}
+                  itemStyle={{ padding: '0' }}
+                  formatter={(v: any) => [formatCurrency(v as number), '']}
+                />
+                <Bar dataKey="Pago" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Pendente" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </Card>
 
         {/* Dynamic Drill-down Table */}
@@ -272,87 +306,122 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
                 <div 
                   onClick={() => toggleMonth(month.key)}
                   className={cn(
-                    "flex items-center justify-between p-5 rounded-[1.5rem] cursor-pointer transition-all border border-white/5",
+                    "flex items-center justify-between p-3.5 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] cursor-pointer transition-all border border-white/5",
                     isExpanded ? "bg-primary/10 border-primary/20 scale-[1.01] shadow-lg" : "bg-card/40 hover:bg-card/60"
                   )}
                 >
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3 sm:gap-6">
                     <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center font-black text-xs uppercase shadow-inner",
+                      "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-[9px] sm:text-xs uppercase shadow-inner shrink-0",
                       isCurrent ? "bg-green-500 text-white" : isHistorical ? "bg-secondary text-muted-foreground" : "bg-primary text-white"
                     )}>
                       {month.key.split('-')[1]}<br/>{month.key.split('-')[0].substring(2)}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                         <h4 className="text-lg font-black text-foreground capitalize">{month.monthLabel}</h4>
-                         {isCurrent && <Badge variant="success" className="text-[8px] px-1.5 h-4">Mês Corrente</Badge>}
+                         <h4 className="text-[15px] sm:text-lg font-black text-foreground capitalize truncate">{month.monthLabel}</h4>
+                         {isCurrent && <Badge variant="success" className="text-[7px] sm:text-[8px] px-1 h-3.5 sm:h-4 shrink-0">Mês Atual</Badge>}
                       </div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
                         {month.installments.length} Lançamentos • {month.paid > 0 ? `Pagos: ${formatCurrency(month.paid)}` : 'Nenhum pago'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-8">
-                     <div className="text-right hidden sm:block">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-0.5">Total Mensal</p>
-                        <p className="text-xl font-black text-foreground">{formatCurrency(month.total)}</p>
+                  <div className="flex items-center gap-3 sm:gap-8 shrink-0">
+                     <div className="text-right hidden xs:block sm:block">
+                        <p className="text-[8px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-0.5">Total Mensal</p>
+                        <p className="text-sm sm:text-xl font-black text-foreground">{formatCurrency(month.total)}</p>
                      </div>
                      <div className={cn(
-                       "w-8 h-8 rounded-full flex items-center justify-center transition-transform",
+                       "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-transform",
                        isExpanded ? "bg-primary text-white rotate-180" : "bg-secondary text-muted-foreground"
                      )}>
-                        <ChevronDown size={16} />
+                        <ChevronDown size={14} className="sm:w-4 sm:h-4" />
                      </div>
                   </div>
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-2 ml-4 mr-4 space-y-2 p-4 bg-secondary/10 rounded-b-3xl border-x border-b border-white/5 animate-in slide-in-from-top-4 duration-300">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-muted-foreground uppercase font-black tracking-tighter border-b border-white/5">
-                          <th className="pb-3 text-left pl-2">
-                            <button onClick={() => toggleSort('supplierName')} className="flex items-center gap-1 hover:text-primary transition-colors">
-                              Fornecedor {installmentSort.key === 'supplierName' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
-                            </button>
-                          </th>
-                          <th className="pb-3 text-center">
-                            <button onClick={() => toggleSort('dataVencimento')} className="flex items-center justify-center gap-1 w-full hover:text-primary transition-colors">
-                              Vencimento {installmentSort.key === 'dataVencimento' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
-                            </button>
-                          </th>
-                          <th className="pb-3 text-right pr-2">
-                             <button onClick={() => toggleSort('valor')} className="flex items-center justify-end gap-1 w-full hover:text-primary transition-colors">
-                              Valor {installmentSort.key === 'valor' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
-                            </button>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {month.installments.map((inst, idx) => (
-                          <tr key={idx} className="group hover:bg-white/5 transition-colors">
-                            <td className="py-3 pl-2">
-                              <div className="flex items-center gap-3">
-                                 <div className={cn(
-                                   "w-2 h-2 rounded-full",
-                                   inst.status === 'pago' ? "bg-green-500" : "bg-primary"
-                                 )} />
-                                 <div>
-                                   <p className="font-bold text-foreground">{inst.supplierName}</p>
-                                   <p className="text-[10px] font-medium text-muted-foreground">Parc. {inst.numero} • {inst.category}</p>
-                                 </div>
-                              </div>
-                            </td>
-                            <td className="py-3 text-center font-mono opacity-80">{formatDate(inst.dataVencimento)}</td>
-                            <td className="py-3 text-right pr-2 font-black text-foreground">
-                              {formatCurrency(inst.valor)}
-                            </td>
+                  <div className="mt-2 ml-0 sm:ml-4 sm:mr-4 space-y-2 p-1 sm:p-4 bg-secondary/5 sm:bg-secondary/10 rounded-b-[2rem] sm:rounded-b-3xl border-x border-b border-white/5 animate-in slide-in-from-top-4 duration-300">
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted-foreground uppercase font-black tracking-tighter border-b border-white/5">
+                            <th className="pb-3 text-left pl-2">
+                              <button onClick={() => toggleSort('supplierName')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                                Fornecedor {installmentSort.key === 'supplierName' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                              </button>
+                            </th>
+                            <th className="pb-3 text-center">
+                              <button onClick={() => toggleSort('dataVencimento')} className="flex items-center justify-center gap-1 w-full hover:text-primary transition-colors">
+                                Vencimento {installmentSort.key === 'dataVencimento' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                              </button>
+                            </th>
+                            <th className="pb-3 text-right pr-2">
+                              <button onClick={() => toggleSort('valor')} className="flex items-center justify-end gap-1 w-full hover:text-primary transition-colors">
+                                Valor {installmentSort.key === 'valor' && (installmentSort.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                              </button>
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {month.installments.map((inst, idx) => (
+                            <tr key={idx} className="group hover:bg-white/5 transition-colors">
+                              <td className="py-3 pl-2">
+                                <div className="flex items-center gap-3">
+                                  <div className={cn(
+                                    "w-2 h-2 rounded-full",
+                                    inst.status === 'pago' ? "bg-green-500" : "bg-primary"
+                                  )} />
+                                  <div>
+                                    <p className="font-bold text-foreground">{inst.supplierName}</p>
+                                    <p className="text-[10px] font-medium text-muted-foreground">Parc. {inst.numero} • {inst.category}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 text-center font-mono opacity-80">{formatDate(inst.dataVencimento)}</td>
+                              <td className="py-3 text-right pr-2 font-black text-foreground">
+                                {formatCurrency(inst.valor)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Clean List View */}
+                    <div className="sm:hidden flex flex-col divide-y divide-white/5">
+                      {month.installments.map((inst, idx) => (
+                        <div key={idx} className="py-4 px-2 flex items-center justify-between gap-4">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className={cn(
+                              "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                              inst.status === 'pago' ? "bg-green-500" : "bg-primary"
+                            )} />
+                            <div className="min-w-0">
+                              <p className="font-bold text-[14px] text-foreground truncate leading-tight mb-0.5">
+                                {inst.supplierName}
+                              </p>
+                              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                                <span>Parc. {inst.numero}</span>
+                                <span className="w-1 h-1 rounded-full bg-white/10" />
+                                <span className="truncate">{inst.category}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-black text-[14px] text-foreground leading-none mb-1">
+                              {formatCurrency(inst.valor)}
+                            </p>
+                            <p className="text-[9px] font-bold font-mono text-muted-foreground/50 uppercase">
+                              {formatDate(inst.dataVencimento)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

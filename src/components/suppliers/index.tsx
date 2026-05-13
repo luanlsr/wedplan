@@ -126,15 +126,15 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col gap-6 bg-card/60 backdrop-blur-xl p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 shadow-2xl">
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 sm:gap-6">
+      <div className="flex flex-col gap-6 bg-transparent md:bg-card/60 md:backdrop-blur-xl p-0 md:p-8 rounded-none md:rounded-[2rem] border-0 md:border md:border-white/5 shadow-none md:shadow-2xl">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 sm:gap-6 px-4 md:px-0 pt-4 md:pt-0">
           <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
             <div className="relative w-full md:w-96 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all duration-300" size={20} />
               <input
                 type="text"
-                placeholder="Buscar fornecedor ou serviço..."
-                className="w-full bg-secondary/20 border border-white/5 rounded-2xl h-14 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary/40 transition-all font-medium"
+                placeholder="Buscar..."
+                className="w-full bg-secondary/20 border border-white/5 rounded-xl sm:rounded-2xl h-10 sm:h-14 pl-10 sm:pl-12 pr-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary/40 transition-all font-medium"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -144,14 +144,14 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
               <div className="flex items-center justify-between w-full h-full gap-4">
                 <Button 
                   variant="outline" 
-                  className={cn("md:hidden h-12 flex-1 rounded-2xl font-bold gap-2", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
+                  className={cn("md:hidden h-10 flex-1 rounded-xl font-bold gap-2 text-xs", showMobileFilters && "bg-primary/10 text-primary border-primary/20")}
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                 >
-                  <Filter size={18} /> {showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+                  <Filter size={16} /> {showMobileFilters ? 'Ocultar' : 'Filtrar'}
                 </Button>
-                <div className="px-4 py-2 bg-secondary/10 rounded-xl border border-white/5 shrink-0 flex items-center h-12 md:h-14">
-                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
-                   <span className="text-xs font-black text-primary">{sortedSuppliers.length}</span>
+                <div className="px-3 py-1 bg-secondary/10 rounded-lg border border-white/5 shrink-0 flex items-center h-10 sm:h-14">
+                   <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
+                   <span className="text-[10px] sm:text-xs font-black text-primary">{sortedSuppliers.length}</span>
                 </div>
               </div>
 
@@ -165,14 +165,14 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
             </div>
           </div>
 
-          <Button onClick={onAdd} size="lg" className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest group shadow-[0_10px_20px_rgba(var(--primary-rgb),0.3)] w-full xl:w-auto">
-            <Plus className="group-hover:rotate-90 transition-transform duration-500" />
+          <Button onClick={onAdd} size="lg" className="h-10 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest group shadow-[0_10px_20px_rgba(var(--primary-rgb),0.3)] w-full xl:w-auto text-xs sm:text-sm">
+            <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
             Adicionar Fornecedor
           </Button>
         </div>
 
         <div className={cn(
-          "flex-wrap items-center gap-2 pt-4 border-t border-white/5",
+          "flex-wrap items-center gap-2 pt-4 border-t border-white/5 px-4 md:px-0",
           showMobileFilters ? "flex" : "hidden md:flex"
         )}>
           <SortBtn active={sortBy === 'manual'} onClick={() => handleSort('manual')} icon={<ArrowUpDown size={14}/>} label="Ordem Manual" />
@@ -188,7 +188,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
           axis="y"
           values={sortedSuppliers}
           onReorder={onReorder}
-          className="space-y-4"
+          className="flex flex-col bg-background/50 backdrop-blur-sm divide-y divide-border/10 md:bg-transparent md:backdrop-blur-none md:divide-none md:space-y-4"
         >
           <AnimatePresence mode="popLayout">
             {paginatedSuppliers.map((s) => (

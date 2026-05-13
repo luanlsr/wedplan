@@ -1,7 +1,8 @@
-import { Edit2, Trash2, Users, Phone } from 'lucide-react';
-import { Button, Badge, Card } from '../ui';
+import { MoreVertical, Users, Phone, Send, Check, X, Clock, Edit2, Trash2, ChevronDown } from 'lucide-react';
+import { Button, Badge } from '../ui';
 import type { Guest } from '../../types';
 import { cn } from '../../lib/utils';
+import { useState } from 'react';
 
 interface GuestCardProps {
   guest: Guest;
@@ -12,112 +13,132 @@ interface GuestCardProps {
 }
 
 export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
+  const [showActions, setShowActions] = useState(false);
+
+  const getStatusColor = () => {
+    switch (guest.status) {
+      case 'confirmado': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+      case 'recusado': return 'text-red-500 bg-red-500/10 border-red-500/20';
+      default: return 'text-amber-600 bg-amber-500/10 border-amber-500/20';
+    }
+  };
+
   return (
-    <Card className="p-5 space-y-4 relative overflow-hidden group">
-      {/* Categoria Badge */}
-      <div className="flex justify-between items-start">
-        <Badge variant="outline" className="font-bold border-primary/20 text-primary bg-primary/5">
-          {guest.categoria}
-        </Badge>
-        
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => onEdit(guest)}>
-            <Edit2 size={14} />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
-             const isConfirmed = await confirm({
-               title: "Excluir Convidado?",
-               description: `Tem certeza que deseja remover "${guest.nome}"?`,
-               type: "danger",
-               confirmLabel: "Excluir",
-               cancelLabel: "Cancelar"
-             });
-             if (isConfirmed) onDelete(guest.id);
-          }}>
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Nome e Info Principal */}
-      <div>
-        <h4 className="text-lg font-black text-foreground leading-tight">{guest.nome}</h4>
-        <div className="flex items-center gap-3 mt-1 text-muted-foreground font-bold text-xs uppercase tracking-widest">
-            <div className="flex items-center gap-1">
-                <Users size={12} className="text-primary" />
-                <span>{guest.adultos} Adultos</span>
+    <div className="relative border-b border-border/40 bg-transparent py-4 px-2 last:border-0">
+      <div className="flex items-center gap-3 relative">
+        {/* Lado Esquerdo: Info Principal */}
+        <div className="flex-1 min-w-0 pr-12" onClick={() => onEdit(guest)}>
+          <div className="mb-1">
+            <h4 className={cn(
+              "text-[15px] font-bold text-foreground leading-tight tracking-tight",
+              guest.status === 'recusado' && "opacity-40 line-through"
+            )}>
+              {guest.nome}
+            </h4>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest flex-wrap">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Users size={13} className="text-primary/30" />
+              <span className="text-foreground/80">{guest.adultos + guest.criancas}</span>
             </div>
-            {guest.criancas > 0 && (
-                <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground/30">•</span>
-                    <span>{guest.criancas} Crianças</span>
-                </div>
+            
+            <Badge variant="outline">
+              {guest.categoria}
+            </Badge>
+
+            {guest.telefone && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-border shrink-0" />
+                <span className="truncate">{guest.telefone}</span>
+              </>
             )}
+          </div>
         </div>
-        {guest.children_names && (
-             <p className="text-[10px] text-muted-foreground italic mt-1">({guest.children_names})</p>
-        )}
-      </div>
 
-      {/* Status Toggles Section */}
-      <div className="grid grid-cols-2 gap-3 pt-2">
-        <div className="space-y-1.5">
-            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Presença</p>
-            <button 
-                onClick={() => {
-                    const statusMap: Record<string, "confirmado" | "pendente" | "recusado"> = {
-                    'pendente': 'confirmado',
-                    'confirmado': 'recusado',
-                    'recusado': 'pendente'
-                    };
-                    onUpdate(guest.id, { status: statusMap[guest.status] });
-                }}
-                className="w-full"
+        {/* Lado Direito: Status (Select) e Ações - Absoluto */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2 shrink-0">
+          {/* Select de Status */}
+          <div className="relative group hidden sm:block">
+            <select
+              value={guest.status}
+              onChange={(e) => onUpdate(guest.id, { status: e.target.value as any })}
+              className={cn(
+                "h-10 pl-3 pr-8 rounded-2xl border font-black text-[10px] uppercase tracking-widest appearance-none transition-all cursor-pointer outline-none focus:ring-2 focus:ring-primary/20 shadow-sm",
+                getStatusColor()
+              )}
             >
-                {guest.status === 'confirmado' ? <Badge variant="success" className="w-full justify-center py-1.5">Confirmado</Badge> :
-                guest.status === 'pendente' ? <Badge variant="warning" className="w-full justify-center py-1.5">Pendente</Badge> :
-                <Badge variant="error" className="w-full justify-center py-1.5">Recusado</Badge>}
-            </button>
-        </div>
+              <option value="confirmado">Sim</option>
+              <option value="pendente">?</option>
+              <option value="recusado">Não</option>
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" size={14} />
+          </div>
 
-        <div className="space-y-1.5">
-            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Convite</p>
-            <div className="flex items-center gap-3 h-8 px-3 bg-muted/20 rounded-xl border border-border/50">
-                <button
-                    onClick={() => onUpdate(guest.id, { invitation_sent: !guest.invitation_sent })}
-                    className={cn(
-                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
-                        guest.invitation_sent ? "bg-primary" : "bg-muted"
-                    )}
-                >
-                    <span
-                        className={cn(
-                            "pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm ring-0 transition-transform",
-                            guest.invitation_sent ? "translate-x-5" : "translate-x-0.5"
-                        )}
-                    />
-                </button>
-                {guest.invitation_sent ? (
-                    <Badge variant="success" className="text-[8px] px-2 py-0 border-none bg-transparent">Enviado</Badge>
-                ) : (
-                    <Badge variant="outline" className="text-[8px] px-2 py-0 border-none bg-transparent opacity-50">Pendente</Badge>
-                )}
-            </div>
+          {/* Menu de Ações */}
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn("h-10 w-10 rounded-2xl bg-secondary/20", showActions && "bg-primary text-white shadow-lg shadow-primary/30")}
+              onClick={() => setShowActions(!showActions)}
+            >
+              <MoreVertical size={20} />
+            </Button>
+
+            {showActions && (
+              <>
+                <div className="fixed inset-0 z-[60]" onClick={() => setShowActions(false)} />
+                <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-[0_10px_40px_rgba(0,0,0,0.3)] rounded-[1.5rem] p-2 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                  <div className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 py-2">Administrar</div>
+                  
+                  <button 
+                    onClick={() => {
+                      onUpdate(guest.id, { invitation_sent: !guest.invitation_sent });
+                      setShowActions(false);
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Send size={16} className={guest.invitation_sent ? "text-primary" : "text-muted-foreground"} />
+                      <span>{guest.invitation_sent ? 'Enviado' : 'Enviar'}</span>
+                    </div>
+                    {guest.invitation_sent && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      onEdit(guest);
+                      setShowActions(false);
+                    }}
+                    className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
+                  >
+                    <Edit2 size={16} className="text-primary" />
+                    Editar Convidado
+                  </button>
+
+                  <div className="h-px bg-border/50 my-1 mx-2" />
+
+                  <button 
+                    onClick={async () => {
+                      setShowActions(false);
+                      const isConfirmed = await confirm({
+                        title: "Excluir?",
+                        description: `Remover ${guest.nome}?`,
+                        type: "danger",
+                      });
+                      if (isConfirmed) onDelete(guest.id);
+                    }}
+                    className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Excluir
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Footer Info */}
-      <div className="pt-3 border-t border-border flex items-center justify-between text-[10px] font-bold text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-            <Phone size={12} className="opacity-50" />
-            <span>{guest.telefone || 'Sem telefone'}</span>
-        </div>
-        {guest.observacoes && (
-            <div className="flex items-center gap-1 text-primary">
-                <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-primary/30">Obs</Badge>
-            </div>
-        )}
-      </div>
-    </Card>
+    </div>
   );
 };

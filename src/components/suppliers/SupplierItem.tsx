@@ -1,12 +1,15 @@
 import { motion, useDragControls, Reorder } from "framer-motion";
 import { 
     GripVertical, ChevronRight, AlertCircle, 
-    Briefcase, DollarSign as DollarIcon, Calendar 
+    Briefcase, DollarSign as DollarIcon, Calendar,
+    MoreVertical, Edit2, Trash2, ExternalLink,
+    Check
 } from "lucide-react";
-import { Badge } from "../ui";
+import { Badge, Button } from "../ui";
 import { formatCurrency, formatDate } from "../../utils/calculations";
 import { cn } from "../../lib/utils";
 import type { Supplier } from "../../types";
+import { useState } from "react";
 
 interface SupplierItemProps {
     supplier: Supplier;
@@ -16,130 +19,160 @@ interface SupplierItemProps {
 
 export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps) => {
     const dragControls = useDragControls();
+    const [showActions, setShowActions] = useState(false);
     const paidValue = supplier.parcelas.reduce((acc: number, p: any) => p.status === 'pago' ? acc + p.valor : acc, 0);
     const progress = (paidValue / supplier.valorTotal) * 100;
 
     return (
         <Reorder.Item
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
             value={supplier}
             dragListener={false}
             dragControls={dragControls}
-            className="group"
+            className="group outline-none"
         >
-            <div
-                className={cn(
-                    "relative overflow-hidden p-5 sm:p-6 rounded-[2.5rem] border transition-all duration-500 cursor-pointer active:scale-[0.98]",
-                    supplier.status === 'pago' 
-                      ? "bg-gradient-to-br from-green-500/20 via-emerald-500/10 to-transparent border-green-500/40 shadow-[0_20px_40px_-15px_rgba(34,197,94,0.2)] ring-1 ring-green-500/30"
-                      : "bg-card/40 backdrop-blur-md border-white/5 hover:border-primary/30 shadow-xl hover:shadow-primary/5",
-                    isManual ? "pl-2" : ""
-                )}
-                onClick={() => onSelect(supplier)}
-            >
-                {/* Status Indicator Background */}
-                <div className={cn(
-                  "absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full blur-3xl transition-all duration-700",
-                  supplier.status === 'pago' ? 'bg-green-400 opacity-40 scale-150' :
-                  supplier.status === 'atrasado' ? 'bg-red-500 opacity-20' :
-                  supplier.status === 'parcial' ? 'bg-amber-500 opacity-20' : 'bg-blue-500 opacity-20'
-                )} />
-
-                <div className="flex flex-col gap-4 relative z-10 w-full">
-                    <div className="flex items-center gap-4 w-full">
-                        {isManual && (
-                            <div 
-                                onPointerDown={(e) => dragControls.start(e)}
-                                className="p-2 cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-primary transition-colors flex items-center shrink-0"
-                            >
-                                <GripVertical size={20} />
-                            </div>
-                        )}
-                        <div className="flex flex-1 items-start sm:items-center gap-2 sm:gap-3 flex-wrap min-w-0">
-                            <h4 className="text-lg sm:text-2xl font-black text-foreground group-hover:text-primary transition-colors duration-300 truncate max-w-full">
+        <div className={cn(
+            "relative border-b border-border/40 bg-transparent py-4 px-2 sm:px-4 sm:py-5 transition-all last:border-0 group hover:bg-secondary/5",
+            showActions && "z-50"
+        )}>
+                <div className="flex items-center gap-4 relative z-10 w-full min-w-0">
+                    {isManual && (
+                        <div 
+                            onPointerDown={(e) => dragControls.start(e)}
+                            className="p-2 cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-primary transition-colors flex items-center shrink-0"
+                        >
+                            <GripVertical size={20} />
+                        </div>
+                    )}
+                <div className="flex items-center justify-between gap-4 relative w-full">
+                    {/* Lado Esquerdo: Info */}
+                    <div className="flex-1 min-w-0 pr-24" onClick={() => onSelect(supplier)}>
+                        {/* Nível 1: Nome */}
+                        <div className="mb-2">
+                            <h4 className="text-[15px] sm:text-2xl font-black text-foreground leading-tight tracking-tight group-hover:text-primary transition-colors line-clamp-1">
                               {supplier.fornecedor}
                             </h4>
-                            <div className="flex flex-wrap gap-2">
-                                <Badge variant="outline" className="shrink-0 bg-primary/5 text-primary border-primary/20 text-[8px] sm:text-[9px] uppercase font-black px-2 sm:px-3 py-0.5">
-                                    {supplier.categoria}
-                                </Badge>
-                                {supplier.status === 'atrasado' && (
-                                  <span className="flex items-center gap-1 text-red-500 text-[8px] sm:text-[9px] font-black uppercase shrink-0 px-2 py-0.5 bg-red-500/10 rounded-full border border-red-500/20">
-                                    <AlertCircle size={10} /> Atrasado
-                                  </span>
-                                )}
+                        </div>
+
+                        {/* Nível 2: Valor */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 mb-3">
+                            <div className="flex items-center gap-1.5">
+                                <DollarIcon size={14} className="text-primary/30" />
+                                <span className="text-[12px] sm:text-lg font-medium text-foreground/80 tracking-tight">
+                                    {formatCurrency(supplier.valorTotal)}
+                                </span>
+                            </div>
+
+                            <div className="hidden sm:flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] opacity-60">Pago</span>
+                                    <span className="text-emerald-500/80">{formatCurrency(paidValue)}</span>
+                                </div>
+                                <div className="w-px h-6 bg-border/40" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] opacity-60">Restante</span>
+                                    <span className="text-amber-500/80">{formatCurrency(supplier.valorTotal - paidValue)}</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="ml-auto group-hover:translate-x-1 transition-transform duration-500 text-muted-foreground group-hover:text-primary">
-                             <ChevronRight size={20} />
+
+                        {/* Nível 3: Tags Lado a Lado */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="opacity-80 sm:text-[10px] sm:px-3 sm:py-1">
+                                {supplier.categoria}
+                            </Badge>
+                            
+                            <Badge 
+                                variant={
+                                    // @ts-ignore
+                                    supplier.status === 'pago' ? "success" : 
+                                    // @ts-ignore
+                                    supplier.status === 'atrasado' ? "error" : "warning"
+                                }
+                                className="shadow-sm sm:text-[10px] sm:px-3 sm:py-1"
+                            >
+                                {/* @ts-ignore */}
+                                {supplier.status}
+                            </Badge>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 xl:gap-8 bg-secondary/5 p-4 rounded-[1.2rem] border border-white/5">
-                        <div>
-                            <p className="text-[8px] text-muted-foreground font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5 opacity-50">
-                              <DollarIcon size={10} className="text-primary" /> Valor
-                            </p>
-                            <p className="font-black text-base text-foreground font-mono">{formatCurrency(supplier.valorTotal)}</p>
+                    {/* Lado Direito: Progresso e Ações - Absoluto */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-3 shrink-0">
+                        {/* Progresso Circular */}
+                        <div className="relative w-10 h-10 sm:w-14 sm:h-14 hidden sm:block">
+                            <svg className="w-full h-full -rotate-90">
+                                <circle
+                                    cx="50%" cy="50%" r="45%"
+                                    className="fill-none stroke-secondary/30 stroke-[3]"
+                                />
+                                <motion.circle
+                                    cx="50%" cy="50%" r="45%"
+                                    className="fill-none stroke-primary stroke-[3]"
+                                    strokeDasharray="100"
+                                    initial={{ strokeDashoffset: 100 }}
+                                    animate={{ strokeDashoffset: 100 - progress }}
+                                    transition={{ duration: 1, ease: "easeOut" }}
+                                />
+                            </svg>
+                            <span className="absolute inset-0 flex items-center justify-center text-[8px] sm:text-[10px] font-black">{Math.round(progress)}%</span>
                         </div>
 
-                        <div>
-                            <p className="text-[8px] text-muted-foreground font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5 opacity-50">
-                              <Calendar size={10} className="text-amber-500" /> Quitação
-                            </p>
-                            <p className="text-base font-black text-foreground font-mono">
-                              {formatDate(supplier.parcelas[supplier.parcelas.length - 1].dataVencimento)}
-                            </p>
-                        </div>
+                        {/* Menu de Ações */}
+                        <div className="relative">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={cn("h-10 w-10 rounded-2xl bg-secondary/20", showActions && "bg-primary text-white shadow-lg shadow-primary/30")}
+                                onClick={() => setShowActions(!showActions)}
+                            >
+                                <MoreVertical size={20} />
+                            </Button>
 
-                        <div className="flex flex-col justify-center gap-1.5">
-                            <p className="text-[8px] text-muted-foreground font-black uppercase tracking-[0.2em] flex items-center justify-between opacity-50">
-                              Pago <span className="text-foreground">{Math.round(progress)}%</span>
-                            </p>
-                            <div className="h-1.5 w-full bg-secondary/30 rounded-full overflow-hidden">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progress}%` }}
-                                transition={{ duration: 1, ease: "easeOut" }}
-                                className={cn(
-                                  "h-full rounded-full bg-gradient-to-r",
-                                  progress === 100 ? "from-green-500 to-emerald-400" : "from-primary to-blue-400"
-                                )}
-                              />
-                            </div>
-                        </div>
+                            {showActions && (
+                                <>
+                                    <div className="fixed inset-0 z-[60]" onClick={() => setShowActions(false)} />
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-[0_10px_40px_rgba(0,0,0,0.3)] rounded-[1.5rem] p-2 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                        <div className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 py-2">Administrar</div>
+                                        
+                                        <button 
+                                            onClick={() => {
+                                                onSelect(supplier);
+                                                setShowActions(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
+                                        >
+                                            <ExternalLink size={16} className="text-primary" />
+                                            Ver Detalhes
+                                        </button>
 
-                        <div className="flex items-center justify-end gap-1.5 pr-1">
-                            <div className="flex -space-x-1.5 overflow-hidden">
-                                {supplier.parcelas.map((p: any, i: number) => (
-                                    <div 
-                                        key={i} 
-                                        className={cn(
-                                            "w-5 h-5 rounded-md border-2 border-slate-900 flex items-center justify-center text-[8px] font-black transition-all", 
-                                            p.status === 'pago' 
-                                              ? 'bg-green-500 text-white shadow-[0_0_6px_rgba(34,197,94,0.3)]' 
-                                              : 'bg-secondary/40 text-muted-foreground/30'
-                                        )} 
-                                        title={`Parcela ${p.numero}: ${p.status}`} 
-                                    >
-                                      {p.numero}
+                                        <button 
+                                            onClick={() => {
+                                                onSelect(supplier);
+                                                setShowActions(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
+                                        >
+                                            <Edit2 size={16} className="text-primary" />
+                                            Editar
+                                        </button>
+
+                                        <div className="h-px bg-border/50 my-1 mx-2" />
+
+                                        <button 
+                                            className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                            Excluir
+                                        </button>
                                     </div>
-                                ))}
-                            </div>
+                                </>
+                            )}
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-2 pl-1">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                          <Briefcase size={12} />
-                        </div>
-                        <p className="text-[11px] font-bold text-muted-foreground tracking-wide truncate">
-                          Serviço: <span className="text-foreground">{supplier.servico}</span>
-                        </p>
                     </div>
                 </div>
+
+                {/* Subinfo: Removida para manter padrão clean list mobile-like no Web */}
             </div>
         </Reorder.Item>
     );
