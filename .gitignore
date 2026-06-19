@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Local Supabase schema audit dumps
+supabase/.audit/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
