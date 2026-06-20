@@ -976,6 +976,68 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
+-- ============================================================
+-- STORAGE: buckets e policies (schema storage, fora do dump
+-- --schema public). Conteúdo confirmado contra o dump real de
+-- produção em 2026-06-19.
+-- ============================================================
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('contracts', 'contracts', true) ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public) VALUES ('casamentos', 'casamentos', true) ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'contracts');
+
+DROP POLICY IF EXISTS "Auth Insert" ON storage.objects;
+CREATE POLICY "Auth Insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'contracts' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Auth Update" ON storage.objects;
+CREATE POLICY "Auth Update" ON storage.objects FOR UPDATE USING (bucket_id = 'contracts' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Auth Delete" ON storage.objects;
+CREATE POLICY "Auth Delete" ON storage.objects FOR DELETE USING (bucket_id = 'contracts' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Membros do casamento podem ver arquivos" ON storage.objects;
+CREATE POLICY "Membros do casamento podem ver arquivos" ON storage.objects
+    FOR SELECT USING (
+        bucket_id = 'casamentos'
+        AND (
+            EXISTS (
+                SELECT 1 FROM public.wedding_members
+                WHERE wedding_id::text = (string_to_array(name, '/'))[1]
+                AND user_id = auth.uid()
+            )
+            OR public.is_master()
+        )
+    );
+
+DROP POLICY IF EXISTS "Membros do casamento podem fazer upload" ON storage.objects;
+CREATE POLICY "Membros do casamento podem fazer upload" ON storage.objects
+    FOR INSERT WITH CHECK (
+        bucket_id = 'casamentos'
+        AND (
+            EXISTS (
+                SELECT 1 FROM public.wedding_members
+                WHERE wedding_id::text = (string_to_array(name, '/'))[1]
+                AND user_id = auth.uid()
+            )
+            OR public.is_master()
+        )
+    );
+
+DROP POLICY IF EXISTS "Membros do casamento podem deletar arquivos" ON storage.objects;
+CREATE POLICY "Membros do casamento podem deletar arquivos" ON storage.objects
+    FOR DELETE USING (
+        bucket_id = 'casamentos'
+        AND (
+            EXISTS (
+                SELECT 1 FROM public.wedding_members
+                WHERE wedding_id::text = (string_to_array(name, '/'))[1]
+                AND user_id = auth.uid()
+            )
+            OR public.is_master()
+        )
+    );
 
 
 
