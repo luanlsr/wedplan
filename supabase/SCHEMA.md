@@ -20,6 +20,7 @@ Perfil de cada usuário autenticado (1:1 com `auth.users`).
 | `email` | text | |
 | `role` | text | **Legado.** Valores: `master`/`couple`/`staff`. Ainda é a coluna que `is_master()` e a maioria das policies de negócio realmente leem. |
 | `role_id` | uuid (FK → `roles.id`) | Arquitetura "nova" introduzida em 2025, hoje sem uso real nas policies — ver `KNOWN_ISSUES.md`. |
+| `wedding_id` | uuid | **Legado.** Coluna que várias policies de negócio atuais (`Acesso ao casamento vinculado`, `Noivo gere convidados/fornecedores/parcelas/tarefas`) realmente usam para escopar acesso — não `wedding_members`. |
 | `account_id` | uuid (FK → `accounts.id`) | |
 | `asaas_customer_id` | text | |
 | `created_at`, `updated_at` | timestamptz | |
