@@ -69,8 +69,10 @@ git mv supabase/migrations/0021_ensure_luan_master.sql supabase/migrations/_arch
 
 - [ ] **Step 3: Mover os 3 arquivos soltos**
 
+Correção: `fix_rls_policies.sql` está em `supabase/`, não em `supabase/migrations/`. Os outros dois estão em `supabase/migrations/`.
+
 ```bash
-git mv supabase/migrations/fix_rls_policies.sql supabase/migrations/_archive/
+git mv supabase/fix_rls_policies.sql supabase/migrations/_archive/
 git mv supabase/migrations/rollback_and_fix.sql supabase/migrations/_archive/
 git mv supabase/migrations/drop_all_tables.sql supabase/migrations/_archive/
 ```
