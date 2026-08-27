@@ -1,41 +1,101 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useEffect, useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Users, ArrowRight, CreditCard } from 'lucide-react';
-import { Card } from '../ui';
+import { ArrowRight, CreditCard, Crown, Hourglass, Users } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { Badge, Card } from '../ui';
 
-interface AdminAccount {
+type AdminSubscription = {
+  id: string;
+  account_id: string;
+  status: string;
+  billing_interval: 'monthly' | 'yearly';
+  created_at: string;
+  plans: any;
+};
+
+type Profile = {
+  account_id: string;
+  id: string;
+  full_name: string;
+  email: string;
+};
+
+type PendingCheckout = {
   id: string;
   status: string;
-  created_at: string;
-  account_types: any; // Cast flexível para lidar com retorno do Supabase
-  profiles: { full_name: string; email: string }[];
-}
+};
+
+const monthlyValue = (subscription: AdminSubscription) => {
+  const plan = Array.isArray(subscription.plans) ? subscription.plans[0] : subscription.plans;
+  const monthly = Number(plan?.price_monthly || 0);
+  const yearly = Number(plan?.price_yearly || 0);
+  return subscription.billing_interval === 'yearly' ? yearly / 12 : monthly;
+};
+
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
 export function AdminDashboard() {
-  const [accounts, setAccounts] = useState<AdminAccount[]>([]);
+  const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([]);
+  const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
+  const [pendingCheckouts, setPendingCheckouts] = useState<PendingCheckout[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAccounts();
+    fetchAdminData();
   }, []);
 
-  const fetchAccounts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select(`
-          id,
-          status,
-          created_at,
-          account_types (name, price),
-          profiles (full_name, email)
-        `)
-        .order('created_at', { ascending: false });
+  const fetchAdminData = async () => {
+    setLoading(true);
 
-      if (error) throw error;
-      setAccounts((data as any) || []);
+    try {
+      const [subscriptionsResult, checkoutsResult] = await Promise.all([
+        supabase
+          .from('subscriptions')
+          .select(`
+            id,
+            account_id,
+            status,
+            billing_interval,
+            created_at,
+            plans (
+              name,
+              code,
+              price_monthly,
+              price_yearly
+            )
+          `)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('checkout_sessions')
+          .select('id, status')
+          .eq('status', 'payment_pending'),
+      ]);
+
+      if (subscriptionsResult.error) throw subscriptionsResult.error;
+      if (checkoutsResult.error) throw checkoutsResult.error;
+
+      const subRows = ((subscriptionsResult.data || []) as any[]) as AdminSubscription[];
+      setSubscriptions(subRows);
+      setPendingCheckouts((checkoutsResult.data || []) as PendingCheckout[]);
+
+      const accountIds = subRows.map((subscription) => subscription.account_id).filter(Boolean);
+      const { data: profilesData, error: profilesError } = accountIds.length
+        ? await supabase
+            .from('profiles')
+            .select('account_id, id, full_name, email')
+            .in('account_id', accountIds)
+        : { data: [], error: null };
+
+      if (profilesError) throw profilesError;
+
+      setProfiles(new Map(
+        ((profilesData || []) as Profile[]).map((profile) => [
+          profile.account_id || profile.id,
+          profile,
+        ])
+      ));
     } catch (err) {
       console.error('Error fetching admin data:', err);
     } finally {
@@ -43,18 +103,19 @@ export function AdminDashboard() {
     }
   };
 
+  const activeSubscriptions = useMemo(
+    () => subscriptions.filter((subscription) => subscription.status === 'active' || subscription.status === 'trialing'),
+    [subscriptions]
+  );
+
+  const mrr = useMemo(
+    () => activeSubscriptions.reduce((total, subscription) => total + monthlyValue(subscription), 0),
+    [activeSubscriptions]
+  );
+
   if (loading) {
     return <div className="flex justify-center p-8"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
   }
-
-  const mrr = accounts
-    .filter(a => a.status === 'active')
-    .reduce((acc, curr) => {
-      const price = Array.isArray(curr.account_types) 
-        ? curr.account_types[0]?.price 
-        : curr.account_types?.price;
-      return acc + (Number(price) || 0);
-    }, 0);
 
   return (
     <div className="space-y-6">
@@ -64,90 +125,72 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card 
-          className="p-6 bg-gradient-to-br from-primary/20 to-transparent border-primary/20 cursor-pointer hover:scale-[1.02] transition-transform"
-          onClick={() => navigate('/usuarios')}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/20 rounded-xl">
-                <Users className="text-primary" size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total de Contas</p>
-                <p className="text-3xl font-black">{accounts.length}</p>
-              </div>
-            </div>
-            <ArrowRight size={20} className="text-muted-foreground" />
-          </div>
-        </Card>
-        
-        <Card 
-          className="p-6 bg-gradient-to-br from-blue-500/20 to-transparent border-blue-500/20 cursor-pointer hover:scale-[1.02] transition-transform"
+        <MetricCard
+          icon={Users}
+          label="Assinantes ativos"
+          value={String(activeSubscriptions.length)}
+          tone="primary"
           onClick={() => navigate('/assinaturas')}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <CreditCard className="text-blue-500" size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">MRR Projetado</p>
-                <p className="text-3xl font-black">R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              </div>
-            </div>
-            <ArrowRight size={20} className="text-muted-foreground" />
-          </div>
-        </Card>
+        />
+        <MetricCard
+          icon={CreditCard}
+          label="MRR projetado"
+          value={formatMoney(mrr)}
+          tone="blue"
+          onClick={() => navigate('/assinaturas')}
+        />
+        <MetricCard
+          icon={Hourglass}
+          label="Checkouts pendentes"
+          value={String(pendingCheckouts.length)}
+          tone="amber"
+          onClick={() => navigate('/assinaturas')}
+        />
       </div>
 
       <Card className="overflow-hidden border-border/50 bg-secondary/20">
         <div className="p-4 border-b border-border/50 bg-background/50">
-          <h2 className="font-bold tracking-widest uppercase text-sm">Assinantes Recentes</h2>
+          <h2 className="font-bold tracking-widest uppercase text-sm">Assinaturas recentes</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/50 bg-secondary/50 text-left">
-                <th className="p-4 font-black uppercase tracking-wider text-xs text-muted-foreground">Cliente Principal</th>
+                <th className="p-4 font-black uppercase tracking-wider text-xs text-muted-foreground">Cliente</th>
                 <th className="p-4 font-black uppercase tracking-wider text-xs text-muted-foreground">Plano</th>
-                <th className="p-4 font-black uppercase tracking-wider text-xs text-muted-foreground">Status Assinatura</th>
+                <th className="p-4 font-black uppercase tracking-wider text-xs text-muted-foreground">Status</th>
                 <th className="p-4 font-black uppercase tracking-wider text-xs text-muted-foreground">Cadastro</th>
               </tr>
             </thead>
             <tbody>
-              {accounts.slice(0, 5).map(acc => {
-                const owner = acc.profiles?.[0];
+              {subscriptions.slice(0, 6).map((subscription) => {
+                const profile = profiles.get(subscription.account_id);
+                const plan = Array.isArray(subscription.plans) ? subscription.plans[0] : subscription.plans;
                 return (
-                  <tr key={acc.id} className="border-b border-border/10 hover:bg-white/5 transition-colors">
+                  <tr key={subscription.id} className="border-b border-border/20 bg-card/30 transition-colors hover:bg-accent/40">
                     <td className="p-4">
-                      <div className="font-bold">{owner?.full_name || 'Sem nome'}</div>
-                      <div className="text-xs text-muted-foreground">{owner?.email || 'Sem e-mail'}</div>
-                    </td>
-                    <td className="p-4 text-muted-foreground font-bold">
-                      {Array.isArray(acc.account_types) 
-                        ? acc.account_types[0]?.name 
-                        : acc.account_types?.name || 'Padrão'}
+                      <div className="font-bold">{profile?.full_name || 'Sem nome'}</div>
+                      <div className="text-xs text-muted-foreground">{profile?.email || 'Sem e-mail'}</div>
                     </td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase ${
-                        acc.status === 'active' ? 'bg-green-500/20 text-green-500' :
-                        acc.status === 'trial' ? 'bg-blue-500/20 text-blue-500' :
-                        'bg-orange-500/20 text-orange-500'
-                      }`}>
-                        {acc.status || 'trial'}
-                      </span>
+                      <div className="font-bold">{plan?.name || 'Plano'}</div>
+                      <div className="text-xs text-muted-foreground">{formatMoney(monthlyValue(subscription))}/mês</div>
+                    </td>
+                    <td className="p-4">
+                      <Badge variant={subscription.status === 'active' ? 'success' : subscription.status === 'past_due' ? 'warning' : 'outline'}>
+                        {subscription.status}
+                      </Badge>
                     </td>
                     <td className="p-4 text-muted-foreground text-xs">
-                      {new Date(acc.created_at).toLocaleDateString('pt-BR')}
+                      {new Date(subscription.created_at).toLocaleDateString('pt-BR')}
                     </td>
                   </tr>
                 );
               })}
-              {accounts.length === 0 && (
+              {subscriptions.length === 0 && (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                    Nenhuma conta encontrada.
+                    Nenhuma assinatura encontrada.
                   </td>
                 </tr>
               )}
@@ -158,3 +201,43 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+const MetricCard = ({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  onClick,
+}: {
+  icon: ElementType;
+  label: string;
+  value: string;
+  tone: 'primary' | 'blue' | 'amber';
+  onClick: () => void;
+}) => {
+  const tones = {
+    primary: 'from-primary/20 border-primary/20 text-primary',
+    blue: 'from-blue-500/20 border-blue-500/20 text-blue-500',
+    amber: 'from-amber-500/20 border-amber-500/20 text-amber-500',
+  };
+
+  return (
+    <Card
+      className={`p-6 bg-gradient-to-br ${tones[tone]} to-transparent cursor-pointer hover:scale-[1.02] transition-transform`}
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-current/10 rounded-xl">
+            <Icon className="text-current" size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
+            <p className="text-3xl font-black">{value}</p>
+          </div>
+        </div>
+        <ArrowRight size={20} className="text-muted-foreground" />
+      </div>
+    </Card>
+  );
+};

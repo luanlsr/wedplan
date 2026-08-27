@@ -19,8 +19,10 @@ import { SettingsView } from './SettingsView';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { AdminUsers } from './admin/AdminUsers';
 import { AdminSubscriptions } from './admin/AdminSubscriptions';
+import { AdminDomainRequests } from './admin/AdminDomainRequests';
 import { AdminSettings } from './admin/AdminSettings';
 import { PaymentGate } from './auth/PaymentGate';
+import { WeddingSiteView } from './site/WeddingSiteView';
 
 import { useWeddingData } from '../hooks/useWeddingData';
 import { useAuth } from '../hooks/useAuth';
@@ -193,7 +195,9 @@ export function MainApp() {
     if (path === "/tarefas") return "Minhas Tarefas";
     if (path === "/financeiro") return "Fluxo de Caixa";
     if (path === "/planejamento") return "Planejamento Financeiro";
+    if (path === "/site") return "Site do Casal";
     if (path === "/configuracoes") return "Configurações";
+    if (path === "/dominios") return "Domínios";
     if (path === "/checkin") return "Visão Geral do Evento";
     return "Visão Geral";
   };
@@ -284,6 +288,7 @@ export function MainApp() {
           <>
             <Route path="usuarios" element={<AdminUsers />} />
             <Route path="assinaturas" element={<AdminSubscriptions />} />
+            <Route path="dominios" element={<AdminDomainRequests />} />
             <Route path="configuracoes-master" element={<AdminSettings />} />
           </>
         )}
@@ -338,6 +343,8 @@ export function MainApp() {
             onUpdateSimulation={() => { }}
           />
         } />
+
+        <Route path="site" element={<WeddingSiteView data={data} />} />
 
         <Route path="checkin" element={
           <CheckInView

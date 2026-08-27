@@ -7,6 +7,7 @@ import { ForgotPassword } from './components/auth/ForgotPassword';
 import { ResetPassword } from './components/auth/ResetPassword';
 import { LandingPage } from './components/layout/LandingPage';
 import { CookieConsent } from './components/layout/CookieConsent';
+import { WeddingSitePublic } from './components/site/WeddingSitePublic';
 import { Loader2 } from 'lucide-react';
 import { ConfirmProvider } from './components/ui';
 
@@ -34,6 +35,8 @@ function AppRoutes() {
           onLogin={() => navigate('/login')} 
         />
       } />
+
+      <Route path="/casamento/:slug" element={<WeddingSitePublic />} />
 
       <Route path="/login" element={
         user ? <Navigate to="/" replace /> :

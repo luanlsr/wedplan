@@ -30,7 +30,15 @@ export function AdminSettings() {
   const [saved, setSaved] = useState(false);
 
   const [profile, setProfile] = useState({ fullName: '', email: '' });
-  const [plans, setPlans] = useState<{ id: string; name: string; price: number; description: string }[]>([]);
+  const [plans, setPlans] = useState<{
+    id: string;
+    code: string;
+    name: string;
+    description: string;
+    price_monthly: number;
+    price_yearly: number;
+    is_active: boolean;
+  }[]>([]);
   const [notifications, setNotifications] = useState({
     newAccount: true,
     paymentReceived: true,
@@ -56,9 +64,9 @@ export function AdminSettings() {
       }
 
       const { data: plansData } = await supabase
-        .from('account_types')
-        .select('id, name, price, description')
-        .order('price');
+        .from('plans')
+        .select('id, code, name, description, price_monthly, price_yearly, is_active')
+        .order('price_monthly');
       
       if (plansData) setPlans(plansData);
     } catch (err) {
@@ -74,7 +82,16 @@ export function AdminSettings() {
       }
       if (activeSection === 'plans') {
         for (const plan of plans) {
-          await supabase.from('account_types').update({ name: plan.name, price: plan.price, description: plan.description }).eq('id', plan.id);
+          await supabase
+            .from('plans')
+            .update({
+              name: plan.name,
+              description: plan.description,
+              price_monthly: plan.price_monthly,
+              price_yearly: plan.price_yearly,
+              is_active: plan.is_active,
+            })
+            .eq('id', plan.id);
         }
       }
       setSaved(true);
@@ -190,21 +207,29 @@ export function AdminSettings() {
                 </div>
                 <div>
                   <h3 className="font-black uppercase tracking-tighter">Planos e Preços</h3>
-                  <p className="text-xs text-muted-foreground">Edite os planos da tabela account_types</p>
+                  <p className="text-xs text-muted-foreground">Edite os planos comerciais da tabela plans</p>
                 </div>
               </div>
 
               {plans.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Zap size={40} className="mx-auto mb-3 opacity-30" />
-                  <p className="text-sm font-medium">Nenhum plano cadastrado na tabela account_types</p>
+                  <p className="text-sm font-medium">Nenhum plano cadastrado na tabela plans</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {plans.map((plan, idx) => (
                     <div key={plan.id} className="p-4 rounded-2xl border border-border bg-secondary/20 space-y-3">
                       <p className="text-[10px] font-black uppercase tracking-widest text-primary">Plano {idx + 1}</p>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Código</label>
+                          <input
+                            value={plan.code}
+                            readOnly
+                            className="w-full bg-secondary/30 border border-border/60 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground cursor-not-allowed"
+                          />
+                        </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome</label>
                           <input
@@ -214,11 +239,22 @@ export function AdminSettings() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Preço (R$)</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mensal (R$)</label>
                           <input
                             type="number"
-                            value={plan.price}
-                            onChange={e => setPlans(ps => ps.map(p => p.id === plan.id ? { ...p, price: parseFloat(e.target.value) } : p))}
+                            step="0.01"
+                            value={plan.price_monthly}
+                            onChange={e => setPlans(ps => ps.map(p => p.id === plan.id ? { ...p, price_monthly: parseFloat(e.target.value) || 0 } : p))}
+                            className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anual (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={plan.price_yearly}
+                            onChange={e => setPlans(ps => ps.map(p => p.id === plan.id ? { ...p, price_yearly: parseFloat(e.target.value) || 0 } : p))}
                             className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
                           />
                         </div>
@@ -231,6 +267,15 @@ export function AdminSettings() {
                           className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
                         />
                       </div>
+                      <label className="flex items-center justify-between rounded-xl border border-border bg-background/50 px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                        Plano ativo
+                        <input
+                          type="checkbox"
+                          checked={plan.is_active}
+                          onChange={e => setPlans(ps => ps.map(p => p.id === plan.id ? { ...p, is_active: e.target.checked } : p))}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </label>
                     </div>
                   ))}
                 </div>
