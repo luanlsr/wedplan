@@ -1,12 +1,11 @@
 import { motion, useDragControls, Reorder } from "framer-motion";
 import { 
-    GripVertical, ChevronRight, AlertCircle, 
-    Briefcase, DollarSign as DollarIcon, Calendar,
-    MoreVertical, Edit2, Trash2, ExternalLink,
-    Check
+    GripVertical,
+    DollarSign as DollarIcon,
+    MoreVertical, Edit2, Trash2, ExternalLink
 } from "lucide-react";
 import { Badge, Button } from "../ui";
-import { formatCurrency, formatDate } from "../../utils/calculations";
+import { formatCurrency } from "../../utils/calculations";
 import { cn } from "../../lib/utils";
 import type { Supplier } from "../../types";
 import { useState } from "react";
@@ -31,7 +30,7 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
             className="group outline-none"
         >
         <div className={cn(
-            "relative border-b border-border/40 bg-transparent py-4 px-2 sm:px-4 sm:py-5 transition-all last:border-0 group hover:bg-secondary/5",
+            "relative border-b border-border bg-card/90 py-4 px-3 sm:rounded-xl sm:border sm:px-5 sm:py-4 sm:shadow-sm transition-all last:border-0 group hover:bg-accent/40",
             showActions && "z-50"
         )}>
                 <div className="flex items-center gap-4 relative z-10 w-full min-w-0">
@@ -45,10 +44,10 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
                     )}
                 <div className="flex items-center justify-between gap-4 relative w-full">
                     {/* Lado Esquerdo: Info */}
-                    <div className="flex-1 min-w-0 pr-24" onClick={() => onSelect(supplier)}>
+                    <div className="flex-1 min-w-0 pr-20" onClick={() => onSelect(supplier)}>
                         {/* Nível 1: Nome */}
                         <div className="mb-2">
-                            <h4 className="text-[15px] sm:text-2xl font-black text-foreground leading-tight tracking-tight group-hover:text-primary transition-colors line-clamp-1">
+                            <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                               {supplier.fornecedor}
                             </h4>
                         </div>
@@ -57,12 +56,12 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 mb-3">
                             <div className="flex items-center gap-1.5">
                                 <DollarIcon size={14} className="text-primary/30" />
-                                <span className="text-[12px] sm:text-lg font-medium text-foreground/80 tracking-tight">
+                                <span className="text-sm font-semibold text-foreground/80">
                                     {formatCurrency(supplier.valorTotal)}
                                 </span>
                             </div>
 
-                            <div className="hidden sm:flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                            <div className="hidden sm:flex items-center gap-4 text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
                                 <div className="flex flex-col">
                                     <span className="text-[9px] opacity-60">Pago</span>
                                     <span className="text-emerald-500/80">{formatCurrency(paidValue)}</span>
@@ -122,7 +121,7 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className={cn("h-10 w-10 rounded-2xl bg-secondary/20", showActions && "bg-primary text-white shadow-lg shadow-primary/30")}
+                                className={cn("h-9 w-9 rounded-lg bg-secondary/60", showActions && "bg-primary text-white shadow-sm shadow-primary/30")}
                                 onClick={() => setShowActions(!showActions)}
                             >
                                 <MoreVertical size={20} />
@@ -131,8 +130,8 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
                             {showActions && (
                                 <>
                                     <div className="fixed inset-0 z-[60]" onClick={() => setShowActions(false)} />
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-[0_10px_40px_rgba(0,0,0,0.3)] rounded-[1.5rem] p-2 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                        <div className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 py-2">Administrar</div>
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-xl rounded-xl p-2 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                        <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wide px-3 py-2">Administrar</div>
                                         
                                         <button 
                                             onClick={() => {

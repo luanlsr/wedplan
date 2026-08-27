@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Users, TrendingUp, AlertTriangle, ArrowRight, CreditCard } from 'lucide-react';
-import { Card, Button } from '../ui';
+import { Crown, Users, ArrowRight, CreditCard } from 'lucide-react';
+import { Card } from '../ui';
 
 interface AdminAccount {
   id: string;

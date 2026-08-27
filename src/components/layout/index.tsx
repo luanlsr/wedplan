@@ -59,9 +59,10 @@ interface SidebarProps {
   isPublicMode?: boolean;
   weddingId?: string;
   userName?: string;
+  onWeddingSwitch?: () => void | Promise<void>;
 }
 
-export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse, isPublicMode, weddingId, userName }: SidebarProps) => {
+export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed, onToggleCollapse, isPublicMode, weddingId, userName, onWeddingSwitch }: SidebarProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -104,7 +105,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     <>
     <style>{tooltipStyles}</style>
     <div className={cn(
-      "hidden lg:flex h-screen fixed left-0 top-0 glass border-r border-white/10 p-6 flex-col z-50 transition-all duration-500",
+      "hidden lg:flex h-screen fixed left-0 top-0 bg-card/90 backdrop-blur-xl border-r border-border p-5 flex-col z-50 transition-all duration-500 shadow-sm",
       isCollapsed ? "w-24" : "w-80"
     )}>
       {/* Collapse Toggle Button */}
@@ -118,12 +119,12 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
       </button>
 
       <div className={cn(
-        "flex items-center mb-16 px-2 group cursor-pointer overflow-hidden justify-center transition-all duration-500",
-        isCollapsed ? "mt-2" : "mt-4"
+        "flex items-center mb-8 px-2 group cursor-pointer overflow-hidden justify-center shrink-0 transition-all duration-500",
+        isCollapsed ? "mt-2" : "mt-2"
       )} onClick={() => navigate('/dashboard')}>
         <div className={cn(
           "shrink-0 transition-all duration-700 ease-in-out flex items-center justify-center relative",
-          isCollapsed ? "w-12 h-12" : "w-52 h-40"
+          isCollapsed ? "w-11 h-11" : "w-40 h-24"
         )}>
           <AnimatePresence mode="wait">
             {isCollapsed ? (
@@ -172,18 +173,18 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
         <WeddingSwitcher 
           currentWeddingId={weddingId} 
           isCollapsed={isCollapsed} 
-          onSwitch={() => window.location.reload()} 
+          onSwitch={() => onWeddingSwitch?.()} 
         />
       )}
 
       {/* User Profile Info */}
       {!isPublicMode && (
         <div className={cn(
-          "mb-8 p-3 rounded-2xl bg-secondary/30 border border-white/5 flex items-center transition-all duration-500 overflow-hidden",
+          "mb-6 p-3 rounded-xl bg-secondary/60 border border-border flex items-center shrink-0 transition-all duration-500 overflow-hidden",
           isCollapsed ? "justify-center" : "justify-start gap-3"
         )}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shrink-0 shadow-lg">
-            <div className="w-full h-full rounded-[0.6rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black text-sm italic">
+            <div className="w-full h-full rounded-lg bg-card flex items-center justify-center text-primary font-extrabold text-sm">
               {userName ? userName.substring(0, 2).toUpperCase() : 'US'}
             </div>
           </div>
@@ -197,10 +198,10 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
                 transition={{ duration: 0.3 }}
                 className="flex flex-col min-w-0"
               >
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary leading-none mb-1 truncate">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary leading-none mb-1 truncate">
                   {userRole}
                 </span>
-                <span className="text-xs font-bold truncate max-w-[150px]">
+                <span className="text-sm font-semibold truncate max-w-[150px]">
                   {userName || 'Usuário WedPlan'}
                 </span>
               </motion.div>
@@ -219,18 +220,18 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
             data-tooltip={isCollapsed ? item.label : undefined}
             className={({ isActive }) => cn(
               "w-full flex items-center rounded-xl transition-all duration-300 group relative overflow-visible",
-              isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3.5",
+              isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-3 px-3.5 py-3",
               isActive 
-                ? "bg-primary text-white shadow-xl shadow-primary/20" 
-                : "hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                ? "bg-primary text-white shadow-sm shadow-primary/20" 
+                : "hover:bg-accent text-muted-foreground hover:text-foreground"
             )}
           >
             {({ isActive }) => (
               <>
                 <item.icon size={22} className={cn("shrink-0 transition-all duration-500 ease-in-out", isActive ? "text-white" : "group-hover:text-primary")} />
                 <span className={cn(
-                  "font-semibold tracking-wide whitespace-nowrap transition-all duration-500 ease-in-out",
-                  isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0 ml-4"
+                  "font-semibold text-sm tracking-normal whitespace-nowrap transition-all duration-500 ease-in-out",
+                  isCollapsed ? "w-0 opacity-0 pointer-events-none -translate-x-4" : "w-auto opacity-100 translate-x-0"
                 )}>
                   {item.label}
                 </span>
@@ -246,13 +247,13 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
         ))}
       </nav>
 
-      <div className="space-y-4 pt-6 mt-6 border-t border-primary/10">
+      <div className="space-y-3 pt-5 mt-5 border-t border-border">
         <button 
           onClick={toggleTheme}
           data-tooltip={isCollapsed ? (isDark ? "Modo Claro" : "Modo Escuro") : undefined}
           className={cn(
             "w-full flex items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all duration-500 ease-in-out relative",
-            isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
+            isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-3 px-3.5 py-3"
           )}
         >
           <div className="shrink-0 transition-transform duration-500">{isDark ? <Sun size={20} /> : <Moon size={20} />}</div>
@@ -269,8 +270,8 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
             onClick={handleSignOut}
             data-tooltip={isCollapsed ? "Sair" : undefined}
             className={cn(
-              "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-500 ease-in-out relative",
-              isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-4 px-4 py-3"
+            "w-full flex items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-500 ease-in-out relative",
+              isCollapsed ? "justify-center p-3 sidebar-tooltip" : "gap-3 px-3.5 py-3"
             )}
           >
             <div className="shrink-0 transition-transform duration-500"><LogOut size={20} /></div>
@@ -337,7 +338,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 
   return (
     <>
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-2 xs:px-4 py-2 flex items-center justify-around z-[60] safe-area-bottom">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background shadow-xl border-t border-white/10 px-2 xs:px-4 py-2 flex items-center justify-around z-[60] safe-area-bottom">
         {mainActions.map((item) => (
           <NavLink
             key={item.id}
@@ -369,7 +370,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 
       {/* Mobile Over-Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[55] bg-background/90 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-10 duration-300">
+        <div className="lg:hidden fixed inset-0 z-[55] bg-background animate-in fade-in slide-in-from-bottom-10 duration-300">
           <div className="p-6 pt-20 space-y-6 flex flex-col h-full">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-xl">
@@ -430,41 +431,31 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 };
 
 export const Header = ({ title, isDark, toggleTheme }: { title: string; isDark: boolean; toggleTheme?: () => void }) => (
-  <header className="flex flex-col gap-4 mb-6 sm:mb-10 w-full">
-    {/* Primeira Linha: Logo e Toggle */}
-    <div className="flex items-center justify-between w-full">
-      {/* Logo Esquerda */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
-          <img 
-            src={isDark ? "/image/favicon.png" : "/image/favicon.png"} 
-            alt="Logo" 
-            className={cn("w-full h-full object-contain filter drop-shadow-md", isDark && "invert brightness-0")} 
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-primary leading-none opacity-50">WedPlan</p>
-          <p className="text-xs font-extrabold uppercase tracking-tight">Premium Suite</p>
-        </div>
+  <header className="mb-6 sm:mb-8 flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-card/80 px-4 py-4 shadow-sm backdrop-blur-xl sm:px-5">
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
+        <img 
+          src="/image/favicon.png" 
+          alt="WedPlan" 
+          className={cn("h-7 w-7 object-contain", isDark && "invert brightness-0")} 
+        />
       </div>
-
-      {/* Toggle Direita */}
-      {toggleTheme && (
-        <button 
-          onClick={toggleTheme}
-          className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center hover:bg-primary/10 transition-all active:scale-90 border border-white/5"
-        >
-          {isDark ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-primary" />}
-        </button>
-      )}
+      <div className="min-w-0">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-primary">WedPlan</p>
+        <h1 className="truncate text-xl font-extrabold text-foreground sm:text-2xl">
+          {title}
+        </h1>
+      </div>
     </div>
 
-    {/* Segunda Linha: Título da Página */}
-    <div className="flex flex-col">
-      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight uppercase leading-none truncate max-w-full">
-        {title}
-      </h2>
-      <div className="h-1.5 w-16 bg-primary rounded-full mt-3 shadow-[0_2px_10px_rgba(var(--primary-rgb),0.3)]" />
-    </div>
+    {toggleTheme && (
+      <button 
+        onClick={toggleTheme}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/60 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
+        aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+      >
+        {isDark ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-primary" />}
+      </button>
+    )}
   </header>
 );

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { 
-  Settings, Shield, Key, Globe, Bell, Database, 
-  Save, Eye, EyeOff, CheckCircle, AlertTriangle,
-  Zap, CreditCard, RefreshCw, Copy
+  Shield, Bell, Database, 
+  Save, CheckCircle, AlertTriangle,
+  Zap, RefreshCw
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button, Card } from '../ui';
@@ -28,16 +28,8 @@ export function AdminSettings() {
   const [activeSection, setActiveSection] = useState('profile');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [showKey, setShowKey] = useState(false);
-  const [showWebhookKey, setShowWebhookKey] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const [profile, setProfile] = useState({ fullName: '', email: '' });
-  const [gateway, setGateway] = useState({
-    asaasKey: '',
-    webhookToken: '',
-    environment: 'sandbox' as 'sandbox' | 'production',
-  });
   const [plans, setPlans] = useState<{ id: string; name: string; price: number; description: string }[]>([]);
   const [notifications, setNotifications] = useState({
     newAccount: true,
@@ -93,14 +85,6 @@ export function AdminSettings() {
       setSaving(false);
     }
   };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const webhookUrl = `${window.location.origin.replace('5173', '54321')}/functions/v1/asaas-webhook`;
 
   return (
     <div className="space-y-6">

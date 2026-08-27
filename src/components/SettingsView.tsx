@@ -11,6 +11,7 @@ interface SettingsViewProps {
   handleSyncData: () => Promise<void>;
   isSyncing: boolean;
   customAlert: (info: any) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 export const SettingsView = ({
@@ -19,7 +20,8 @@ export const SettingsView = ({
   updateConfig,
   handleSyncData,
   isSyncing,
-  customAlert
+  customAlert,
+  refreshData
 }: SettingsViewProps) => {
   const { user, resetPassword, updatePassword } = useAuth();
   const { confirm } = useConfirm();
@@ -414,7 +416,7 @@ export const SettingsView = ({
                     });
                     if (isConfirmed) {
                       localStorage.removeItem("wedding_manager_data");
-                      window.location.reload();
+                      await refreshData();
                     }
                   }}
                 >
@@ -428,4 +430,3 @@ export const SettingsView = ({
     </div>
   );
 };
-

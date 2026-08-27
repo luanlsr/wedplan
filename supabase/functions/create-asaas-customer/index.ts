@@ -42,30 +42,43 @@ serve(async (req) => {
     const body = await req.json()
     const { name, email, cpfCnpj } = body
 
-    console.log(`[create-asaas-customer] Criando cliente Asaas para: ${email}`)
+    const { data: existingAccount } = await supabaseClient
+      .from('accounts')
+      .select('id, asaas_customer_id')
+      .eq('id', user.id)
+      .maybeSingle()
 
-    // 1. Criar cliente no Asaas
-    const customerRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'access_token': ASAAS_API_KEY,
-      },
-      body: JSON.stringify({
-        name: name || email,
-        email: email,
-        cpfCnpj: cpfCnpj || undefined,
-        externalReference: user.id,
+    let customerId = existingAccount?.asaas_customer_id
+
+    if (!customerId) {
+      console.log(`[create-asaas-customer] Criando cliente Asaas para: ${email}`)
+
+      // 1. Criar cliente no Asaas
+      const customerRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': ASAAS_API_KEY,
+        },
+        body: JSON.stringify({
+          name: name || email,
+          email: email,
+          cpfCnpj: cpfCnpj || undefined,
+          externalReference: user.id,
+        })
       })
-    })
 
-    const customer = await customerRes.json()
-    if (!customerRes.ok) {
-      console.error('[create-asaas-customer] Erro ao criar cliente:', customer)
-      throw new Error(customer.errors?.[0]?.description || 'Erro ao criar cliente no Asaas')
+      const customer = await customerRes.json()
+      if (!customerRes.ok) {
+        console.error('[create-asaas-customer] Erro ao criar cliente:', customer)
+        throw new Error(customer.errors?.[0]?.description || 'Erro ao criar cliente no Asaas')
+      }
+
+      customerId = customer.id
+      console.log(`[create-asaas-customer] Cliente criado: ${customerId}`)
+    } else {
+      console.log(`[create-asaas-customer] Reutilizando cliente Asaas: ${customerId}`)
     }
-
-    console.log(`[create-asaas-customer] Cliente criado: ${customer.id}`)
 
     // 2. Buscar o preço do plano
     const { data: accountType } = await supabaseClient
@@ -90,7 +103,7 @@ serve(async (req) => {
         'access_token': ASAAS_API_KEY,
       },
       body: JSON.stringify({
-        customer: customer.id,
+        customer: customerId,
         billingType: 'UNDEFINED', // Permite que o cliente escolha (PIX, boleto ou cartão)
         value: planPrice,
         dueDate: dueDateStr,
@@ -117,7 +130,7 @@ serve(async (req) => {
       .upsert({
         id: user.id,
         status: 'pending_payment',
-        asaas_customer_id: customer.id,
+        asaas_customer_id: customerId,
         account_type_id: accountType?.id,
       })
 
@@ -125,10 +138,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      customerId: customer.id,
+      customerId,
       paymentId: payment.id,
       paymentUrl: payment.invoiceUrl,   // Link para pagar
       paymentValue: planPrice,
+      planName,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

@@ -4,12 +4,12 @@ import { CreditCard, ShieldCheck, ArrowRight, CheckCircle2, Loader2 } from 'luci
 import { Card, Button } from '../ui';
 
 interface PaymentGateProps {
-  onCheckout: () => void;
   email?: string;
 }
 
 export function PaymentGate({ email }: PaymentGateProps) {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [paymentValue, setPaymentValue] = useState<number>(197);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +49,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
         const result = await res.json();
         if (res.ok && result.paymentUrl) {
           setPaymentUrl(result.paymentUrl);
+          if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
         }
       } else {
         // Cria novo cliente no Asaas
@@ -66,6 +67,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Erro ao gerar link de pagamento');
         if (result.paymentUrl) setPaymentUrl(result.paymentUrl);
+        if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
       }
     } catch (err: any) {
       console.error('PaymentGate error:', err);
@@ -124,7 +126,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
               <p className="text-xs font-black uppercase tracking-[0.2em] text-primary italic">Plano Premium</p>
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-xl font-bold">R$</span>
-                <span className="text-6xl font-black tracking-tighter">5</span>
+                <span className="text-6xl font-black tracking-tighter">{Math.round(paymentValue)}</span>
               </div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pagamento Único • Acesso Vitalício</p>
             </div>

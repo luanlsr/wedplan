@@ -10,7 +10,7 @@ export const Card = ({ children, className, onClick }: { children: React.ReactNo
   <div 
     onClick={onClick}
     className={cn(
-      "bg-card rounded-2xl p-6 transition-all duration-300 border border-border/50 shadow-lg",
+      "bg-card rounded-xl p-5 sm:p-6 transition-all duration-300 border border-border/70 shadow-sm",
       onClick && "cursor-pointer active:scale-[0.98]",
       className
     )}
@@ -37,11 +37,11 @@ export const Button = ({
   disabled?: boolean;
 }) => {
   const variants = {
-    primary: "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20",
-    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-    outline: "border-2 border-primary/20 bg-transparent hover:bg-primary/5 text-primary",
+    primary: "bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/50",
+    outline: "border border-border bg-card hover:bg-accent text-foreground",
     ghost: "bg-transparent hover:bg-accent text-accent-foreground",
-    destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/20",
+    destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm shadow-destructive/20",
   };
 
   const sizes = {
@@ -74,7 +74,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-xl border-2 border-transparent bg-secondary/50 px-4 py-2 text-sm transition-all placeholder:text-muted-foreground focus:outline-none focus:border-primary/30 focus:bg-card disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-11 w-full rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition-all placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         ref={ref}
@@ -95,7 +95,7 @@ export const Badge = ({ children, variant = "default", className }: { children: 
   };
   return (
     <span className={cn(
-      "inline-flex items-center justify-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] text-center border leading-none shrink-0", 
+      "inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-[0.08em] text-center border leading-none shrink-0", 
       styles[variant], 
       className
     )}>

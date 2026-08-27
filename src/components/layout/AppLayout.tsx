@@ -17,6 +17,7 @@ interface AppLayoutProps {
   isPublicMode?: boolean;
   weddingId?: string;
   userName?: string;
+  onWeddingSwitch?: () => void | Promise<void>;
 }
 
 export const AppLayout = ({
@@ -31,12 +32,13 @@ export const AppLayout = ({
   pageTitle,
   isPublicMode = false,
   weddingId,
-  userName
+  userName,
+  onWeddingSwitch
 }: AppLayoutProps) => {
   return (
     <div className={cn(
-      "min-h-screen transition-colors duration-500 flex flex-col lg:flex-row", 
-      isDark ? "dark bg-background text-foreground" : "bg-slate-50 text-slate-900"
+      "wedplan-app min-h-screen transition-colors duration-500 flex flex-col lg:flex-row", 
+      isDark ? "dark text-foreground" : "text-foreground"
     )}>
       <Sidebar
         isDark={isDark}
@@ -47,6 +49,7 @@ export const AppLayout = ({
         isPublicMode={isPublicMode}
         weddingId={weddingId}
         userName={userName}
+        onWeddingSwitch={onWeddingSwitch}
       />
 
       {isNewWedding && userRole !== 'master' && userName !== 'Luan Master' && (
@@ -57,7 +60,7 @@ export const AppLayout = ({
         "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",
         isSidebarCollapsed ? "lg:ml-24" : "lg:ml-80"
       )}>
-        <div className="max-w-[1600px] mx-auto p-3 sm:p-6 lg:p-10">
+        <div className="max-w-[1500px] mx-auto p-4 sm:p-6 lg:p-8">
           <Header title={pageTitle} isDark={isDark} toggleTheme={toggleTheme} />
           {children}
         </div>

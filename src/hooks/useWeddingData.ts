@@ -6,6 +6,21 @@ import { useAuth } from "./useAuth";
 
 const STORAGE_KEY = "wedding_manager_data";
 
+const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] => {
+  if (parcelas.length === 0) return "pendente";
+
+  const allPaid = parcelas.every((p) => p.status === "pago");
+  const somePaid = parcelas.some((p) => p.status === "pago");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const someOverdue = parcelas.some((p) => p.status !== "pago" && new Date(p.dataVencimento) < today);
+
+  if (allPaid) return "pago";
+  if (someOverdue) return "atrasado";
+  if (somePaid) return "parcial";
+  return "pendente";
+};
+
 export const useWeddingData = () => {
   const { user } = useAuth();
   const [data, setData] = useState<WeddingData>(INITIAL_DATA);
@@ -100,12 +115,25 @@ export const useWeddingData = () => {
             weddingId = await ensureWeddingExists(user.id);
           }
         } else if (publicToken) {
-          const { data: weddingByToken } = await supabase
-            .from('weddings')
-            .select('id')
-            .eq('public_checkin_token', publicToken)
-            .maybeSingle();
-          if (weddingByToken) weddingId = weddingByToken.id;
+          const { data: publicData, error: publicError } = await supabase
+            .rpc('public_get_checkin_data', { p_token: publicToken });
+
+          if (publicError) throw publicError;
+
+          setData({
+            ...INITIAL_DATA,
+            casal: {
+              nome1: publicData?.casal?.nome1 || '',
+              nome2: publicData?.casal?.nome2 || '',
+              data: publicData?.casal?.data || '',
+            },
+            convidados: publicData?.convidados || [],
+            fornecedores: [],
+            tarefas: [],
+            role: 'staff'
+          });
+          setLoading(false);
+          return;
         }
 
 
@@ -160,18 +188,6 @@ export const useWeddingData = () => {
             status: p.status
           })).sort((a: any, b: any) => a.numero - b.numero);
 
-          let statusCalc: any = 'pendente';
-          if (parcelasFormatadas.length > 0) {
-            const allPaid = parcelasFormatadas.every((p: any) => p.status === 'pago');
-            const somePaid = parcelasFormatadas.some((p: any) => p.status === 'pago');
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
-            const someOverdue = parcelasFormatadas.some((p: any) => p.status !== 'pago' && new Date(p.dataVencimento) < hoje);
-            if (allPaid) statusCalc = 'pago';
-            else if (someOverdue) statusCalc = 'atrasado';
-            else if (somePaid) statusCalc = 'parcial';
-          }
-
           return {
             id: s.id,
             fornecedor: s.fornecedor,
@@ -179,7 +195,7 @@ export const useWeddingData = () => {
             categoria: s.categoria,
             valorTotal: parseFloat(s.valor_total),
             tipoPagamento: s.tipo_pagamento,
-            status: statusCalc,
+            status: calculateSupplierStatus(parcelasFormatadas),
             dataContrato: s.data_contrato,
             staff_names: s.staff_names,
             phone: s.phone,
@@ -250,6 +266,7 @@ export const useWeddingData = () => {
         contract_url: supplier.contract_url
       }).select().single();
       if (sError) throw sError;
+      let parcelas: Installment[] = [];
       if (supplier.parcelas?.length > 0) {
         const installments = supplier.parcelas.map(p => ({
           supplier_id: sData.id,
@@ -259,14 +276,35 @@ export const useWeddingData = () => {
           valor: p.valor,
           status: p.status
         }));
-        await supabase.from('installments').insert(installments);
+        const { data: installmentData, error: installmentError } = await supabase.from('installments').insert(installments).select();
+        if (installmentError) throw installmentError;
+        parcelas = (installmentData || []).map((p: any) => ({
+          id: p.id,
+          numero: p.numero,
+          dataVencimento: p.data_venc_original || p.data_vencimento,
+          dataPagamento: p.data_pagamento,
+          valor: parseFloat(p.valor),
+          status: p.status
+        })).sort((a, b) => a.numero - b.numero);
       }
-      loadData();
+      setData(prev => ({
+        ...prev,
+        fornecedores: [
+          ...prev.fornecedores,
+          {
+            ...supplier,
+            id: sData.id,
+            parcelas,
+            status: calculateSupplierStatus(parcelas)
+          }
+        ]
+      }));
     } catch (err) { console.error(err); }
   };
 
   const updateSupplier = async (id: string, updated: Partial<Supplier>) => {
     if (!user) return;
+    const { parcelas: _parcelas, status: _status, ...localUpdated } = updated;
     try {
       const payload: any = {};
       if (updated.fornecedor) payload.fornecedor = updated.fornecedor;
@@ -281,36 +319,67 @@ export const useWeddingData = () => {
       if (updated.cnpj_cpf !== undefined) payload.cnpj_cpf = updated.cnpj_cpf;
       if (updated.address !== undefined) payload.address = updated.address;
       if (updated.contract_url !== undefined) payload.contract_url = updated.contract_url;
-      await supabase.from('suppliers').update(payload).eq('id', id);
-      loadData();
+      const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
+      if (error) throw error;
+      setData(prev => ({
+        ...prev,
+        fornecedores: prev.fornecedores.map((supplier) =>
+          supplier.id === id ? { ...supplier, ...localUpdated } : supplier
+        )
+      }));
     } catch (err) { console.error(err); }
   };
 
   const deleteSupplier = async (id: string) => {
     if (!user) return;
     try {
-      await supabase.from('suppliers').delete().eq('id', id);
-      loadData();
+      const { error } = await supabase.from('suppliers').delete().eq('id', id);
+      if (error) throw error;
+      setData(prev => ({
+        ...prev,
+        fornecedores: prev.fornecedores.filter((supplier) => supplier.id !== id)
+      }));
     } catch (err) { console.error(err); }
   };
 
   const updateInstallment = async (_supplierId: string, installmentId: string, updated: Partial<Installment>) => {
     if (!user) return;
+    const previousSuppliers = data.fornecedores;
+    setData(prev => ({
+      ...prev,
+      fornecedores: prev.fornecedores.map((supplier) => {
+        if (supplier.id !== _supplierId) return supplier;
+
+        const parcelas = supplier.parcelas.map((installment) =>
+          installment.id === installmentId ? { ...installment, ...updated } : installment
+        );
+
+        return {
+          ...supplier,
+          parcelas,
+          status: calculateSupplierStatus(parcelas)
+        };
+      })
+    }));
+
     try {
       const payload: any = {};
       if (updated.status) payload.status = updated.status;
       if (updated.valor !== undefined) payload.valor = updated.valor;
       if (updated.dataVencimento) payload.data_vencimento = updated.dataVencimento;
       if (updated.dataPagamento !== undefined) payload.data_pagamento = updated.dataPagamento;
-      await supabase.from('installments').update(payload).eq('id', installmentId);
-      loadData();
-    } catch (err) { console.error(err); }
+      const { error } = await supabase.from('installments').update(payload).eq('id', installmentId);
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      setData(prev => ({ ...prev, fornecedores: previousSuppliers }));
+    }
   };
 
   const addGuest = async (guest: Omit<Guest, 'id'>) => {
     if (!user || !data.id) return;
     try {
-      await supabase.from('guests').insert({
+      const { data: guestData, error } = await supabase.from('guests').insert({
         wedding_id: data.id,
         nome: guest.nome,
         categoria: guest.categoria,
@@ -322,8 +391,27 @@ export const useWeddingData = () => {
         observacoes: guest.observacoes,
         is_present: guest.is_present || false,
         invitation_sent: guest.invitation_sent || false
-      });
-      loadData();
+      }).select().single();
+      if (error) throw error;
+      setData(prev => ({
+        ...prev,
+        convidados: [
+          ...(prev.convidados || []),
+          {
+            id: guestData.id,
+            nome: guestData.nome,
+            categoria: guestData.categoria,
+            status: guestData.status,
+            adultos: guestData.adultos,
+            criancas: guestData.criancas,
+            children_names: guestData.children_names,
+            telefone: guestData.telefone,
+            observacoes: guestData.observacoes,
+            is_present: guestData.is_present,
+            invitation_sent: guestData.invitation_sent
+          }
+        ].sort((a, b) => a.nome.localeCompare(b.nome))
+      }));
     } catch (err) { console.error(err); }
   };
 
@@ -331,6 +419,15 @@ export const useWeddingData = () => {
     const searchParams = new URLSearchParams(window.location.search);
     const publicToken = searchParams.get('token');
     if (!user && !publicToken) return;
+
+    const previousGuest = (data.convidados || []).find((guest) => guest.id === id);
+    setData(prev => ({
+      ...prev,
+      convidados: (prev.convidados || []).map((guest) =>
+        guest.id === id ? { ...guest, ...updated } : guest
+      )
+    }));
+
     try {
       const payload: any = {};
       if (updated.nome) payload.nome = updated.nome;
@@ -343,23 +440,43 @@ export const useWeddingData = () => {
       if (updated.observacoes !== undefined) payload.observacoes = updated.observacoes;
       if (updated.is_present !== undefined) payload.is_present = updated.is_present;
       if (updated.invitation_sent !== undefined) payload.invitation_sent = updated.invitation_sent;
-      await supabase.from('guests').update(payload).eq('id', id);
-      loadData();
-    } catch (err) { console.error(err); }
+      const { error } = publicToken
+        ? await supabase.rpc('public_toggle_guest_presence', {
+            p_token: publicToken,
+            p_guest_id: id,
+            p_is_present: Boolean(updated.is_present)
+          })
+        : await supabase.from('guests').update(payload).eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      if (previousGuest) {
+        setData(prev => ({
+          ...prev,
+          convidados: (prev.convidados || []).map((guest) =>
+            guest.id === id ? previousGuest : guest
+          )
+        }));
+      }
+    }
   };
 
   const deleteGuest = async (id: string) => {
     if (!user) return;
     try {
-      await supabase.from('guests').delete().eq('id', id);
-      loadData();
+      const { error } = await supabase.from('guests').delete().eq('id', id);
+      if (error) throw error;
+      setData(prev => ({
+        ...prev,
+        convidados: (prev.convidados || []).filter((guest) => guest.id !== id)
+      }));
     } catch (err) { console.error(err); }
   };
 
   const addTask = async (task: Omit<Task, 'id'>) => {
     if (!user || !data.id) return;
     try {
-      await supabase.from('tasks').insert({
+      const { data: taskData, error } = await supabase.from('tasks').insert({
         wedding_id: data.id,
         titulo: task.titulo,
         descricao: task.descricao,
@@ -367,13 +484,36 @@ export const useWeddingData = () => {
         data_limite: task.dataLimite,
         status: task.status,
         ordem: task.ordem
-      });
-      loadData();
+      }).select().single();
+      if (error) throw error;
+      setData(prev => ({
+        ...prev,
+        tarefas: [
+          ...(prev.tarefas || []),
+          {
+            id: taskData.id,
+            titulo: taskData.titulo,
+            descricao: taskData.descricao,
+            categoria: taskData.categoria,
+            dataLimite: taskData.data_limite,
+            status: taskData.status,
+            ordem: taskData.ordem
+          }
+        ]
+      }));
     } catch (err) { console.error(err); }
   };
 
   const updateTask = async (id: string, updated: Partial<Task>) => {
     if (!user) return;
+    const previousTasks = data.tarefas || [];
+    setData(prev => ({
+      ...prev,
+      tarefas: (prev.tarefas || []).map((task) =>
+        task.id === id ? { ...task, ...updated } : task
+      )
+    }));
+
     try {
       const payload: any = {};
       if (updated.titulo) payload.titulo = updated.titulo;
@@ -382,29 +522,48 @@ export const useWeddingData = () => {
       if (updated.dataLimite !== undefined) payload.data_limite = updated.dataLimite;
       if (updated.status) payload.status = updated.status;
       if (updated.ordem !== undefined) payload.ordem = updated.ordem;
-      await supabase.from('tasks').update(payload).eq('id', id);
-      loadData();
-    } catch (err) { console.error(err); }
+      const { error } = await supabase.from('tasks').update(payload).eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      setData(prev => ({ ...prev, tarefas: previousTasks }));
+    }
   };
 
   const deleteTask = async (id: string) => {
     if (!user) return;
     try {
-      await supabase.from('tasks').delete().eq('id', id);
-      loadData();
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) throw error;
+      setData(prev => ({
+        ...prev,
+        tarefas: (prev.tarefas || []).filter((task) => task.id !== id)
+      }));
     } catch (err) { console.error(err); }
   };
 
   const updateWeddingInfo = async (info: Partial<WeddingData["casal"]>) => {
     if (!user || !data.id) return;
+    const previousCasal = data.casal;
+    setData(prev => ({
+      ...prev,
+      casal: {
+        ...prev.casal,
+        ...info
+      }
+    }));
+
     try {
       const payload: any = {};
       if (info.nome1) payload.couple_name1 = info.nome1;
       if (info.nome2) payload.couple_name2 = info.nome2;
       if (info.data) payload.wedding_date = info.data;
-      await supabase.from('weddings').update(payload).eq('id', data.id);
-      loadData();
-    } catch (err) { console.error(err); }
+      const { error } = await supabase.from('weddings').update(payload).eq('id', data.id);
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      setData(prev => ({ ...prev, casal: previousCasal }));
+    }
   };
 
   const updateConfig = async (config: Partial<WeddingData["configuracoes"]>) => {
@@ -434,14 +593,22 @@ export const useWeddingData = () => {
   };
 
 
-  const reorderSuppliers = async (order: { id: string; ordem: number }[]) => {
+  const reorderSuppliers = async (suppliers: Supplier[]) => {
     if (!user) return;
+    const previousSuppliers = data.fornecedores;
+    setData(prev => ({
+      ...prev,
+      fornecedores: suppliers
+    }));
+
     try {
-      for (const item of order) {
-        await supabase.from('suppliers').update({ ordem: item.ordem }).eq('id', item.id);
+      for (const [index, supplier] of suppliers.entries()) {
+        await supabase.from('suppliers').update({ ordem: index }).eq('id', supplier.id);
       }
-      loadData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setData(prev => ({ ...prev, fornecedores: previousSuppliers }));
+    }
   };
 
   return {

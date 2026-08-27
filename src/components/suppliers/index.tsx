@@ -4,7 +4,7 @@ import {
   Search, Plus, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
   DollarSign as DollarIcon, CheckCircle2, 
-  ChevronLeft
+  ChevronLeft, X
 } from "lucide-react";
 import type { Supplier } from "../../types";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
@@ -28,10 +28,10 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus = false }: any)
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-secondary/20 border border-white/5 rounded-2xl h-14 pl-12 pr-10 text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary/40 transition-all font-medium cursor-pointer"
+      className="w-full bg-card border border-border rounded-xl h-11 pl-12 pr-10 text-foreground appearance-none focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all text-sm font-medium cursor-pointer"
     >
       {options.map((o: string) => (
-        <option key={o} value={o} className="bg-slate-900 border-none px-4 py-2 capitalize font-medium">
+        <option key={o} value={o}>
           {isStatus && o !== "Todos" ? (o === "pago" ? "Pagos" : o === "pendente" ? "Pendentes" : o === "parcial" ? "Parciais" : "Atrasados") : o}
         </option>
       ))}
@@ -44,10 +44,10 @@ const SortBtn = ({ active, onClick, icon, label, direction }: any) => (
     <button
         onClick={onClick}
         className={cn(
-            "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all duration-300",
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold tracking-wide transition-all duration-300",
             active 
-              ? "bg-primary text-white shadow-[0_8px_16px_rgba(var(--primary-rgb),0.3)] scale-105" 
-              : "text-muted-foreground bg-secondary/10 hover:bg-secondary/30 border border-white/5"
+              ? "bg-primary text-white shadow-sm shadow-primary/20" 
+              : "text-muted-foreground bg-card hover:bg-accent border border-border"
         )}
     >
         {icon}
@@ -125,8 +125,8 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col gap-6 bg-transparent md:bg-card/60 md:backdrop-blur-xl p-0 md:p-8 rounded-none md:rounded-[2rem] border-0 md:border md:border-white/5 shadow-none md:shadow-2xl">
+    <div className="space-y-6 animate-in fade-in duration-700">
+      <div className="flex flex-col gap-5 bg-transparent md:bg-card/90 md:backdrop-blur-xl p-0 md:p-5 rounded-none md:rounded-xl border-0 md:border md:border-border shadow-none md:shadow-sm">
         <div className="flex flex-col xl:flex-row items-center justify-between gap-4 sm:gap-6 px-4 md:px-0 pt-4 md:pt-0">
           <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
             <div className="relative w-full md:w-96 group">
@@ -134,10 +134,20 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
               <input
                 type="text"
                 placeholder="Buscar..."
-                className="w-full bg-secondary/20 border border-white/5 rounded-xl sm:rounded-2xl h-10 sm:h-14 pl-10 sm:pl-12 pr-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary/40 transition-all font-medium"
+                className="w-full bg-card border border-border rounded-xl h-11 pl-10 sm:pl-12 pr-10 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all font-medium"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
             
             <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
@@ -149,9 +159,9 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
                 >
                   <Filter size={16} /> {showMobileFilters ? 'Ocultar' : 'Filtrar'}
                 </Button>
-                <div className="px-3 py-1 bg-secondary/10 rounded-lg border border-white/5 shrink-0 flex items-center h-10 sm:h-14">
-                   <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mr-2 hidden sm:inline">Encontrados:</span>
-                   <span className="text-[10px] sm:text-xs font-black text-primary">{sortedSuppliers.length}</span>
+                <div className="px-3 py-1 bg-secondary/50 rounded-lg border border-border shrink-0 flex items-center h-10 sm:h-11">
+                   <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wide mr-2 hidden sm:inline">Encontrados:</span>
+                   <span className="text-xs font-extrabold text-primary">{sortedSuppliers.length}</span>
                 </div>
               </div>
 
@@ -165,14 +175,14 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
             </div>
           </div>
 
-          <Button onClick={onAdd} size="lg" className="h-10 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest group shadow-[0_10px_20px_rgba(var(--primary-rgb),0.3)] w-full xl:w-auto text-xs sm:text-sm">
+          <Button onClick={onAdd} size="lg" className="h-11 px-5 rounded-xl font-extrabold group w-full xl:w-auto text-sm">
             <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
             Adicionar Fornecedor
           </Button>
         </div>
 
         <div className={cn(
-          "flex-wrap items-center gap-2 pt-4 border-t border-white/5 px-4 md:px-0",
+          "flex-wrap items-center gap-2 pt-4 border-t border-border px-4 md:px-0",
           showMobileFilters ? "flex" : "hidden md:flex"
         )}>
           <SortBtn active={sortBy === 'manual'} onClick={() => handleSort('manual')} icon={<ArrowUpDown size={14}/>} label="Ordem Manual" />
@@ -188,7 +198,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
           axis="y"
           values={sortedSuppliers}
           onReorder={onReorder}
-          className="flex flex-col bg-background/50 backdrop-blur-sm divide-y divide-border/10 md:bg-transparent md:backdrop-blur-none md:divide-none md:space-y-4"
+          className="flex flex-col bg-card/80 backdrop-blur-sm divide-y divide-border md:bg-transparent md:backdrop-blur-none md:divide-none md:space-y-3"
         >
           <AnimatePresence mode="popLayout">
             {paginatedSuppliers.map((s) => (

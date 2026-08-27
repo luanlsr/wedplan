@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Card, Badge, Input } from '../ui';
 import { formatCurrency, formatDate } from '../../utils/calculations';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
-import { Search, Filter, Calendar, DollarSign, ChevronDown, CheckCircle, Clock, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Filter, Calendar, DollarSign, ChevronDown, CheckCircle, Clock, ArrowUp, ArrowDown, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from '../ui';
@@ -137,10 +137,20 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
             <Input 
               placeholder="Buscar fornecedor no fluxo..." 
-              className="pl-12 h-12 bg-secondary/30 border-none w-full focus:ring-2 focus:ring-primary/20"
+              className="h-12 w-full border-none bg-secondary/30 pl-12 pr-10 focus:ring-2 focus:ring-primary/20"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label="Limpar busca"
+              >
+                <X size={15} />
+              </button>
+            )}
           </div>
           
           <div className="relative w-full md:w-40 group">
@@ -150,7 +160,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
-              {categories.map(c => <option key={c} value={c} className="bg-card text-foreground">{c}</option>)}
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
           </div>

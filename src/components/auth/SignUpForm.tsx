@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { getSiteUrl } from '../../utils/url';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
-import { Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight, User, ShieldCheck, CreditCard, CheckCircle2 } from 'lucide-react';
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -17,8 +17,10 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [paymentValue, setPaymentValue] = useState<number>(197);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
     setError(null);
 
     // 1. Criar usuário no Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -63,6 +65,7 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
 
         if (res.ok && result.paymentUrl) {
           setPaymentUrl(result.paymentUrl);
+          if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
           setSuccess(true);
           setLoading(false);
           return;
@@ -95,9 +98,9 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
   if (success) {
     return (
       <AuthLayout 
-        title={paymentUrl ? "Quase lá! 🎉" : "Verifique seu e-mail!"} 
+        title={paymentUrl ? "Checkout iniciado" : "Verifique seu e-mail!"} 
         subtitle={paymentUrl 
-          ? "Sua conta foi criada! Finalize o pagamento para ter acesso completo ao WedPlan." 
+          ? "Sua conta foi criada. Confirme o e-mail e finalize o pagamento para liberar o WedPlan." 
           : "Verifique seu e-mail para confirmar o cadastro e começar a planejar."}
       >
         <div className="flex flex-col items-center justify-center py-10 text-center space-y-6 animate-in zoom-in duration-500">
@@ -111,7 +114,10 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
                   Conta criada para <strong className="text-foreground">{email}</strong>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Clique abaixo para pagar <strong className="text-primary">R$ 5,00</strong> via PIX, boleto ou cartão e liberar seu acesso.
+                  Sua senha inicial é a senha definida no cadastro. Por segurança, ela não será enviada por e-mail.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Clique abaixo para pagar via PIX, boleto ou cartão e liberar seu acesso.
                 </p>
               </div>
               <a
@@ -144,10 +150,31 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
 
   return (
     <AuthLayout 
-      title="Criar sua conta" 
-      subtitle="Junte-se ao WedPlan e organize o seu casamento dos sonhos."
+      title="Checkout WedPlan" 
+      subtitle="Crie sua conta, confirme seu e-mail e finalize o pagamento com segurança."
     >
       <form onSubmit={handleSignUp} className="space-y-5">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Plano Premium</p>
+              <p className="mt-1 text-sm font-bold text-foreground">Acesso completo para organizar um casamento</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-foreground">R$ {Math.round(paymentValue)}</p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">pagamento único</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 text-xs font-bold text-muted-foreground">
+            {["Convidados, fornecedores, financeiro e tarefas", "Check-in público com token seguro", "Ativação automática via Asaas"].map((item) => (
+              <span key={item} className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-primary" />
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-2">
           <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">Seu Nome</label>
           <div className="relative group">
@@ -179,12 +206,12 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
         </div>
 
         <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">Senha</label>
+          <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">Senha inicial</label>
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
             <Input 
               type="password" 
-              placeholder="Min. 8 caracteres" 
+              placeholder="Essa será sua senha de login" 
               className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -192,7 +219,21 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
               minLength={8}
             />
           </div>
+          <p className="ml-1 text-[10px] font-medium text-muted-foreground">
+            Enviaremos o e-mail de confirmação da conta. A senha não é enviada por e-mail por segurança.
+          </p>
         </div>
+
+        <label className="flex items-start gap-3 rounded-2xl border border-border bg-secondary/30 p-4 text-xs font-bold text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+            required
+          />
+          <span>Confirmo que quero criar minha conta WedPlan e seguir para o checkout seguro via Asaas.</span>
+        </label>
 
         {error && (
           <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold animate-in fade-in slide-in-from-top-2">
@@ -202,24 +243,35 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
 
         <Button 
           type="submit" 
-          disabled={loading}
+          disabled={loading || !acceptedTerms}
           className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 group"
         >
           {loading ? (
             <Loader2 className="animate-spin" size={20} />
           ) : (
             <span className="flex items-center gap-2">
-              Começar Agora <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              Criar conta e ir para pagamento <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </span>
           )}
         </Button>
+
+        <div className="grid grid-cols-2 gap-3 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+          <span className="flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary/20 px-3 py-2">
+            <ShieldCheck size={14} className="text-emerald-600" />
+            Conta protegida
+          </span>
+          <span className="flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary/20 px-3 py-2">
+            <CreditCard size={14} className="text-primary" />
+            Pix, boleto, cartão
+          </span>
+        </div>
 
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-white/5"></div>
           </div>
           <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.3em]">
-            <span className="bg-background px-4 text-muted-foreground/40">Ou use sua conta</span>
+            <span className="bg-background px-4 text-muted-foreground/40">Ou entre com Google</span>
           </div>
         </div>
 

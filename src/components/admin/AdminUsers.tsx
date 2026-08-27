@@ -128,11 +128,21 @@ export function AdminUsers() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <Input 
-            className="pl-10 rounded-xl border-border/50 bg-background"
+            className="rounded-xl border-border/50 bg-background pl-10 pr-10"
             placeholder="Buscar por nome ou e-mail..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              aria-label="Limpar busca"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </Card>
 

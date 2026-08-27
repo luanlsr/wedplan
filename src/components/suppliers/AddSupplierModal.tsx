@@ -323,7 +323,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                   value={formData.categoria}
                   onChange={e => setFormData({ ...formData, categoria: e.target.value })}
                 >
-                  {categories.map(c => <option key={c} value={c} className="bg-card">{c}</option>)}
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
               </div>
@@ -378,10 +378,10 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                   value={formData.tipoPagamento}
                   onChange={e => setFormData({ ...formData, tipoPagamento: e.target.value as PaymentType })}
                 >
-                  <option value="parcelado_fixo" className="bg-card">Parcelado Fixo</option>
-                  <option value="pagamento_unico" className="bg-card">Pagamento Único</option>
-                  <option value="entrada_parcelas" className="bg-card">Entrada + Parcelas</option>
-                  <option value="entrada_quitacao" className="bg-card">Entrada + Saldo na Quitação</option>
+                  <option value="parcelado_fixo">Parcelado Fixo</option>
+                  <option value="pagamento_unico">Pagamento Único</option>
+                  <option value="entrada_parcelas">Entrada + Parcelas</option>
+                  <option value="entrada_quitacao">Entrada + Saldo na Quitação</option>
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
               </div>

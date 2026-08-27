@@ -6,6 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 
 import { AppLayout } from './layout/AppLayout';
 import { GlobalModals } from './layout/GlobalModals';
+import { GuidedTour } from './layout/GuidedTour';
 import { Dashboard } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { SupplierDetails } from './suppliers/SupplierDetails';
@@ -40,7 +41,7 @@ export function MainApp() {
     addSupplier, updateSupplier, deleteSupplier, updateInstallment,
     addGuest, updateGuest, deleteGuest,
     addTask, updateTask, deleteTask,
-    updateConfig, updateWeddingInfo, reorderSuppliers
+    updateConfig, updateWeddingInfo, reorderSuppliers, refreshData
   } = useWeddingData();
   
   const { user } = useAuth();
@@ -80,11 +81,11 @@ export function MainApp() {
       if (result.success) {
         await customAlert({
           title: "Sincronização Concluída",
-          description: "Dados sincronizados com sucesso na nuvem! O aplicativo será recarregado.",
+          description: "Dados sincronizados com sucesso na nuvem.",
           type: "success",
           confirmLabel: "OK",
         });
-        window.location.reload();
+        await refreshData();
       } else {
         await customAlert({
           title: "Erro na Sincronização",
@@ -244,6 +245,7 @@ export function MainApp() {
       isPublicMode={isPublicMode}
       weddingId={data.id}
       userName={data.userName}
+      onWeddingSwitch={refreshData}
     >
       <Routes>
         <Route index element={
@@ -352,6 +354,7 @@ export function MainApp() {
             handleSyncData={handleSyncData}
             isSyncing={isSyncing}
             customAlert={customAlert}
+            refreshData={refreshData}
           />
         } />
 
@@ -373,6 +376,16 @@ export function MainApp() {
         addTask={addTask}
         updateTask={updateTask}
         onClose={clearModals}
+      />
+      <GuidedTour
+        enabled={
+          !loading &&
+          !isPublicMode &&
+          data.role !== 'master' &&
+          data.role !== 'staff' &&
+          data.account_status !== 'pending_payment' &&
+          !isNewWedding
+        }
       />
     </AppLayout>
   );

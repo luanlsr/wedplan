@@ -1,4 +1,4 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Card, Button, Input, useConfirm } from '../ui';
 import type { Guest } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
@@ -20,7 +20,6 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
-  const [filterInvitation, setFilterInvitation] = useState('Todos');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
@@ -55,7 +54,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory, filterStatus, filterInvitation]);
+  }, [searchTerm, filterCategory, filterStatus]);
   const sortedAndFilteredGuests = useMemo(() => {
     let items = guests.filter(g => {
       const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -80,11 +79,8 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
       }
 
       const matchesStatus = filterStatus === 'Todos' || g.status === filterStatus;
-      
-      const matchesInvitation = filterInvitation === 'Todos' || 
-        (filterInvitation === 'Enviados' ? g.invitation_sent === true : g.invitation_sent === false);
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesInvitation;
+      return matchesSearch && matchesCategory && matchesStatus;
     });
 
     if (sortConfig) {
@@ -104,12 +100,12 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     }
 
     return items;
-  }, [guests, searchTerm, filterCategory, filterStatus, filterInvitation, sortConfig]);
+  }, [guests, searchTerm, filterCategory, filterStatus, sortConfig]);
 
   // Effect to update orderedIds only when criteria change OR guests are added/removed
   useEffect(() => {
     setOrderedIds(sortedAndFilteredGuests.map(g => g.id));
-  }, [searchTerm, filterCategory, filterStatus, filterInvitation, sortConfig, guests.length]);
+  }, [searchTerm, filterCategory, filterStatus, sortConfig, guests.length]);
 
   // The actual guests to display, in the frozen order, with latest data
   const displayGuests = useMemo(() => {
@@ -128,11 +124,16 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
     total: guests.length,
     confirmados: guests.filter(g => g.status === 'confirmado').length,
     pendentes: guests.filter(g => g.status === 'pendente').length,
+    convidados: guests.reduce((acc, g) => g.categoria.trim().toLowerCase() !== 'staff' ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
     adultos: guests.reduce((acc, g) => acc + (g.adultos || 0), 0),
     criancas: guests.reduce((acc, g) => acc + (g.criancas || 0), 0),
     noiva: guests.reduce((acc, g) => g.categoria.includes('Noiva') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
     noivo: guests.reduce((acc, g) => g.categoria.includes('Noivo') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
-    convitesEnviados: guests.filter(g => g.invitation_sent).length,
+    staff: guests.reduce((acc, g) => g.categoria.trim().toLowerCase() === 'staff' ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
+    meia: guests.reduce((acc, g) => {
+      const isStaff = g.categoria.trim().toLowerCase() === 'staff';
+      return acc + (isStaff ? (g.adultos || 0) + (g.criancas || 0) : 0) + (g.criancas || 0);
+    }, 0),
   }), [guests]);
 
   return (
@@ -144,8 +145,8 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               <Users size={20} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-muted-foreground leading-none mb-1">Total Geral</p>
-              <p className="text-xl font-black">{totals.adultos + totals.criancas} <span className="text-[10px] text-muted-foreground italic">({totals.total} Grupos)</span></p>
+              <p className="text-[10px] font-black uppercase text-muted-foreground leading-none mb-1">Convidados</p>
+              <p className="text-xl font-black">{totals.convidados} <span className="text-[10px] text-muted-foreground italic">(sem staff)</span></p>
             </div>
           </div>
           <Button 
@@ -162,7 +163,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
         </div>
       </div>
 
-      <Card className="border-none sm:border border-border shadow-none sm:shadow-2xl overflow-hidden bg-transparent sm:bg-card/60 sm:backdrop-blur-xl rounded-none sm:rounded-[2rem] -mx-4 sm:mx-0">
+      <Card className="overflow-hidden border-border bg-card/90 shadow-sm -mx-4 rounded-none sm:mx-0 sm:rounded-xl">
         <div className="p-4 sm:p-8 border-b border-border/50 bg-muted/20 sm:bg-transparent">
           <div className="flex flex-col gap-6">
             {/* PRIMEIRA LINHA: BUSCA E AÇÕES */}
@@ -172,10 +173,20 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
                   <Input
                     placeholder="Buscar convidado..."
-                    className="h-10 sm:h-12 pl-10 sm:pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-xl sm:rounded-2xl font-bold w-full text-sm"
+                    className="h-10 sm:h-12 pl-10 pr-10 sm:pl-12 bg-secondary/10 border-border focus:bg-secondary/20 rounded-xl sm:rounded-2xl font-bold w-full text-sm"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      aria-label="Limpar busca"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
                 </div>
                 <Button 
                   variant="outline" 
@@ -187,7 +198,7 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto mt-2 xl:mt-0">
-                <Button onClick={onAdd} className="h-12 flex-1 sm:flex-none px-6 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest gap-2 shadow-[0_10px_20px_rgba(var(--primary-rgb),0.2)] whitespace-nowrap text-xs sm:text-sm">
+                <Button onClick={onAdd} className="h-11 flex-1 sm:flex-none px-5 rounded-xl font-extrabold gap-2 whitespace-nowrap text-sm">
                   <UserPlus size={18} className="shrink-0" /> Adicionar Convidado
                 </Button>
               </div>
@@ -201,7 +212,6 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               <div className="flex flex-col md:flex-row flex-wrap items-center gap-3 w-full xl:w-auto">
                 <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
                 <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
-                <FilterSelect value={filterInvitation} onChange={setFilterInvitation} options={['Todos', 'Enviados', 'Pendentes']} icon={<Send size={18}/>} label="Convite" />
                 
                 <div className="md:hidden w-full mt-2">
                   <FilterSelect 
@@ -223,38 +233,33 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left min-w-[800px]">
             <thead>
-              <tr className="bg-muted/30 border-b border-border">
-                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('nome')}>
+              <tr>
+                <th className="px-6 py-4 cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('nome')}>
                   <div className="flex items-center gap-2">
-                    NOME {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
+                    Convidado {sortConfig?.key === 'nome' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('categoria')}>
+                <th className="px-6 py-4 cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('status')}>
                   <div className="flex items-center gap-2">
-                    CATEGORIA {sortConfig?.key === 'categoria' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
+                    Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('status')}>
+                <th className="px-6 py-4 cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('invitation_sent')}>
                   <div className="flex items-center gap-2">
-                    STATUS {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
+                    Convite {sortConfig?.key === 'invitation_sent' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('invitation_sent')}>
+                <th className="px-6 py-4 cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('telefone')}>
                   <div className="flex items-center gap-2">
-                    CONVITE {sortConfig?.key === 'invitation_sent' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
+                    Contato {sortConfig?.key === 'telefone' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-xs font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('telefone')}>
-                  <div className="flex items-center gap-2">
-                    CONTATO {sortConfig?.key === 'telefone' && (sortConfig.direction === 'asc' ? <ArrowDown size={14}/> : <ArrowUp size={14}/>)}
-                  </div>
-                </th>
-                <th className="px-8 py-5 text-right"></th>
+                <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {paginatedItems.map((guest) => (
                 <GuestRow 
                   key={guest.id} 
@@ -352,7 +357,7 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { val
       onChange={(e) => onChange(e.target.value)}
     >
       {options.map((o: string) => (
-        <option key={o} value={o} className="bg-slate-900 border-none px-4 py-2 capitalize font-medium">
+        <option key={o} value={o}>
           {o === "Todos" ? (isStatus ? "Todos os Status" : `Todas as ${label}s`) : 
            isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : 
            o === "total_pessoas" ? "Acompanhantes" :

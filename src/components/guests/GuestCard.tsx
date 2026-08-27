@@ -1,4 +1,4 @@
-import { MoreVertical, Users, Phone, Send, Check, X, Clock, Edit2, Trash2, ChevronDown } from 'lucide-react';
+import { MoreVertical, Users, Send, Edit2, Trash2, ChevronDown } from 'lucide-react';
 import { Button, Badge } from '../ui';
 import type { Guest } from '../../types';
 import { cn } from '../../lib/utils';

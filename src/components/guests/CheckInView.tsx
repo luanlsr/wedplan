@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Card, Button, Input, Badge } from '../ui';
-import { Briefcase, Search, UserCheck, UserMinus, Users, CheckCircle2, Circle, PartyPopper } from 'lucide-react';
+import { Briefcase, Search, UserCheck, UserMinus, Users, CheckCircle2, Circle, PartyPopper, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { Guest, Supplier } from '../../types';
 
@@ -101,10 +101,20 @@ export const CheckInView = ({ guests, onTogglePresence }: Omit<CheckInViewProps,
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
           <Input 
             placeholder={activeTab === 'guests' ? "Buscar convidado..." : "Buscar fornecedor..."}
-            className="pl-12 h-12 sm:h-14 bg-secondary/20 border-none focus:bg-card transition-all text-base sm:text-lg"
+            className="h-12 bg-secondary/20 pl-12 pr-10 text-base transition-all focus:bg-card sm:h-14 sm:text-lg"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              aria-label="Limpar busca"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
         {activeTab === 'guests' && (
           <div className="flex bg-secondary/30 p-1 rounded-2xl w-full md:w-auto">
