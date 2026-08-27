@@ -75,7 +75,30 @@ const includedItems = [
   "Painel financeiro com pagamentos e vencimentos",
   "Checklist, planejamento e dashboard do casal",
   "Acesso para o casal e equipe do evento",
-  "Compra segura e ativação imediata",
+  "Compra segura e ativação após pagamento",
+];
+
+const pricingPlans = [
+  {
+    name: "Essencial",
+    price: "14,90",
+    caption: "para começar sem planilhas",
+    features: ["Até 150 convidados", "Fornecedores e tarefas", "Organização do casal"],
+  },
+  {
+    name: "Premium",
+    price: "24,90",
+    caption: "gestão completa do evento",
+    features: ["Até 500 convidados", "Financeiro completo", "Check-in público seguro"],
+    highlight: "Mais escolhido",
+  },
+  {
+    name: "Pro Casal",
+    price: "39,90",
+    caption: "site, RSVP e presentes",
+    features: ["Landing page do casal", "Lista de presentes integrada", "Mensagens e RSVP"],
+    highlight: "Pro",
+  },
 ];
 
 export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
@@ -95,7 +118,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
 
           <nav className="hidden items-center gap-8 text-sm font-bold text-slate-600 lg:flex">
             <a href="#recursos" className="hover:text-primary">Recursos</a>
-            <a href="#preco" className="hover:text-primary">Preço</a>
+            <a href="#preco" className="hover:text-primary">Planos</a>
             <a href="#garantia" className="hover:text-primary">Segurança</a>
           </nav>
 
@@ -111,7 +134,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
               onClick={onGetStarted}
               className="h-10 rounded-lg px-4 text-sm font-extrabold"
             >
-              Criar conta
+              Ver planos
             </Button>
           </div>
         </div>
@@ -139,7 +162,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   onClick={onGetStarted}
                 className="h-14 rounded-lg px-6 text-base font-extrabold shadow-xl shadow-primary/20"
                 >
-                  Começar planejamento
+                  Assinar agora
                   <ArrowRight size={18} />
                 </Button>
                 <Button
@@ -147,14 +170,14 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   onClick={onLogin}
                   className="h-14 rounded-lg border-slate-300 bg-white px-6 text-base font-extrabold text-slate-900 hover:bg-slate-50"
                 >
-                  Acessar demonstrativo
+                  Ver planos
                 </Button>
               </div>
 
               <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-bold text-slate-600">
                 <span className="inline-flex items-center gap-2"><ShieldCheck size={17} className="text-emerald-600" /> Compra segura</span>
                 <span className="inline-flex items-center gap-2"><LockKeyhole size={17} className="text-sky-600" /> Dados protegidos</span>
-                <span className="inline-flex items-center gap-2"><BadgeCheck size={17} className="text-primary" /> Acesso imediato</span>
+                <span className="inline-flex items-center gap-2"><BadgeCheck size={17} className="text-primary" /> Assinatura mensal</span>
               </div>
             </div>
 
@@ -194,57 +217,109 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                 </article>
               ))}
             </div>
+
+            <div className="mt-10 flex flex-col items-start justify-between gap-5 border-t border-slate-200 pt-8 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Pronto para vender tranquilidade?</p>
+                <h3 className="mt-2 text-3xl font-bold text-slate-950 [font-family:'Cormorant_Garamond',serif]">
+                  Comece pequeno e evolua para o Pro quando quiser.
+                </h3>
+              </div>
+              <Button onClick={onGetStarted} className="h-12 rounded-lg px-5 text-sm font-extrabold">
+                Escolher meu plano
+                <ArrowRight size={17} />
+              </Button>
+            </div>
           </div>
         </section>
 
         <section id="preco" className="border-y border-slate-200 bg-slate-950 py-16 text-white sm:py-20">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
-            <div className="self-center">
-              <Badge className="mb-5 border-white/10 bg-white/10 text-white">
-                <PieChart size={13} />
-                Plano único
-              </Badge>
-              <h2 className="text-5xl font-bold leading-[0.95] [font-family:'Cormorant_Garamond',serif] sm:text-6xl">
-                Comece hoje e acompanhe tudo ate o grande dia.
-              </h2>
-              <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-300">
-                Um pagamento único para organizar o planejamento completo, sem mensalidade escondida no meio do caminho.
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-white/10 bg-white p-6 text-slate-950 shadow-2xl sm:p-8">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.14em] text-primary">Oferta de lancamento</p>
-                  <div className="mt-2 flex items-end gap-1">
-                    <span className="mb-2 text-2xl font-black">R$</span>
-                    <span className="text-7xl font-bold leading-none [font-family:'Cormorant_Garamond',serif]">197</span>
-                  </div>
-                  <p className="mt-2 text-sm font-bold text-slate-500">Pagamento único</p>
-                </div>
-                <div id="garantia" className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
-                  <ShieldCheck className="mb-2" size={20} />
-                  Compra segura via Asaas
-                </div>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+              <div>
+                <Badge className="mb-5 border-white/10 bg-white/10 text-white">
+                  <PieChart size={13} />
+                  Assinatura mensal
+                </Badge>
+                <h2 className="text-5xl font-bold leading-[0.95] [font-family:'Cormorant_Garamond',serif] sm:text-6xl">
+                  Um plano para cada fase do casamento.
+                </h2>
+                <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-300">
+                  Preços baixos para crescer com muitos casais, sem cobrar caro antes de provar valor.
+                </p>
               </div>
 
-              <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-                {includedItems.map((item) => (
-                  <li key={item} className="flex gap-3 text-sm font-bold text-slate-700">
-                    <Check className="mt-0.5 shrink-0 text-primary" size={17} />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                onClick={onGetStarted}
-                className="mt-8 h-14 w-full rounded-lg text-base font-extrabold"
-              >
-                Garantir meu acesso
-                <ChevronRight size={19} />
-              </Button>
+              <div id="garantia" className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm font-black text-emerald-100">
+                <ShieldCheck className="mb-2" size={20} />
+                Compra segura via Asaas. A conta só é criada depois do pagamento confirmado.
+              </div>
             </div>
+
+            <div className="mt-10 grid gap-4 lg:grid-cols-3">
+              {pricingPlans.map((plan) => (
+                <article
+                  key={plan.name}
+                  className={cn(
+                    "relative rounded-lg border bg-white p-6 text-slate-950 shadow-2xl",
+                    plan.highlight ? "border-primary shadow-primary/20" : "border-white/10"
+                  )}
+                >
+                  {plan.highlight && (
+                    <span className="absolute right-4 top-4 rounded-md bg-primary px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+                      {plan.highlight}
+                    </span>
+                  )}
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-primary">{plan.name}</p>
+                  <div className="mt-3 flex items-end gap-1">
+                    <span className="mb-2 text-2xl font-black">R$</span>
+                    <span className="text-6xl font-bold leading-none [font-family:'Cormorant_Garamond',serif]">{plan.price}</span>
+                  </div>
+                  <p className="mt-2 text-sm font-bold text-slate-500">por mês, {plan.caption}</p>
+
+                  <ul className="mt-6 grid gap-3">
+                    {plan.features.map((item) => (
+                      <li key={item} className="flex gap-3 text-sm font-bold text-slate-700">
+                        <Check className="mt-0.5 shrink-0 text-primary" size={17} />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    onClick={onGetStarted}
+                    className="mt-7 h-12 w-full rounded-lg text-sm font-extrabold"
+                    variant={plan.name === "Pro Casal" ? "primary" : "outline"}
+                  >
+                    Assinar {plan.name}
+                    <ChevronRight size={18} />
+                  </Button>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-lg border border-white/10 bg-white/10 p-5">
+              <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-white">Extra Pro: domínio personalizado</p>
+                  <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-300">
+                    O casal pode solicitar um domínio como mariaejoao.com.br. A compra/configuração entra como adicional anual após consulta de disponibilidade.
+                  </p>
+                </div>
+                <Button onClick={onGetStarted} className="h-12 rounded-lg px-5 text-sm font-extrabold">
+                  Quero o Pro
+                  <ArrowRight size={17} />
+                </Button>
+              </div>
+            </div>
+
+            <ul className="mt-8 grid gap-3 text-sm font-bold text-slate-300 sm:grid-cols-2 lg:grid-cols-5">
+              {includedItems.map((item) => (
+                <li key={item} className="flex gap-3">
+                  <Check className="mt-0.5 shrink-0 text-primary" size={17} />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
       </main>

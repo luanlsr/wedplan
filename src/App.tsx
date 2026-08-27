@@ -6,6 +6,7 @@ import { SignUpForm } from './components/auth/SignUpForm';
 import { ForgotPassword } from './components/auth/ForgotPassword';
 import { ResetPassword } from './components/auth/ResetPassword';
 import { LandingPage } from './components/layout/LandingPage';
+import { CookieConsent } from './components/layout/CookieConsent';
 import { Loader2 } from 'lucide-react';
 import { ConfirmProvider } from './components/ui';
 
@@ -80,6 +81,7 @@ function App() {
       <ConfirmProvider>
         <Router>
           <AppRoutes />
+          <CookieConsent />
         </Router>
       </ConfirmProvider>
     </AuthProvider>

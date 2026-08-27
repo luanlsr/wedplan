@@ -1,145 +1,186 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState, type ElementType, type ReactNode } from 'react';
 import { supabase } from '../../lib/supabase';
-import { getSiteUrl } from '../../utils/url';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
-import { Mail, Lock, Loader2, ArrowRight, User, ShieldCheck, CreditCard, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, CreditCard, Loader2, Mail, Phone, ShieldCheck, User } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface SignUpFormProps {
   onSuccess?: () => void;
   onNavigateToLogin: () => void;
 }
 
-export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) => {
+type Plan = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  price_monthly: number;
+  price_yearly: number | null;
+  sort_order: number;
+};
+
+type BillingInterval = 'monthly' | 'yearly';
+
+const fallbackPlans: Plan[] = [
+  {
+    id: 'premium',
+    code: 'premium',
+    name: 'Premium',
+    description: 'Gestão completa de convidados, fornecedores, tarefas e financeiro.',
+    price_monthly: 24.9,
+    price_yearly: 249,
+    sort_order: 20,
+  },
+  {
+    id: 'pro_couple',
+    code: 'pro_couple',
+    name: 'Pro Casal',
+    description: 'Inclui site público do casal, RSVP, mensagens e lista de presentes.',
+    price_monthly: 39.9,
+    price_yearly: 399,
+    sort_order: 30,
+  },
+];
+
+const planHighlights: Record<string, string[]> = {
+  essential: ['Até 150 convidados', 'Tarefas e fornecedores', 'Organização essencial'],
+  premium: ['Até 500 convidados', 'Financeiro completo', 'Check-in público seguro'],
+  pro_couple: ['Site do casal', 'Lista de presentes', 'RSVP e mensagens'],
+  pro_agency: ['Múltiplos casamentos', 'Recursos Pro', 'Base para assessorias'],
+};
+
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
+  const [plans, setPlans] = useState<Plan[]>(fallbackPlans);
+  const [planCode, setPlanCode] = useState('pro_couple');
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [cpfCnpj, setCpfCnpj] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [paymentValue, setPaymentValue] = useState<number>(197);
+  const [successPlan, setSuccessPlan] = useState<string | null>(null);
+  const [successValue, setSuccessValue] = useState<number | null>(null);
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadPlans = async () => {
+      setPlansLoading(true);
+      const { data, error: plansError } = await supabase
+        .from('plans')
+        .select('id, code, name, description, price_monthly, price_yearly, sort_order')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (!plansError && data?.length) {
+        setPlans(data as Plan[]);
+        if (!data.some((plan: Plan) => plan.code === 'pro_couple')) {
+          setPlanCode(data[0].code);
+        }
+      }
+
+      setPlansLoading(false);
+    };
+
+    loadPlans();
+  }, []);
+
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => plan.code === planCode) || plans[0],
+    [plans, planCode]
+  );
+
+  const selectedValue = useMemo(() => {
+    if (!selectedPlan) return 0;
+    if (billingInterval === 'yearly') return selectedPlan.price_yearly || selectedPlan.price_monthly * 12;
+    return selectedPlan.price_monthly;
+  }, [billingInterval, selectedPlan]);
+
+  const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // 1. Criar usuário no Supabase Auth
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name }
-      }
-    });
-
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    // 2. Fazer login imediato para obter o token (necessário para chamar a Edge Function)
-    const { data: sessionData } = await supabase.auth.signInWithPassword({ email, password });
-    const token = sessionData?.session?.access_token;
-
-    if (token) {
-      try {
-        // 3. Criar cliente no Asaas e gerar link de pagamento
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-asaas-customer`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ name, email }),
-          }
-        );
-
-        const result = await res.json();
-
-        if (res.ok && result.paymentUrl) {
-          setPaymentUrl(result.paymentUrl);
-          if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
-          setSuccess(true);
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error('Erro ao criar cliente Asaas:', err);
-        // Continua o fluxo normalmente sem bloquear o cadastro
-      }
-    }
-
-    setSuccess(true);
-    setLoading(false);
-    if (onSuccess) setTimeout(onSuccess, 2000);
-  };
-
-  const handleGoogleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getSiteUrl(),
-        },
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          email,
+          phone,
+          cpfCnpj,
+          planCode,
+          billingInterval,
+          acceptedTerms,
+          acceptedPrivacy,
+          marketingConsent,
+          source: 'signup',
+        }),
       });
-      if (error) throw error;
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Não foi possível iniciar o checkout');
+
+      setPaymentUrl(result.paymentUrl || null);
+      setSuccessPlan(result.planName || selectedPlan?.name || null);
+      setSuccessValue(Number(result.paymentValue || selectedValue));
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Não foi possível iniciar o checkout');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (success) {
+  if (successPlan) {
     return (
-      <AuthLayout 
-        title={paymentUrl ? "Checkout iniciado" : "Verifique seu e-mail!"} 
-        subtitle={paymentUrl 
-          ? "Sua conta foi criada. Confirme o e-mail e finalize o pagamento para liberar o WedPlan." 
-          : "Verifique seu e-mail para confirmar o cadastro e começar a planejar."}
+      <AuthLayout
+        title="Checkout iniciado"
+        subtitle="Sua conta será criada e liberada automaticamente após a confirmação do primeiro pagamento."
       >
         <div className="flex flex-col items-center justify-center py-10 text-center space-y-6 animate-in zoom-in duration-500">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center ${paymentUrl ? 'bg-primary/10 text-primary' : 'bg-green-500/10 text-green-500'}`}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center bg-primary/10 text-primary">
             <Mail size={40} />
           </div>
+          <div className="space-y-2">
+            <p className="text-muted-foreground font-medium">
+              Plano <strong className="text-foreground">{successPlan}</strong> para{' '}
+              <strong className="text-foreground">{email}</strong>
+            </p>
+            {successValue && (
+              <p className="text-sm text-muted-foreground">
+                Valor da assinatura: <strong className="text-foreground">{formatMoney(successValue)}</strong>{' '}
+                {billingInterval === 'yearly' ? 'por ano' : 'por mês'}.
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Depois da confirmação do pagamento, enviaremos um e-mail seguro para ativar a conta e definir a senha.
+            </p>
+          </div>
+
           {paymentUrl ? (
-            <>
-              <div className="space-y-2">
-                <p className="text-muted-foreground font-medium">
-                  Conta criada para <strong className="text-foreground">{email}</strong>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Sua senha inicial é a senha definida no cadastro. Por segurança, ela não será enviada por e-mail.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Clique abaixo para pagar via PIX, boleto ou cartão e liberar seu acesso.
-                </p>
-              </div>
-              <a
-                href={paymentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 flex items-center justify-center gap-2 transition-all"
-              >
-                Pagar e Ativar Minha Conta →
-              </a>
-              <p className="text-xs text-muted-foreground">
-                Após o pagamento, sua conta será ativada automaticamente.
-              </p>
-            </>
+            <a
+              href={paymentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 flex items-center justify-center gap-2 transition-all"
+            >
+              Ir para pagamento <ArrowRight size={18} />
+            </a>
           ) : (
-            <>
-              <p className="text-muted-foreground font-medium">
-                Enviamos um link de confirmação para <br/>
-                <strong className="text-foreground">{email}</strong>
-              </p>
-            </>
+            <div className="w-full rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm font-bold text-muted-foreground">
+              Checkout criado. Se o link de pagamento não aparecer em alguns instantes, entre em contato com o suporte.
+            </div>
           )}
+
           <Button onClick={onNavigateToLogin} variant="outline" className="w-full h-14 rounded-2xl">
             Voltar para o Login
           </Button>
@@ -149,91 +190,137 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
   }
 
   return (
-    <AuthLayout 
-      title="Checkout WedPlan" 
-      subtitle="Crie sua conta, confirme seu e-mail e finalize o pagamento com segurança."
+    <AuthLayout
+      title="Assinar WedPlan"
+      subtitle="Escolha seu plano, informe os dados de cobrança e finalize o pagamento com segurança."
     >
-      <form onSubmit={handleSignUp} className="space-y-5">
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Plano Premium</p>
-              <p className="mt-1 text-sm font-bold text-foreground">Acesso completo para organizar um casamento</p>
+      <form onSubmit={handleCheckout} className="space-y-5">
+        <div className="grid gap-3">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">Plano</label>
+            {plansLoading && <Loader2 className="animate-spin text-muted-foreground" size={14} />}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {plans.map((plan) => {
+              const isSelected = plan.code === planCode;
+              const value = billingInterval === 'yearly' ? plan.price_yearly || plan.price_monthly * 12 : plan.price_monthly;
+              return (
+                <button
+                  key={plan.code}
+                  type="button"
+                  onClick={() => setPlanCode(plan.code)}
+                  className={cn(
+                    'rounded-2xl border p-4 text-left transition-all',
+                    isSelected
+                      ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
+                      : 'border-border bg-secondary/30 hover:border-primary/40'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-foreground">{plan.name}</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">{plan.description}</p>
+                    </div>
+                    {isSelected && <CheckCircle2 className="shrink-0 text-primary" size={18} />}
+                  </div>
+                  <p className="mt-4 text-2xl font-black text-foreground">{formatMoney(value)}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    {billingInterval === 'yearly' ? 'por ano' : 'por mês'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 rounded-2xl border border-border bg-secondary/30 p-1">
+            <button
+              type="button"
+              onClick={() => setBillingInterval('monthly')}
+              className={cn('h-11 rounded-xl text-xs font-black uppercase tracking-widest', billingInterval === 'monthly' && 'bg-background text-primary shadow-sm')}
+            >
+              Mensal
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingInterval('yearly')}
+              className={cn('h-11 rounded-xl text-xs font-black uppercase tracking-widest', billingInterval === 'yearly' && 'bg-background text-primary shadow-sm')}
+            >
+              Anual
+            </button>
+          </div>
+
+          {selectedPlan && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="grid gap-2 text-xs font-bold text-muted-foreground">
+                {(planHighlights[selectedPlan.code] || []).map((item) => (
+                  <span key={item} className="flex items-center gap-2">
+                    <CheckCircle2 size={14} className="text-primary" />
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-black text-foreground">R$ {Math.round(paymentValue)}</p>
-              <p className="text-[10px] font-bold uppercase text-muted-foreground">pagamento único</p>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-2 text-xs font-bold text-muted-foreground">
-            {["Convidados, fornecedores, financeiro e tarefas", "Check-in público com token seguro", "Ativação automática via Asaas"].map((item) => (
-              <span key={item} className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-primary" />
-                {item}
-              </span>
-            ))}
-          </div>
+          )}
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">Seu Nome</label>
-          <div className="relative group">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
-            <Input 
-              type="text" 
-              placeholder="Ex: Luan Ramalho" 
-              className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">E-mail</label>
-          <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
-            <Input 
-              type="email" 
-              placeholder="exemplo@email.com" 
-              className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">Senha inicial</label>
-          <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
-            <Input 
-              type="password" 
-              placeholder="Essa será sua senha de login" 
-              className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
-          <p className="ml-1 text-[10px] font-medium text-muted-foreground">
-            Enviaremos o e-mail de confirmação da conta. A senha não é enviada por e-mail por segurança.
-          </p>
-        </div>
-
-        <label className="flex items-start gap-3 rounded-2xl border border-border bg-secondary/30 p-4 text-xs font-bold text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={acceptedTerms}
-            onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+        <Field label="Nome completo" icon={User}>
+          <Input
+            type="text"
+            placeholder="Ex: Maria Oliveira"
+            className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             required
           />
-          <span>Confirmo que quero criar minha conta WedPlan e seguir para o checkout seguro via Asaas.</span>
-        </label>
+        </Field>
+
+        <Field label="E-mail" icon={Mail}>
+          <Input
+            type="email"
+            placeholder="exemplo@email.com"
+            className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Telefone" icon={Phone}>
+            <Input
+              type="tel"
+              placeholder="(00) 00000-0000"
+              className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </Field>
+
+          <Field label="CPF/CNPJ" icon={CreditCard}>
+            <Input
+              type="text"
+              placeholder="Documento do titular"
+              className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
+              value={cpfCnpj}
+              onChange={(e) => setCpfCnpj(e.target.value)}
+              required
+            />
+          </Field>
+        </div>
+
+        <div className="space-y-3">
+          <Checkbox checked={acceptedTerms} onChange={setAcceptedTerms}>
+            Li e aceito os Termos de Uso do WedPlan.
+          </Checkbox>
+          <Checkbox checked={acceptedPrivacy} onChange={setAcceptedPrivacy}>
+            Li e aceito a Política de Privacidade e autorizo o tratamento dos dados para criação da assinatura.
+          </Checkbox>
+          <Checkbox checked={marketingConsent} onChange={setMarketingConsent}>
+            Quero receber novidades e ofertas do WedPlan por e-mail.
+          </Checkbox>
+        </div>
 
         {error && (
           <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold animate-in fade-in slide-in-from-top-2">
@@ -241,16 +328,16 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
           </div>
         )}
 
-        <Button 
-          type="submit" 
-          disabled={loading || !acceptedTerms}
+        <Button
+          type="submit"
+          disabled={loading || !acceptedTerms || !acceptedPrivacy}
           className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 group"
         >
           {loading ? (
             <Loader2 className="animate-spin" size={20} />
           ) : (
             <span className="flex items-center gap-2">
-              Criar conta e ir para pagamento <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              Ir para checkout seguro <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </span>
           )}
         </Button>
@@ -258,43 +345,17 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
         <div className="grid grid-cols-2 gap-3 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
           <span className="flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary/20 px-3 py-2">
             <ShieldCheck size={14} className="text-emerald-600" />
-            Conta protegida
+            LGPD
           </span>
           <span className="flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary/20 px-3 py-2">
             <CreditCard size={14} className="text-primary" />
-            Pix, boleto, cartão
+            Asaas
           </span>
-        </div>
-
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/5"></div>
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.3em]">
-            <span className="bg-background px-4 text-muted-foreground/40">Ou entre com Google</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
-          <Button 
-            variant="outline" 
-            type="button" 
-            onClick={handleGoogleLogin}
-            className="h-14 rounded-2xl border-white/5 bg-secondary/30 gap-3 font-bold hover:bg-secondary/50 transition-all"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 7.79-4.53 1.62 0 3.06.56 4.21 1.64z" fill="#EA4335"/>
-            </svg>
-            Cadastrar com Google
-          </Button>
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
           Já tem uma conta?{' '}
-          <button 
+          <button
             type="button"
             onClick={onNavigateToLogin}
             className="text-primary font-black hover:underline underline-offset-4"
@@ -306,3 +367,41 @@ export const SignUpForm = ({ onSuccess, onNavigateToLogin }: SignUpFormProps) =>
     </AuthLayout>
   );
 };
+
+const Field = ({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: ElementType;
+  children: ReactNode;
+}) => (
+  <div className="space-y-2">
+    <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">{label}</label>
+    <div className="relative group">
+      <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
+      {children}
+    </div>
+  </div>
+);
+
+const Checkbox = ({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: ReactNode;
+}) => (
+  <label className="flex items-start gap-3 rounded-2xl border border-border bg-secondary/30 p-4 text-xs font-bold text-muted-foreground">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+    />
+    <span>{children}</span>
+  </label>
+);

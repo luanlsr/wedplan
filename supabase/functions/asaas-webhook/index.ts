@@ -9,115 +9,257 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, asaas-access-token',
 }
 
+const paidEvents = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'])
+const overdueEvents = new Set(['PAYMENT_OVERDUE'])
+const canceledEvents = new Set(['PAYMENT_DELETED', 'PAYMENT_REFUNDED', 'SUBSCRIPTION_DELETED'])
+
+const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase()
+
+const checkoutStatusFromSubscriptionStatus = (status: string) => {
+  if (status === 'active') return 'paid'
+  if (status === 'canceled') return 'canceled'
+  if (status === 'past_due') return 'failed'
+  return 'payment_pending'
+}
+
+const findAuthUserByEmail = async (adminClient: any, email: string) => {
+  const normalizedEmail = normalizeEmail(email)
+  let page = 1
+
+  while (page <= 10) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) throw error
+
+    const user = data?.users?.find((item: any) => normalizeEmail(item.email) === normalizedEmail)
+    if (user) return user
+    if (!data?.users || data.users.length < 1000) return null
+    page += 1
+  }
+
+  return null
+}
+
+const getOrInviteUser = async (adminClient: any, checkout: any) => {
+  if (checkout.created_user_id) return checkout.created_user_id
+
+  const existingUser = await findAuthUserByEmail(adminClient, checkout.email)
+  if (existingUser?.id) return existingUser.id
+
+  const redirectTo = Deno.env.get('SUPABASE_AUTH_REDIRECT_URL') || `${Deno.env.get('PUBLIC_SITE_URL') || ''}/reset-password`
+  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(checkout.email, {
+    data: {
+      full_name: checkout.full_name,
+      checkout_session_id: checkout.id,
+      plan_id: checkout.plan_id,
+    },
+    redirectTo,
+  })
+
+  if (error) {
+    const userAfterInviteError = await findAuthUserByEmail(adminClient, checkout.email)
+    if (userAfterInviteError?.id) return userAfterInviteError.id
+    throw error
+  }
+
+  return data?.user?.id
+}
+
+const updateAccountAndSubscription = async (adminClient: any, checkout: any, userId: string, payment: any, status: string) => {
+  const asaasCustomerId = payment?.customer || checkout.asaas_customer_id
+  const asaasSubscriptionId = payment?.subscription || checkout.asaas_subscription_id
+
+  const { data: coupleRole } = await adminClient
+    .from('roles')
+    .select('id')
+    .eq('name', 'couple')
+    .maybeSingle()
+
+  await adminClient
+    .from('accounts')
+    .upsert({
+      id: userId,
+      status,
+      asaas_customer_id: asaasCustomerId,
+      asaas_subscription_id: asaasSubscriptionId,
+    }, { onConflict: 'id' })
+
+  await adminClient
+    .from('profiles')
+    .upsert({
+      id: userId,
+      email: checkout.email,
+      full_name: checkout.full_name,
+      account_id: userId,
+      role_id: coupleRole?.id || null,
+      role: 'couple',
+    }, { onConflict: 'id' })
+
+  const subscriptionPayload = {
+    account_id: userId,
+    plan_id: checkout.plan_id,
+    status,
+    billing_interval: checkout.billing_interval,
+    asaas_customer_id: asaasCustomerId,
+    asaas_subscription_id: asaasSubscriptionId,
+    current_period_start: new Date().toISOString().split('T')[0],
+    current_period_end: payment?.dueDate || payment?.originalDueDate || null,
+    metadata: {
+      lastPaymentId: payment?.id || checkout.asaas_payment_id || null,
+      checkoutSessionId: checkout.id,
+    },
+  }
+
+  const { data: subscription, error: subscriptionError } = await adminClient
+    .from('subscriptions')
+    .upsert(subscriptionPayload, { onConflict: 'asaas_subscription_id' })
+    .select('id')
+    .single()
+
+  if (subscriptionError) throw subscriptionError
+
+  await adminClient
+    .from('checkout_sessions')
+    .update({
+      status: checkoutStatusFromSubscriptionStatus(status),
+      created_account_id: userId,
+      created_user_id: userId,
+      asaas_payment_id: payment?.id || checkout.asaas_payment_id || null,
+      checkout_url: payment?.invoiceUrl || checkout.checkout_url || null,
+    })
+    .eq('id', checkout.id)
+
+  await adminClient
+    .from('legal_acceptances')
+    .update({ account_id: userId })
+    .eq('checkout_session_id', checkout.id)
+
+  return subscription?.id || null
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // 1. Validar o token de autenticação do Asaas
     const expectedToken = Deno.env.get('ASAAS_WEBHOOK_TOKEN')
     const receivedToken = req.headers.get('asaas-access-token')
 
     if (expectedToken && receivedToken !== expectedToken) {
-      console.warn('Token inválido recebido:', receivedToken)
+      console.warn('[Asaas Webhook] Token inválido recebido')
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
 
-    // 2. Criar cliente Supabase com service_role para bypass de RLS
-    const supabaseClient = createClient(
+    const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     const body = await req.json()
     const event = body.event
-    const payment = body.payment
+    const payment = body.payment || {}
+    const subscriptionPayload = body.subscription || {}
+    const asaasSubscriptionId = payment.subscription || subscriptionPayload.id || subscriptionPayload
+    const asaasPaymentId = payment.id || null
+    const asaasCustomerId = payment.customer || subscriptionPayload.customer || null
+    const providerEventId = body.id || `${event}:${asaasPaymentId || asaasSubscriptionId || crypto.randomUUID()}`
 
-    console.log(`[Asaas Webhook] Evento recebido: ${event}`, { paymentId: payment?.id, customer: payment?.customer })
+    console.log('[Asaas Webhook] Evento recebido:', {
+      event,
+      paymentId: asaasPaymentId,
+      subscriptionId: asaasSubscriptionId,
+      customerId: asaasCustomerId,
+    })
 
-    // 3. Processar eventos de pagamento confirmado
-    if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
-      const asaasCustomerId = payment.customer
+    await adminClient
+      .from('subscription_events')
+      .upsert({
+        provider: 'asaas',
+        event_type: event,
+        provider_event_id: providerEventId,
+        payload: body,
+      }, { onConflict: 'provider,provider_event_id' })
 
-      // Buscar conta vinculada ao Customer ID do Asaas
-      const { data: account, error: accError } = await supabaseClient
-        .from('accounts')
-        .select('id')
-        .eq('asaas_customer_id', asaasCustomerId)
-        .single()
+    let checkoutQuery = adminClient
+      .from('checkout_sessions')
+      .select('id, plan_id, billing_interval, status, full_name, email, asaas_customer_id, asaas_subscription_id, asaas_payment_id, checkout_url, created_user_id')
+      .order('created_at', { ascending: false })
+      .limit(1)
 
-      if (accError || !account) {
-        console.error(`Conta não encontrada para Customer ID: ${asaasCustomerId}`)
-        // Retorna 200 mesmo assim para o Asaas não tentar reenviar
-        return new Response(JSON.stringify({ warning: 'Account not found, ignoring.' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        })
+    if (asaasSubscriptionId) {
+      checkoutQuery = checkoutQuery.eq('asaas_subscription_id', asaasSubscriptionId)
+    } else if (asaasPaymentId) {
+      checkoutQuery = checkoutQuery.eq('asaas_payment_id', asaasPaymentId)
+    } else if (asaasCustomerId) {
+      checkoutQuery = checkoutQuery.eq('asaas_customer_id', asaasCustomerId)
+    } else {
+      return new Response(JSON.stringify({ success: true, ignored: 'missing identifiers', event }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
+    const { data: checkoutRows, error: checkoutError } = await checkoutQuery
+    if (checkoutError) throw checkoutError
+
+    const checkout = checkoutRows?.[0]
+    if (!checkout) {
+      const { data: account } = asaasCustomerId
+        ? await adminClient.from('accounts').select('id').eq('asaas_customer_id', asaasCustomerId).maybeSingle()
+        : { data: null }
+
+      if (account?.id) {
+        const accountStatus = overdueEvents.has(event) ? 'past_due' : canceledEvents.has(event) ? 'canceled' : 'active'
+        await adminClient.from('accounts').update({ status: accountStatus }).eq('id', account.id)
       }
 
-      // Ativar a conta
-      const { error: updateError } = await supabaseClient
-        .from('accounts')
+      return new Response(JSON.stringify({ success: true, warning: 'checkout not found', event }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
+    let subscriptionId = null
+    let processedUserId = null
+    if (paidEvents.has(event)) {
+      const userId = await getOrInviteUser(adminClient, checkout)
+      if (!userId) throw new Error('Não foi possível criar ou localizar o usuário do checkout')
+      processedUserId = userId
+      subscriptionId = await updateAccountAndSubscription(adminClient, checkout, userId, payment, 'active')
+    }
+
+    if (overdueEvents.has(event) || canceledEvents.has(event)) {
+      const userId = checkout.created_user_id || (await findAuthUserByEmail(adminClient, checkout.email))?.id
+      if (userId) {
+        processedUserId = userId
+        const status = overdueEvents.has(event) ? 'past_due' : 'canceled'
+        subscriptionId = await updateAccountAndSubscription(adminClient, checkout, userId, payment, status)
+      } else {
+        await adminClient
+          .from('checkout_sessions')
+          .update({ status: overdueEvents.has(event) ? 'failed' : 'canceled' })
+          .eq('id', checkout.id)
+      }
+    }
+
+    if (subscriptionId) {
+      await adminClient
+        .from('subscription_events')
         .update({
-          status: 'active',
-          asaas_subscription_id: payment.subscription || null
+          subscription_id: subscriptionId,
+          account_id: processedUserId,
         })
-        .eq('id', account.id)
-
-      if (updateError) throw updateError
-
-      console.log(`[Asaas Webhook] ✅ Conta ${account.id} ativada!`)
-    }
-
-    // 4. Processar pagamento vencido/atrasado
-    if (event === 'PAYMENT_OVERDUE') {
-      const asaasCustomerId = payment.customer
-
-      const { data: account } = await supabaseClient
-        .from('accounts')
-        .select('id')
-        .eq('asaas_customer_id', asaasCustomerId)
-        .single()
-
-      if (account) {
-        await supabaseClient
-          .from('accounts')
-          .update({ status: 'past_due' })
-          .eq('id', account.id)
-
-        console.log(`[Asaas Webhook] ⚠️ Conta ${account.id} marcada como past_due`)
-      }
-    }
-
-    // 5. Processar cancelamento de cobrança
-    if (event === 'PAYMENT_DELETED') {
-      const asaasCustomerId = payment.customer
-
-      const { data: account } = await supabaseClient
-        .from('accounts')
-        .select('id')
-        .eq('asaas_customer_id', asaasCustomerId)
-        .single()
-
-      if (account) {
-        await supabaseClient
-          .from('accounts')
-          .update({ status: 'canceled' })
-          .eq('id', account.id)
-
-        console.log(`[Asaas Webhook] ❌ Conta ${account.id} cancelada`)
-      }
+        .eq('provider', 'asaas')
+        .eq('provider_event_id', providerEventId)
     }
 
     return new Response(JSON.stringify({ success: true, event }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
-
   } catch (error) {
     console.error('[Asaas Webhook] Erro:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {

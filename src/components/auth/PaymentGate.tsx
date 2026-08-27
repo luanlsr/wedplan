@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import { CreditCard, ShieldCheck, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { Card, Button } from '../ui';
 
@@ -9,7 +8,7 @@ interface PaymentGateProps {
 
 export function PaymentGate({ email }: PaymentGateProps) {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [paymentValue, setPaymentValue] = useState<number>(197);
+  const [paymentValue, setPaymentValue] = useState<number>(39.9);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,54 +20,28 @@ export function PaymentGate({ email }: PaymentGateProps) {
     setLoading(true);
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Sessão expirada');
+      if (!email) throw new Error('E-mail da conta não encontrado');
 
-      // Verifica se já tem um payment_url salvo ou cria novo cliente no Asaas
-      const { data: account } = await supabase
-        .from('accounts')
-        .select('asaas_customer_id')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      // Se já tem cliente no Asaas, busca a cobrança pendente
-      if (account?.asaas_customer_id) {
-        // Tenta buscar uma invoice URL existente via Edge Function
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-asaas-customer`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ name: email?.split('@')[0], email }),
-          }
-        );
-        const result = await res.json();
-        if (res.ok && result.paymentUrl) {
-          setPaymentUrl(result.paymentUrl);
-          if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: email.split('@')[0],
+            email,
+            planCode: 'pro_couple',
+            billingInterval: 'monthly',
+            acceptedTerms: true,
+            acceptedPrivacy: true,
+            source: 'payment_gate',
+          }),
         }
-      } else {
-        // Cria novo cliente no Asaas
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-asaas-customer`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ name: email?.split('@')[0] || email, email }),
-          }
-        );
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Erro ao gerar link de pagamento');
-        if (result.paymentUrl) setPaymentUrl(result.paymentUrl);
-        if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
-      }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Erro ao gerar assinatura');
+      if (result.paymentUrl) setPaymentUrl(result.paymentUrl);
+      if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
     } catch (err: any) {
       console.error('PaymentGate error:', err);
       setError(err.message);
@@ -98,9 +71,9 @@ export function PaymentGate({ email }: PaymentGateProps) {
               {[
                 "Gestão Completa de Fornecedores",
                 "Controle Financeiro & Aportes",
-                "Lista de Convidados Ilimitada",
+                "Lista de Convidados Integrada",
                 "RSVP Online e Inteligente",
-                "Checklist de Tarefas Premium"
+                "Site do Casal no Plano Pro"
               ].map((text, i) => (
                 <li key={i} className="flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
                   <div className="p-1 bg-primary/20 rounded-full text-primary"><CheckCircle2 size={12} /></div>
@@ -128,14 +101,14 @@ export function PaymentGate({ email }: PaymentGateProps) {
                 <span className="text-xl font-bold">R$</span>
                 <span className="text-6xl font-black tracking-tighter">{Math.round(paymentValue)}</span>
               </div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pagamento Único • Acesso Vitalício</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Assinatura mensal • Plano Pro Casal</p>
             </div>
 
             <div className="w-full space-y-4">
               {loading ? (
                 <div className="flex flex-col items-center gap-3 py-4">
                   <Loader2 className="animate-spin text-primary" size={28} />
-                  <p className="text-xs text-muted-foreground font-medium">Gerando link de pagamento...</p>
+                  <p className="text-xs text-muted-foreground font-medium">Gerando checkout da assinatura...</p>
                 </div>
               ) : error ? (
                 <div className="space-y-3">
@@ -155,7 +128,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
                 </a>
               ) : (
                 <Button onClick={initPayment} className="w-full h-16 rounded-2xl">
-                  Gerar Link de Pagamento
+                  Gerar Checkout da Assinatura
                 </Button>
               )}
 
