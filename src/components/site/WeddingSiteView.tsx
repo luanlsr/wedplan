@@ -1,21 +1,27 @@
-import { useEffect, useMemo, useState, type ElementType, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ElementType, type FormEvent, type ReactNode } from 'react';
 import {
   CheckCircle2,
   Copy,
+  Eye,
+  EyeOff,
   ExternalLink,
   Gift,
   Globe2,
   ImagePlus,
+  Info,
   Loader2,
   MapPin,
   MessageSquareHeart,
   Palette,
+  Pencil,
   Plus,
   Save,
   ShieldCheck,
   Sparkles,
+  Tag,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import { Badge, Button, Card, Input, cn } from '../ui';
 import { supabase } from '../../lib/supabase';
@@ -69,15 +75,31 @@ const steps = [
 
 type StepId = typeof steps[number]['id'];
 
+const EDITOR_GIFTS_PAGE_SIZE = 8;
+
 const fontOptions = [
   { value: 'Playfair Display', label: 'Playfair Display' },
   { value: 'Cormorant Garamond', label: 'Cormorant Garamond' },
+  { value: 'DM Serif Display', label: 'DM Serif Display' },
+  { value: 'Bodoni Moda', label: 'Bodoni Moda' },
+  { value: 'Libre Baskerville', label: 'Libre Baskerville' },
   { value: 'Lora', label: 'Lora' },
+  { value: 'Marcellus', label: 'Marcellus' },
+  { value: 'Prata', label: 'Prata' },
+  { value: 'Cinzel', label: 'Cinzel' },
+  { value: 'Parisienne', label: 'Parisienne' },
+  { value: 'Allura', label: 'Allura' },
+  { value: 'Petit Formal Script', label: 'Petit Formal Script' },
+  { value: 'Sacramento', label: 'Sacramento' },
+  { value: 'Great Vibes', label: 'Great Vibes' },
   { value: 'Outfit', label: 'Outfit' },
   { value: 'Montserrat', label: 'Montserrat' },
+  { value: 'Poppins', label: 'Poppins' },
   { value: 'Manrope', label: 'Manrope' },
   { value: 'Inter', label: 'Inter' },
-  { value: 'Great Vibes', label: 'Great Vibes' },
+  { value: 'Nunito Sans', label: 'Nunito Sans' },
+  { value: 'Raleway', label: 'Raleway' },
+  { value: 'Quicksand', label: 'Quicksand' },
 ];
 
 const slugify = (value: string) =>
@@ -193,6 +215,9 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [deletedGiftIds, setDeletedGiftIds] = useState<string[]>([]);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [expandedGiftId, setExpandedGiftId] = useState<string | null>(null);
+  const [editingGift, setEditingGift] = useState<GiftItem | null>(null);
   const [domain, setDomain] = useState('');
   const [domainRequests, setDomainRequests] = useState<DomainRequest[]>([]);
   const [messages, setMessages] = useState<GuestMessage[]>([]);
@@ -596,8 +621,17 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
   const addCategory = () => {
     const name = newCategoryName.trim();
     if (!name) return;
-    setCategories((current) => [...current, { id: tempId('category'), name, active: true }]);
+    const categoryId = tempId('category');
+    setCategories((current) => [...current, { id: categoryId, name, active: true }]);
+    setExpandedCategoryId(categoryId);
     setNewCategoryName('');
+  };
+
+  const addGift = () => {
+    const gift = newGift(categories[0]?.id);
+    setGifts((current) => [gift, ...current]);
+    setExpandedGiftId(gift.id);
+    setEditingGift(gift);
   };
 
   const copyPublicUrl = async () => {
@@ -948,37 +982,38 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
               </div>
 
               <div className="rounded-2xl border border-border bg-secondary/20 p-4">
-                <p className="mb-3 text-xs font-black uppercase tracking-widest text-muted-foreground">Categorias</p>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((category) => (
-                    <span key={category.id} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-black">
-                      <input value={category.name} onChange={(event) => setCategories((current) => current.map((item) => item.id === category.id ? { ...item, name: event.target.value } : item))} className="w-28 bg-transparent outline-none" />
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Categorias</p>
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">Clique em uma tag para editar nome e status.</p>
+                  </div>
+                  <div className="flex gap-2 sm:min-w-[320px]">
                   <Input value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder="Nova categoria" className="bg-card" />
                   <Button onClick={addCategory} className="h-11 rounded-xl px-4"><Plus size={16} /> Add</Button>
+                  </div>
                 </div>
+                <CategoryTable
+                  categories={categories}
+                  gifts={gifts}
+                  expandedId={expandedCategoryId}
+                  onToggle={(id) => setExpandedCategoryId((current) => current === id ? null : id)}
+                  onChange={(category) => setCategories((current) => current.map((item) => item.id === category.id ? category : item))}
+                />
               </div>
 
-              <div className="space-y-4">
-                {gifts.map((gift) => (
-                  <GiftEditor
-                    key={gift.id}
-                    gift={gift}
-                    categories={categories}
-                    onChange={(nextGift) => setGifts((current) => current.map((item) => item.id === gift.id ? nextGift : item))}
-                    onRemove={() => {
-                      if (!isTempId(gift.id)) setDeletedGiftIds((current) => [...current, gift.id]);
-                      setGifts((current) => current.filter((item) => item.id !== gift.id));
-                    }}
-                  />
-                ))}
-              </div>
-              <Button variant="outline" onClick={() => setGifts((current) => [...current, newGift(categories[0]?.id)])} className="h-11 rounded-xl">
-                <Plus size={16} /> Adicionar presente
-              </Button>
+              <GiftTable
+                gifts={gifts}
+                categories={categories}
+                expandedId={expandedGiftId}
+                onToggle={(id) => setExpandedGiftId((current) => current === id ? null : id)}
+                onEdit={(gift) => setEditingGift(gift)}
+                onRemove={(gift) => {
+                  if (!isTempId(gift.id)) setDeletedGiftIds((current) => [...current, gift.id]);
+                  setGifts((current) => current.filter((item) => item.id !== gift.id));
+                  if (editingGift?.id === gift.id) setEditingGift(null);
+                }}
+                onAdd={addGift}
+              />
             </EditorPanel>
           )}
 
@@ -1078,6 +1113,19 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
           </div>
         </div>
       </div>
+
+      {editingGift && (
+        <GiftEditModal
+          key={editingGift.id}
+          gift={editingGift}
+          categories={categories}
+          onClose={() => setEditingGift(null)}
+          onSave={(gift) => {
+            setGifts((current) => current.map((item) => item.id === gift.id ? gift : item));
+            setEditingGift(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -1173,35 +1221,286 @@ const ImageGrid = ({ images, onRemove }: { images: SiteImage[]; onRemove: (id: s
   </div>
 );
 
-const GiftEditor = ({
+const CategoryTable = ({
+  categories,
+  gifts,
+  expandedId,
+  onToggle,
+  onChange,
+}: {
+  categories: GiftCategory[];
+  gifts: GiftItem[];
+  expandedId: string | null;
+  onToggle: (id: string) => void;
+  onChange: (category: GiftCategory) => void;
+}) => {
+  if (categories.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-card p-5 text-center text-sm font-medium text-muted-foreground">
+        Nenhuma categoria cadastrada.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="flex flex-wrap gap-2">
+        {categories.map((category) => {
+          const isExpanded = expandedId === category.id;
+          const giftCount = gifts.filter((gift) => gift.category === category.id).length;
+
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onToggle(category.id)}
+              className={cn(
+                'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-left text-[11px] font-black leading-4 transition hover:-translate-y-0.5 hover:shadow-sm',
+                isExpanded
+                  ? 'border-primary/40 bg-primary/10 text-primary'
+                  : 'border-border bg-background text-foreground',
+                category.active === false && 'opacity-70'
+              )}
+            >
+              <Tag size={12} className="shrink-0" />
+              <span className="min-w-0 whitespace-normal break-words">{category.name || 'Categoria sem nome'}</span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-1.5 py-0.5 text-[9px] font-black text-muted-foreground">
+                <Gift size={10} />
+                {giftCount}
+              </span>
+              <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase', category.active === false ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
+                {category.active === false ? <EyeOff size={10} /> : <Eye size={10} />}
+                {category.active === false ? 'Oculta' : 'Ativa'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {categories.map((category) => (
+        expandedId === category.id && (
+          <div key={`${category.id}-details`} className="mt-3 rounded-2xl border border-border bg-secondary/20 p-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+              <Input value={category.name} onChange={(event) => onChange({ ...category, name: event.target.value })} placeholder="Nome da categoria" className="bg-card" />
+              <Toggle label="Ativa" checked={category.active !== false} onChange={(checked) => onChange({ ...category, active: checked })} />
+            </div>
+          </div>
+        )
+      ))}
+    </div>
+  );
+};
+
+const GiftTable = ({
+  gifts,
+  categories,
+  expandedId,
+  onToggle,
+  onEdit,
+  onRemove,
+  onAdd,
+}: {
+  gifts: GiftItem[];
+  categories: GiftCategory[];
+  expandedId: string | null;
+  onToggle: (id: string) => void;
+  onEdit: (gift: GiftItem) => void;
+  onRemove: (gift: GiftItem) => void;
+  onAdd: () => void;
+}) => {
+  const categoryName = (categoryId?: string | null) => categories.find((category) => category.id === categoryId)?.name || 'Sem categoria';
+  const [visibleCount, setVisibleCount] = useState(EDITOR_GIFTS_PAGE_SIZE);
+  const visibleGifts = gifts.slice(0, visibleCount);
+
+  useEffect(() => {
+    setVisibleCount(EDITOR_GIFTS_PAGE_SIZE);
+  }, [gifts.length]);
+
+  return (
+    <div className="rounded-2xl border border-border bg-secondary/20">
+      <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Presentes</p>
+          <p className="mt-1 text-xs font-medium text-muted-foreground">Use detalhes para conferir, editar para alterar e remover quando necessário.</p>
+        </div>
+        <Button variant="outline" onClick={onAdd} className="h-10 rounded-xl px-3 text-xs">
+          <Plus size={16} /> Adicionar presente
+        </Button>
+      </div>
+
+      {gifts.length === 0 ? (
+        <div className="m-4 rounded-xl border border-dashed border-border bg-card p-5 text-center text-sm font-medium text-muted-foreground">
+          Nenhum presente cadastrado.
+        </div>
+      ) : (
+        <div className="space-y-3 p-4">
+          {visibleGifts.map((gift) => {
+            const isExpanded = expandedId === gift.id;
+
+            return (
+              <div key={gift.id} className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                  <button type="button" onClick={() => onToggle(gift.id)} className="grid min-w-0 grid-cols-[56px_minmax(0,1fr)] gap-3 text-left">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary text-muted-foreground">
+                      {gift.image_url ? <img src={gift.image_url} alt="" className="h-full w-full object-cover" /> : <Gift size={20} />}
+                    </div>
+                    <div className="min-w-0 self-center">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <p className="max-w-full truncate text-sm font-black text-foreground">{gift.title || 'Presente sem nome'}</p>
+                        <Badge variant={gift.is_bought ? 'success' : gift.is_featured ? 'outline' : 'default'} className="shrink-0">
+                          {gift.is_bought ? 'Reservado' : gift.is_featured ? 'Destaque' : 'Disponível'}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold text-muted-foreground">
+                        <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-secondary px-2 py-1">
+                          <Tag size={11} />
+                          <span className="truncate">{categoryName(gift.category)}</span>
+                        </span>
+                        <span>{gift.brand || gift.subtitle || 'Sem marca'}</span>
+                        <span className="font-black text-foreground">{formatMoney(gift.price)}</span>
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    <Button variant="ghost" onClick={() => onToggle(gift.id)} className="h-9 rounded-xl px-3 text-xs">
+                      <Info size={15} />
+                      Detalhes
+                    </Button>
+                    <Button variant="outline" onClick={() => onEdit(gift)} className="h-9 rounded-xl px-3 text-xs">
+                      <Pencil size={15} />
+                      Editar
+                    </Button>
+                    <Button variant="ghost" onClick={() => onRemove(gift)} className="h-9 rounded-xl px-3 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive">
+                      <Trash2 size={15} />
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-3 grid gap-3 rounded-2xl border border-border bg-secondary/20 p-4 text-xs font-bold text-muted-foreground sm:grid-cols-2">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Descrição</p>
+                      <p className="mt-1 break-words text-foreground">{gift.subtitle || 'Nenhuma descrição curta cadastrada.'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Marca</p>
+                      <p className="mt-1 break-words text-foreground">{gift.brand || 'Não informada'}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest">Link do produto</p>
+                      <p className="mt-1 break-all text-foreground">{gift.buy_url || 'Não informado'}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest">Imagem</p>
+                      <p className="mt-1 break-all text-foreground">{gift.image_url || 'Não informada'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {visibleCount < gifts.length && (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 p-4 text-center sm:flex-row sm:justify-between sm:text-left">
+              <p className="text-xs font-bold text-muted-foreground">
+                Exibindo {visibleGifts.length} de {gifts.length} presentes.
+              </p>
+              <Button variant="outline" onClick={() => setVisibleCount((current) => current + EDITOR_GIFTS_PAGE_SIZE)} className="h-10 rounded-xl px-4 text-xs">
+                Carregar mais presentes
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const GiftEditModal = ({
   gift,
   categories,
-  onChange,
-  onRemove,
+  onClose,
+  onSave,
 }: {
   gift: GiftItem;
   categories: GiftCategory[];
-  onChange: (gift: GiftItem) => void;
-  onRemove: () => void;
-}) => (
-  <div className="rounded-2xl border border-border bg-secondary/20 p-4">
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{gift.title || 'Novo presente'}</p>
-      <button onClick={onRemove} className="text-destructive"><Trash2 size={16} /></button>
+  onClose: () => void;
+  onSave: (gift: GiftItem) => void;
+}) => {
+  const [draft, setDraft] = useState<GiftItem>(gift);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSave(draft);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl custom-scrollbar">
+        <div className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Editar presente</p>
+            <h3 className="mt-1 text-xl font-black text-foreground">{draft.title || 'Novo presente'}</h3>
+          </div>
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/40 text-muted-foreground transition hover:text-foreground">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nome do presente">
+            <Input value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Jogo de panelas" className="bg-secondary/30" />
+          </Field>
+          <Field label="Marca">
+            <Input value={draft.brand || ''} onChange={(event) => setDraft((current) => ({ ...current, brand: event.target.value }))} placeholder="Marca ou loja" className="bg-secondary/30" />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="Descrição curta">
+              <Input value={draft.subtitle || ''} onChange={(event) => setDraft((current) => ({ ...current, subtitle: event.target.value }))} placeholder="Texto de apoio para o card" className="bg-secondary/30" />
+            </Field>
+          </div>
+          <div className="sm:col-span-2">
+            <Field label="Link do produto">
+              <Input value={draft.buy_url || ''} onChange={(event) => setDraft((current) => ({ ...current, buy_url: event.target.value }))} placeholder="https://..." className="bg-secondary/30" />
+            </Field>
+          </div>
+          <div className="sm:col-span-2">
+            <Field label="Link da imagem">
+              <Input value={draft.image_url || ''} onChange={(event) => setDraft((current) => ({ ...current, image_url: event.target.value }))} placeholder="URL externa da imagem" className="bg-secondary/30" />
+            </Field>
+          </div>
+          <Field label="Preço">
+            <Input
+              inputMode="decimal"
+              value={draft.price ?? ''}
+              onChange={(event) => setDraft((current) => ({ ...current, price: event.target.value ? Number(event.target.value.replace(',', '.')) : null }))}
+              placeholder="0,00"
+              className="bg-secondary/30"
+            />
+          </Field>
+          <Field label="Categoria">
+            <select value={draft.category || ''} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value || null }))} className="h-11 w-full rounded-xl border border-border bg-secondary/30 px-3 text-sm font-bold text-foreground outline-none">
+              <option value="">Sem categoria</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+          </Field>
+          <div className="sm:col-span-2">
+            <Toggle label="Destacar presente" checked={draft.is_featured} onChange={(checked) => setDraft((current) => ({ ...current, is_featured: checked }))} />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose} className="h-11 rounded-xl px-4">
+            Cancelar
+          </Button>
+          <Button type="submit" className="h-11 rounded-xl px-4">
+            <Save size={16} />
+            Salvar presente
+          </Button>
+        </div>
+      </form>
     </div>
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Input value={gift.title} onChange={(event) => onChange({ ...gift, title: event.target.value })} placeholder="Nome do presente" className="bg-card" />
-      <Input value={gift.brand || ''} onChange={(event) => onChange({ ...gift, brand: event.target.value })} placeholder="Marca" className="bg-card" />
-      <Input value={gift.subtitle || ''} onChange={(event) => onChange({ ...gift, subtitle: event.target.value })} placeholder="Descrição curta" className="bg-card sm:col-span-2" />
-      <Input value={gift.buy_url || ''} onChange={(event) => onChange({ ...gift, buy_url: event.target.value })} placeholder="Link do produto" className="bg-card sm:col-span-2" />
-      <Input value={gift.image_url || ''} onChange={(event) => onChange({ ...gift, image_url: event.target.value })} placeholder="Link da imagem do produto" className="bg-card sm:col-span-2" />
-      <Input value={gift.price ?? ''} onChange={(event) => onChange({ ...gift, price: event.target.value ? Number(event.target.value.replace(',', '.')) : null })} placeholder="Preço" className="bg-card" />
-      <select value={gift.category || ''} onChange={(event) => onChange({ ...gift, category: event.target.value || null })} className="h-11 rounded-xl border border-border bg-card px-3 text-sm font-bold text-foreground outline-none">
-        <option value="">Sem categoria</option>
-        {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-      </select>
-      <Toggle label="Destaque" checked={gift.is_featured} onChange={(checked) => onChange({ ...gift, is_featured: checked })} />
-    </div>
-    {gift.image_url && <img src={gift.image_url} alt="" className="mt-3 h-36 w-full rounded-xl object-cover" />}
-  </div>
-);
+  );
+};

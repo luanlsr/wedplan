@@ -17,6 +17,8 @@ const priceRanges = [
 type PriceRange = typeof priceRanges[number]['id'];
 type SortOrder = 'latest' | 'low-high' | 'high-low' | 'az';
 
+const PUBLIC_GIFTS_PAGE_SIZE = 12;
+
 export const WeddingGiftsPublic = () => {
   const { slug } = useParams();
   const [site, setSite] = useState<WeddingSite | null>(null);
@@ -33,6 +35,7 @@ export const WeddingGiftsPublic = () => {
   const [guestName, setGuestName] = useState('');
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PUBLIC_GIFTS_PAGE_SIZE);
 
   useEffect(() => {
     loadGifts();
@@ -124,6 +127,13 @@ export const WeddingGiftsPublic = () => {
 
     return result;
   }, [brand, category, categoryById, gifts, priceRange, search, sortOrder]);
+
+  const visibleGifts = useMemo(() => filteredGifts.slice(0, visibleCount), [filteredGifts, visibleCount]);
+
+  useEffect(() => {
+    setVisibleCount(PUBLIC_GIFTS_PAGE_SIZE);
+  }, [brand, category, gifts.length, priceRange, search, sortOrder]);
+
   const themeStyle = site ? {
     '--wedsite-font-primary': `'${site.font_primary || 'Playfair Display'}', serif`,
     '--wedsite-font-secondary': `'${site.font_secondary || 'Manrope'}', sans-serif`,
@@ -245,35 +255,48 @@ export const WeddingGiftsPublic = () => {
               <button onClick={() => { setSearch(''); setCategory('all'); setBrand('all'); setPriceRange('all'); }} className="mt-3 text-sm font-black text-[var(--wedsite-color-primary)]">Limpar filtros</button>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredGifts.map((gift) => (
-                <article key={gift.id} className={cn('overflow-hidden rounded-2xl border border-black/10 bg-[var(--wedsite-bg-secondary)] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10', gift.is_bought && 'opacity-70')}>
-                  <div className="relative flex h-56 items-center justify-center bg-[#f0ebe3]">
-                    {gift.image_url ? <img src={gift.image_url} alt={gift.title} className="h-full w-full object-cover" loading="lazy" /> : <Gift className="text-[var(--wedsite-color-primary)]" size={42} />}
-                    {gift.is_featured && <span className="absolute left-3 top-3 rounded-full bg-[var(--wedsite-color-secondary)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">Sugestão</span>}
-                  </div>
-                  <div className="p-5">
-                    <h2 className="text-lg font-black leading-tight">{gift.title}</h2>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--wedsite-color-primary)]">
-                      {gift.category && <span>{categoryById.get(gift.category)}</span>}
-                      {gift.brand && <span>{gift.brand}</span>}
+            <div className="space-y-6">
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleGifts.map((gift) => (
+                  <article key={gift.id} className={cn('overflow-hidden rounded-2xl border border-black/10 bg-[var(--wedsite-bg-secondary)] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10', gift.is_bought && 'opacity-70')}>
+                    <div className="relative flex h-56 items-center justify-center bg-[#f0ebe3]">
+                      {gift.image_url ? <img src={gift.image_url} alt={gift.title} className="h-full w-full object-cover" loading="lazy" /> : <Gift className="text-[var(--wedsite-color-primary)]" size={42} />}
+                      {gift.is_featured && <span className="absolute left-3 top-3 rounded-full bg-[var(--wedsite-color-secondary)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">Sugestão</span>}
                     </div>
-                    {gift.subtitle && <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-[#69645d]">{gift.subtitle}</p>}
-                    <div className="mt-5 flex items-center justify-between gap-3">
-                      <span className="text-lg font-black text-[var(--wedsite-color-primary)]">{formatMoney(gift.price)}</span>
-                      {gift.is_bought ? (
-                        <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
-                          <Check size={14} /> {gift.bought_by || 'Reservado'}
-                        </span>
-                      ) : (
-                        <button onClick={() => setSelectedGift(gift)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--wedsite-color-secondary)] px-4 text-xs font-black uppercase text-white">
-                          <ShoppingBag size={15} /> Presentear
-                        </button>
-                      )}
+                    <div className="p-5">
+                      <h2 className="text-lg font-black leading-tight">{gift.title}</h2>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--wedsite-color-primary)]">
+                        {gift.category && <span>{categoryById.get(gift.category)}</span>}
+                        {gift.brand && <span>{gift.brand}</span>}
+                      </div>
+                      {gift.subtitle && <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-[#69645d]">{gift.subtitle}</p>}
+                      <div className="mt-5 flex items-center justify-between gap-3">
+                        <span className="text-lg font-black text-[var(--wedsite-color-primary)]">{formatMoney(gift.price)}</span>
+                        {gift.is_bought ? (
+                          <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
+                            <Check size={14} /> {gift.bought_by || 'Reservado'}
+                          </span>
+                        ) : (
+                          <button onClick={() => setSelectedGift(gift)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--wedsite-color-secondary)] px-4 text-xs font-black uppercase text-white">
+                            <ShoppingBag size={15} /> Presentear
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                ))}
+              </div>
+
+              {visibleCount < filteredGifts.length && (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#ded8cf] bg-[var(--wedsite-bg-secondary)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+                  <p className="text-sm font-bold text-[#69645d]">
+                    Exibindo {visibleGifts.length} de {filteredGifts.length} presentes.
+                  </p>
+                  <button onClick={() => setVisibleCount((current) => current + PUBLIC_GIFTS_PAGE_SIZE)} className="inline-flex h-11 items-center justify-center rounded-xl bg-[var(--wedsite-color-secondary)] px-5 text-xs font-black uppercase text-white">
+                    Carregar mais presentes
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </main>
