@@ -71,22 +71,38 @@ serve(async (req) => {
       throw new Error('Você não pode solicitar domínio para este site')
     }
 
-    const { data: subscription, error: subscriptionError } = await adminClient
-      .from('subscriptions')
-      .select('id, status, plan_id')
-      .eq('account_id', user.id)
-      .in('status', ['active', 'trialing'])
-      .order('created_at', { ascending: false })
-      .limit(1)
+    const { data: profile, error: profileError } = await adminClient
+      .from('profiles')
+      .select('plan_id, plan_status, account_id')
+      .eq('id', user.id)
       .maybeSingle()
 
-    if (subscriptionError) throw subscriptionError
-    if (!subscription) throw new Error('Assinatura ativa não encontrada')
+    if (profileError) throw profileError
+
+    let activePlanId = ['active', 'trialing'].includes(profile?.plan_status || '')
+      ? profile?.plan_id
+      : null
+
+    if (!activePlanId) {
+      const { data: subscription, error: subscriptionError } = await adminClient
+        .from('subscriptions')
+        .select('id, status, plan_id')
+        .eq('account_id', profile?.account_id || user.id)
+        .in('status', ['active', 'trialing'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (subscriptionError) throw subscriptionError
+      activePlanId = subscription?.plan_id || null
+    }
+
+    if (!activePlanId) throw new Error('Plano ativo não encontrado')
 
     const { data: featureRows, error: featuresError } = await adminClient
       .from('plan_features')
       .select('feature_key, feature_value')
-      .eq('plan_id', subscription.plan_id)
+      .eq('plan_id', activePlanId)
 
     if (featuresError) throw featuresError
 

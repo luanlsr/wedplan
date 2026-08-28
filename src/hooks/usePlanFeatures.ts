@@ -37,6 +37,55 @@ export const usePlanFeatures = () => {
     setLoading(true);
 
     try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('plan_id, plan_status, billing_interval, plan_current_period_end, account_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      const directPlanId = (profile as any)?.plan_id;
+      const directPlanStatus = (profile as any)?.plan_status || 'active';
+      const directPlanIsEnabled = ['active', 'trialing', 'past_due'].includes(directPlanStatus);
+
+      if (directPlanId && directPlanIsEnabled) {
+        const { data: directPlan, error: directPlanError } = await supabase
+          .from('plans')
+          .select('id, code, name, price_monthly, price_yearly')
+          .eq('id', directPlanId)
+          .maybeSingle();
+
+        if (directPlanError) throw directPlanError;
+
+        if (directPlan) {
+          const { data: featureRows, error: featuresError } = await supabase
+            .from('plan_features')
+            .select('feature_key, feature_value')
+            .eq('plan_id', directPlanId);
+
+          if (featuresError) throw featuresError;
+
+          setSubscription({
+            id: `profile:${user.id}`,
+            status: directPlanStatus,
+            billing_interval: (profile as any)?.billing_interval || 'monthly',
+            current_period_end: (profile as any)?.plan_current_period_end,
+            plan: directPlan as CurrentPlan,
+          });
+
+          setFeatures(
+            (featureRows || []).reduce((acc, item: any) => ({
+              ...acc,
+              [item.feature_key]: item.feature_value,
+            }), {} as PlanFeatureMap)
+          );
+          return;
+        }
+      }
+
+      const accountId = (profile as any)?.account_id || user.id;
+
       const { data: sub, error: subError } = await supabase
         .from('subscriptions')
         .select(`
@@ -53,7 +102,7 @@ export const usePlanFeatures = () => {
             price_yearly
           )
         `)
-        .eq('account_id', user.id)
+        .eq('account_id', accountId)
         .in('status', ['active', 'trialing', 'past_due'])
         .order('created_at', { ascending: false })
         .limit(1)

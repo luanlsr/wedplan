@@ -134,6 +134,12 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
       account_id: userId,
       role_id: coupleRole?.id || null,
       role: 'couple',
+      plan_id: checkout.plan_id,
+      plan_status: status,
+      billing_interval: checkout.billing_interval,
+      plan_current_period_end: payment?.dueDate || payment?.originalDueDate || null,
+      plan_assigned_at: new Date().toISOString(),
+      asaas_customer_id: asaasCustomerId,
     }, { onConflict: 'id' })
 
   const weddingId = await applyWeddingDraft(adminClient, checkout, userId)

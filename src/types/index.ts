@@ -72,6 +72,10 @@ export interface WeddingData {
   asaas_subscription_id?: string;
   subscription_status?: "trial" | "active" | "past_due" | "canceled";
   account_status?: "trial" | "active" | "pending_payment" | "past_due" | "canceled";
+  plan_id?: string | null;
+  plan_status?: "incomplete" | "trialing" | "active" | "past_due" | "canceled" | "expired" | "pending_payment" | null;
+  billing_interval?: "monthly" | "yearly" | null;
+  plan_current_period_end?: string | null;
   userName?: string;
   guided_tour_completed_at?: string | null;
   casal: {
@@ -95,6 +99,10 @@ export interface Profile {
   full_name?: string;
   role: UserRole;
   asaas_customer_id?: string;
+  plan_id?: string | null;
+  plan_status?: string | null;
+  billing_interval?: string | null;
+  plan_current_period_end?: string | null;
   guided_tour_completed_at?: string | null;
 }
 

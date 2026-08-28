@@ -91,7 +91,7 @@ export const useWeddingData = () => {
         if (user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('full_name, wedding_id, role, role_id, guided_tour_completed_at, roles(name), accounts(status)')
+            .select('full_name, wedding_id, role, role_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_end, roles(name), accounts(status)')
             .eq('id', user.id)
             .maybeSingle();
           
@@ -139,15 +139,26 @@ export const useWeddingData = () => {
 
       // 'role' já leva em conta a blindagem por e-mail feita acima
       const userRole = role || 'couple';
-      const accountStatus = userProfile?.accounts?.status || 'active';
       const userName = userProfile?.full_name || '';
       const guidedTourCompletedAt = userProfile?.guided_tour_completed_at || null;
+      const planStatus = userProfile?.plan_status || null;
+      const legacyAccountStatus = userProfile?.accounts?.status || 'active';
+      const accountStatus =
+        planStatus === 'active' || planStatus === 'trialing' ? 'active' :
+        planStatus === 'past_due' ? 'past_due' :
+        planStatus === 'canceled' || planStatus === 'expired' ? 'canceled' :
+        planStatus === 'incomplete' || planStatus === 'pending_payment' ? 'pending_payment' :
+        legacyAccountStatus;
 
       if (!weddingId) {
         setData({
           ...INITIAL_DATA,
           role: userRole as UserRole,
           account_status: accountStatus,
+          plan_id: userProfile?.plan_id || null,
+          plan_status: planStatus,
+          billing_interval: userProfile?.billing_interval || null,
+          plan_current_period_end: userProfile?.plan_current_period_end || null,
           userName,
           guided_tour_completed_at: guidedTourCompletedAt
         });
@@ -173,6 +184,10 @@ export const useWeddingData = () => {
         id: wedding.id,
         role: userRole as UserRole,
         account_status: accountStatus,
+        plan_id: userProfile?.plan_id || null,
+        plan_status: planStatus,
+        billing_interval: userProfile?.billing_interval || null,
+        plan_current_period_end: userProfile?.plan_current_period_end || null,
         userName,
         guided_tour_completed_at: guidedTourCompletedAt,
         public_checkin_token: wedding.public_checkin_token,
