@@ -7,6 +7,7 @@ import { AlertTriangle } from 'lucide-react';
 import { AppLayout } from './layout/AppLayout';
 import { GlobalModals } from './layout/GlobalModals';
 import { GuidedTour } from './layout/GuidedTour';
+import { BrandLogo } from './layout/BrandLogo';
 import { Dashboard } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { SupplierDetails } from './suppliers/SupplierDetails';
@@ -43,7 +44,8 @@ export function MainApp() {
     addSupplier, updateSupplier, deleteSupplier, updateInstallment,
     addGuest, updateGuest, deleteGuest,
     addTask, updateTask, deleteTask,
-    updateConfig, updateWeddingInfo, reorderSuppliers, refreshData
+    updateConfig, updateWeddingInfo, reorderSuppliers,
+    refreshData, markGuidedTourCompleted
   } = useWeddingData();
   
   const { user } = useAuth();
@@ -211,6 +213,7 @@ export function MainApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
+          <BrandLogo size="md" />
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-muted-foreground font-bold tracking-widest uppercase text-xs">Carregando WedPlan...</p>
         </div>
@@ -391,8 +394,11 @@ export function MainApp() {
           data.role !== 'master' &&
           data.role !== 'staff' &&
           data.account_status !== 'pending_payment' &&
-          !isNewWedding
+          !isNewWedding &&
+          !data.guided_tour_completed_at
         }
+        completedAt={data.guided_tour_completed_at}
+        onComplete={markGuidedTourCompleted}
       />
     </AppLayout>
   );

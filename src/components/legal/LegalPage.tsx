@@ -1,5 +1,6 @@
 import { ArrowLeft, FileText, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { BrandLogo } from '../layout/BrandLogo';
 
 type LegalPageProps = {
   type: 'terms' | 'privacy';
@@ -90,9 +91,8 @@ export const LegalPage = ({ type }: LegalPageProps) => {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3 font-black text-foreground">
-            <img src="/image/favicon.png" alt="" className="h-9 w-9 object-contain" />
-            <span>WedPlan</span>
+          <Link to="/" className="flex items-center">
+            <BrandLogo size="sm" />
           </Link>
           <Link
             to="/"

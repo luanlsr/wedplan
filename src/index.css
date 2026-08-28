@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
@@ -71,6 +71,178 @@
 }
 
 @layer components {
+  .wedplan-landing {
+    background:
+      linear-gradient(180deg, #fbfaf8 0%, #fff 34%, #f7fbfc 62%, #fbfaf8 100%);
+  }
+
+  .wedplan-hero-surface {
+    background:
+      linear-gradient(115deg, #fffaf7 0%, #fff3ef 34%, #f4ddd8 64%, #e6f2f5 100%);
+    background-size: 190% 190%;
+    animation: wedplanGradientDrift 18s ease-in-out infinite;
+  }
+
+  .wedplan-aurora-field {
+    position: absolute;
+    inset: -18% -12%;
+    background:
+      linear-gradient(100deg, transparent 0 18%, rgb(200 124 115 / 0.24) 31%, transparent 47%),
+      linear-gradient(142deg, transparent 0 42%, rgb(86 154 174 / 0.22) 55%, transparent 72%),
+      linear-gradient(64deg, transparent 0 48%, rgb(232 182 123 / 0.16) 67%, transparent 86%);
+    background-size: 180% 180%;
+    filter: blur(26px);
+    opacity: 0.9;
+    animation: wedplanAuroraSweep 22s ease-in-out infinite;
+  }
+
+  .wedplan-noise-layer {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+    opacity: 0.08;
+    mix-blend-mode: multiply;
+  }
+
+  .wedplan-soft-grid {
+    background-image:
+      linear-gradient(hsl(225 20% 18% / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(225 20% 18% / 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(180deg, transparent 0%, black 18%, black 82%, transparent 100%);
+  }
+
+  .wedplan-hero-lines {
+    background-image:
+      repeating-linear-gradient(135deg, hsl(5 41% 62% / 0.08) 0 1px, transparent 1px 18px);
+  }
+
+  .wedplan-radial-vignette {
+    background:
+      radial-gradient(ellipse at top, transparent 0%, transparent 45%, rgb(255 255 255 / 0.7) 74%, #fbfaf8 100%),
+      linear-gradient(90deg, rgb(251 250 248 / 0.92), transparent 22%, transparent 78%, rgb(251 250 248 / 0.92));
+  }
+
+  .wedplan-section-mesh {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .wedplan-section-mesh::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(115deg, rgb(200 124 115 / 0.1), transparent 31%),
+      linear-gradient(245deg, rgb(86 154 174 / 0.11), transparent 36%),
+      repeating-linear-gradient(90deg, transparent 0 36px, rgb(15 23 42 / 0.035) 36px 37px);
+    opacity: 0.9;
+  }
+
+  .wedplan-dark-mesh {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .wedplan-dark-mesh::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(130deg, rgb(200 124 115 / 0.18), transparent 34%),
+      linear-gradient(250deg, rgb(66 153 174 / 0.18), transparent 40%),
+      repeating-linear-gradient(135deg, transparent 0 22px, rgb(255 255 255 / 0.035) 22px 23px);
+  }
+
+  .wedplan-premium-card {
+    position: relative;
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      linear-gradient(135deg, rgb(200 124 115 / 0.95), rgb(86 154 174 / 0.8)) border-box;
+    box-shadow:
+      0 24px 60px hsl(5 41% 42% / 0.22),
+      0 0 0 1px rgb(255 255 255 / 0.55) inset;
+  }
+
+  .wedplan-premium-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 24% 0%, rgb(200 124 115 / 0.18), transparent 32%),
+      radial-gradient(circle at 82% 8%, rgb(86 154 174 / 0.16), transparent 34%);
+    pointer-events: none;
+  }
+
+  .wedplan-premium-card::after {
+    content: "";
+    position: absolute;
+    inset-inline: 1.5rem;
+    top: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgb(200 124 115), rgb(86 154 174));
+    box-shadow: 0 0 22px rgb(200 124 115 / 0.55);
+  }
+
+  .wedplan-landing .wedplan-premium-card:hover {
+    transform: translateY(-15px);
+    box-shadow:
+      0 30px 70px hsl(5 41% 42% / 0.28),
+      0 0 0 1px rgb(255 255 255 / 0.65) inset;
+  }
+
+  .wedplan-gradient-text {
+    background: linear-gradient(92deg, #0f172a 0%, #9d564f 44%, #2d7181 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .wedplan-landing article,
+  .wedplan-landing details,
+  .wedplan-landing [data-landing-card] {
+    transition:
+      transform 240ms ease,
+      border-color 240ms ease,
+      background-color 240ms ease,
+      box-shadow 240ms ease;
+  }
+
+  .wedplan-landing article:hover,
+  .wedplan-landing details:hover,
+  .wedplan-landing [data-landing-card]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 42px hsl(225 30% 16% / 0.11);
+  }
+
+  .wedplan-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .wedplan-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 0%, rgb(255 255 255 / 0.28) 45%, transparent 58%);
+    transform: translateX(-120%);
+    animation: wedplanShine 5.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .wedplan-float-card {
+    animation: wedplanFloat 7s ease-in-out infinite;
+  }
+
+  .wedplan-animated-bar {
+    transform-origin: bottom;
+    animation: wedplanBarRise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   .wedplan-app {
     font-family: 'Manrope', system-ui, sans-serif;
     background:
@@ -88,7 +260,7 @@
   .wedplan-app h1,
   .wedplan-app h2,
   .wedplan-app h3 {
-    font-family: 'Manrope', system-ui, sans-serif;
+    font-family: 'Outfit', 'Manrope', system-ui, sans-serif;
     font-style: normal;
     letter-spacing: 0;
     text-transform: none;
@@ -289,4 +461,52 @@
 
 .animate-slide-up {
   animation: slideUp 0.3s ease-out;
+}
+
+@keyframes wedplanGradientDrift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes wedplanAuroraSweep {
+  0%, 100% {
+    transform: translate3d(-2%, 0, 0) skewY(-2deg);
+    background-position: 0% 45%;
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0) skewY(2deg);
+    background-position: 100% 55%;
+  }
+}
+
+@keyframes wedplanShine {
+  0%, 55% { transform: translateX(-120%); }
+  75%, 100% { transform: translateX(120%); }
+}
+
+@keyframes wedplanFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes wedplanBarRise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wedplan-hero-surface,
+  .wedplan-aurora-field,
+  .wedplan-shine::after,
+  .wedplan-float-card,
+  .wedplan-animated-bar,
+  .animate-slide-up {
+    animation: none !important;
+  }
 }

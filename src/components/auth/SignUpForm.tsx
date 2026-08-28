@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AuthLayout } from './AuthLayout';
+import { BrandLogo } from '../layout/BrandLogo';
 import { Button, Input } from '../ui';
 import { cn } from '../../lib/utils';
 import { maskPhone } from '../../utils/masks';
@@ -1001,9 +1002,8 @@ const CheckoutProgress = ({
   <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
     <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
       <div className="flex items-center justify-between gap-3 lg:w-56 lg:shrink-0">
-        <Link to="/" className="flex items-center gap-2">
-          <img src="/image/favicon.png" alt="" className="h-8 w-8 object-contain" />
-          <span className="text-lg font-black text-foreground">Wed<span className="text-primary">Plan</span></span>
+        <Link to="/" className="flex items-center">
+          <BrandLogo size="sm" />
         </Link>
         <button
           type="button"

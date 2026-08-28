@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, ClipboardList, Heart, LayoutDashboard, Wallet, X } from 'lucide-react';
 import { Button } from '../ui';
 
-const TOUR_STORAGE_KEY = 'wedplan_guided_tour_completed';
-
 const steps = [
   {
     icon: LayoutDashboard,
@@ -27,18 +25,26 @@ const steps = [
   },
 ];
 
-export const shouldShowGuidedTour = () => localStorage.getItem(TOUR_STORAGE_KEY) !== 'true';
-
-export const GuidedTour = ({ enabled }: { enabled: boolean }) => {
+export const GuidedTour = ({
+  enabled,
+  completedAt,
+  onComplete,
+}: {
+  enabled: boolean;
+  completedAt?: string | null;
+  onComplete?: () => Promise<void> | void;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (enabled && shouldShowGuidedTour()) {
+    if (enabled && !completedAt) {
       const timer = window.setTimeout(() => setIsOpen(true), 700);
       return () => window.clearTimeout(timer);
     }
-  }, [enabled]);
+    setIsOpen(false);
+  }, [completedAt, enabled]);
 
   if (!isOpen) return null;
 
@@ -46,9 +52,17 @@ export const GuidedTour = ({ enabled }: { enabled: boolean }) => {
   const StepIcon = step.icon;
   const isLastStep = stepIndex === steps.length - 1;
 
-  const closeTour = () => {
-    localStorage.setItem(TOUR_STORAGE_KEY, 'true');
-    setIsOpen(false);
+  const closeTour = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onComplete?.();
+      setIsOpen(false);
+    } catch {
+      setIsOpen(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -69,6 +83,7 @@ export const GuidedTour = ({ enabled }: { enabled: boolean }) => {
           <button
             type="button"
             onClick={closeTour}
+            disabled={saving}
             className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Fechar tour"
           >
@@ -89,7 +104,7 @@ export const GuidedTour = ({ enabled }: { enabled: boolean }) => {
           </div>
 
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={closeTour} className="h-10 rounded-xl">
+            <Button type="button" variant="outline" onClick={closeTour} className="h-10 rounded-xl" disabled={saving}>
               Pular
             </Button>
             <Button
@@ -98,6 +113,7 @@ export const GuidedTour = ({ enabled }: { enabled: boolean }) => {
                 if (isLastStep) closeTour();
                 else setStepIndex((current) => current + 1);
               }}
+              disabled={saving}
               className="h-10 rounded-xl gap-2 font-extrabold"
             >
               {isLastStep ? (

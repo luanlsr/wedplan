@@ -73,6 +73,7 @@ export interface WeddingData {
   subscription_status?: "trial" | "active" | "past_due" | "canceled";
   account_status?: "trial" | "active" | "pending_payment" | "past_due" | "canceled";
   userName?: string;
+  guided_tour_completed_at?: string | null;
   casal: {
     nome1: string;
     nome2: string;
@@ -94,6 +95,7 @@ export interface Profile {
   full_name?: string;
   role: UserRole;
   asaas_customer_id?: string;
+  guided_tour_completed_at?: string | null;
 }
 
 export interface FinancialStats {

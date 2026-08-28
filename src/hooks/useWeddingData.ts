@@ -91,7 +91,7 @@ export const useWeddingData = () => {
         if (user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('full_name, wedding_id, role, role_id, roles(name), accounts(status)')
+            .select('full_name, wedding_id, role, role_id, guided_tour_completed_at, roles(name), accounts(status)')
             .eq('id', user.id)
             .maybeSingle();
           
@@ -141,13 +141,15 @@ export const useWeddingData = () => {
       const userRole = role || 'couple';
       const accountStatus = userProfile?.accounts?.status || 'active';
       const userName = userProfile?.full_name || '';
+      const guidedTourCompletedAt = userProfile?.guided_tour_completed_at || null;
 
       if (!weddingId) {
         setData({
           ...INITIAL_DATA,
           role: userRole as UserRole,
           account_status: accountStatus,
-          userName
+          userName,
+          guided_tour_completed_at: guidedTourCompletedAt
         });
         setLoading(false);
         return;
@@ -172,6 +174,7 @@ export const useWeddingData = () => {
         role: userRole as UserRole,
         account_status: accountStatus,
         userName,
+        guided_tour_completed_at: guidedTourCompletedAt,
         public_checkin_token: wedding.public_checkin_token,
         casal: {
           nome1: wedding.couple_name1 || '',
@@ -592,6 +595,33 @@ export const useWeddingData = () => {
     }
   };
 
+  const markGuidedTourCompleted = async () => {
+    if (!user) return;
+    const completedAt = new Date().toISOString();
+    const previousValue = data.guided_tour_completed_at || null;
+
+    setData(prev => ({
+      ...prev,
+      guided_tour_completed_at: completedAt
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ guided_tour_completed_at: completedAt })
+        .eq('id', user.id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Erro ao salvar conclusão do tour:', err);
+      setData(prev => ({
+        ...prev,
+        guided_tour_completed_at: previousValue
+      }));
+      throw err;
+    }
+  };
+
 
   const reorderSuppliers = async (suppliers: Supplier[]) => {
     if (!user) return;
@@ -626,6 +656,7 @@ export const useWeddingData = () => {
     deleteTask,
     updateWeddingInfo,
     updateConfig,
+    markGuidedTourCompleted,
     reorderSuppliers,
     refreshData: loadData
   };

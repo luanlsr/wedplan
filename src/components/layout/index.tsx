@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, NavLink } from "react-router-dom";
 import { useState } from "react";
 import { WeddingSwitcher } from "./WeddingSwitcher";
+import { BrandLogo } from "./BrandLogo";
 
 // Estilos customizados para tooltips premium quando colapsado
 const tooltipStyles = `
@@ -138,14 +139,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
                 transition={{ duration: 0.4, ease: "backOut" }}
                 className="w-full h-full flex items-center justify-center"
               >
-                <img 
-                  src="/image/favicon.png" 
-                  alt="WedPlan" 
-                  className={cn(
-                    "w-full h-full object-contain filter drop-shadow-lg",
-                    isDark && "invert brightness-0"
-                  )} 
-                />
+                <BrandLogo variant="mark" size="md" />
               </motion.div>
             ) : (
               <motion.div
@@ -154,13 +148,9 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="w-full h-full"
+                className="w-full h-full flex items-center"
               >
-                <img 
-                  src={isDark ? "/image/wedplan_logo_white.png" : "/image/wedplan_logo.png"} 
-                  alt="WedPlan Logo" 
-                  className="w-full h-full object-contain filter drop-shadow-xl" 
-                />
+                <BrandLogo size="md" showTagline />
               </motion.div>
 
             )}
@@ -437,13 +427,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 export const Header = ({ title, isDark, toggleTheme }: { title: string; isDark: boolean; toggleTheme?: () => void }) => (
   <header className="mb-6 sm:mb-8 flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-card/80 px-4 py-4 shadow-sm backdrop-blur-xl sm:px-5">
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
-        <img 
-          src="/image/favicon.png" 
-          alt="WedPlan" 
-          className={cn("h-7 w-7 object-contain", isDark && "invert brightness-0")} 
-        />
-      </div>
+      <BrandLogo variant="mark" size="sm" />
       <div className="min-w-0">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-primary">WedPlan</p>
         <h1 className="truncate text-xl font-extrabold text-foreground sm:text-2xl">

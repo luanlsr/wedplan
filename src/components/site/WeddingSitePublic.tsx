@@ -151,7 +151,7 @@ export const WeddingSitePublic = () => {
       <div className="flex min-h-screen items-center justify-center bg-[#fbfaf8] px-4 text-center">
         <div>
           <Heart className="mx-auto mb-4 text-primary" size={40} />
-          <h1 className="text-3xl font-bold text-slate-950 [font-family:'Cormorant_Garamond',serif]">Site não encontrado</h1>
+          <h1 className="text-3xl font-bold text-slate-950 [font-family:'Outfit',sans-serif]">Site não encontrado</h1>
           <p className="mt-2 text-sm font-medium text-slate-600">Confira o endereço enviado pelo casal.</p>
         </div>
       </div>
@@ -174,7 +174,7 @@ export const WeddingSitePublic = () => {
               <CalendarDays size={14} />
               Nosso casamento
             </div>
-            <h1 className="text-6xl font-bold leading-[0.9] [font-family:'Cormorant_Garamond',serif] sm:text-8xl">
+            <h1 className="text-6xl font-bold leading-[0.9] [font-family:'Outfit',sans-serif] sm:text-8xl">
               {site.title || 'Nosso grande dia'}
             </h1>
             <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-white/90">
@@ -201,7 +201,7 @@ export const WeddingSitePublic = () => {
           <section id="rsvp" className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">RSVP</p>
-              <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Cormorant_Garamond',serif]">Confirme sua presença</h2>
+              <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Outfit',sans-serif]">Confirme sua presença</h2>
               <p className="mt-4 text-sm font-medium leading-6 text-slate-600">Sua resposta ajuda o casal a organizar cada detalhe com carinho.</p>
             </div>
 
@@ -247,7 +247,7 @@ export const WeddingSitePublic = () => {
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Lista de presentes</p>
-                <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Cormorant_Garamond',serif]">Escolha um presente</h2>
+                <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Outfit',sans-serif]">Escolha um presente</h2>
               </div>
             </div>
 
@@ -280,7 +280,7 @@ export const WeddingSitePublic = () => {
           <section className="grid gap-8 lg:grid-cols-[1fr_1fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Mensagens</p>
-              <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Cormorant_Garamond',serif]">Deixe seu carinho</h2>
+              <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Outfit',sans-serif]">Deixe seu carinho</h2>
               <div className="mt-6 grid gap-3">
                 {messages.length === 0 ? (
                   <p className="text-sm font-medium text-slate-600">As mensagens aprovadas aparecerão aqui.</p>

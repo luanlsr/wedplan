@@ -1,5 +1,6 @@
 import { Heart } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { BrandLogo } from "../layout/BrandLogo";
 
 export const AuthLayout = ({
   children,
@@ -36,16 +37,9 @@ export const AuthLayout = ({
       <div className={cn("w-full max-w-[450px] relative z-10 animate-in fade-in zoom-in duration-700", className)}>
         {!hideBrand && (
           <div className="flex flex-col items-center mb-10">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-2xl shadow-primary/20 mb-6 scale-110 hover:rotate-3 transition-transform duration-500">
-              <div className="w-full h-full rounded-[1.4rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black italic text-3xl shadow-inner">
-                WP
-              </div>
-            </div>
-            <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase italic mb-2">
-              Wed<span className="text-primary not-italic">Plan</span>
-            </h1>
+            <BrandLogo variant="stacked" size="lg" showTagline />
             <p className="text-muted-foreground font-medium text-center px-4 tracking-tight">
-              Wedding Management Suite
+              Planejamento de casamento em um só lugar
             </p>
           </div>
         )}
