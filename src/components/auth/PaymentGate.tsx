@@ -6,6 +6,19 @@ interface PaymentGateProps {
   email?: string;
 }
 
+const paymentFallbackError = 'Não conseguimos iniciar o pagamento agora. Tente novamente em alguns minutos ou fale com o suporte.';
+
+const getPaymentErrorMessage = (result: any) => {
+  const message = String(result?.userMessage || result?.error || paymentFallbackError);
+  const technicalPatterns = ['api', 'asaas', 'supabase', 'service_role', 'invalid key', 'chave api', 'not configured', 'jwt', 'authorization'];
+
+  if (technicalPatterns.some((pattern) => message.toLowerCase().includes(pattern))) {
+    return paymentFallbackError;
+  }
+
+  return message;
+};
+
 export function PaymentGate({ email }: PaymentGateProps) {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentValue, setPaymentValue] = useState<number>(39.9);
@@ -21,12 +34,16 @@ export function PaymentGate({ email }: PaymentGateProps) {
     setError(null);
     try {
       if (!email) throw new Error('E-mail da conta não encontrado');
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(supabaseAnonKey ? { Authorization: `Bearer ${supabaseAnonKey}`, apikey: supabaseAnonKey } : {}),
+          },
           body: JSON.stringify({
             fullName: email.split('@')[0],
             email,
@@ -39,7 +56,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
         }
       );
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Erro ao gerar assinatura');
+      if (!res.ok) throw new Error(getPaymentErrorMessage(result));
       if (result.paymentUrl) setPaymentUrl(result.paymentUrl);
       if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
     } catch (err: any) {

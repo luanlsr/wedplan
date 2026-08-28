@@ -64,6 +64,48 @@ const getOrInviteUser = async (adminClient: any, checkout: any) => {
   return data?.user?.id
 }
 
+const getSecondNameFromWeddingName = (weddingName: string) => {
+  const parts = String(weddingName || '').split('&')
+  return parts[1]?.trim() || ''
+}
+
+const applyWeddingDraft = async (adminClient: any, checkout: any, userId: string) => {
+  const draft = checkout.metadata?.weddingDraft
+  if (!draft) return null
+
+  const coupleName1 = String(draft.partnerName || checkout.full_name || '').trim()
+  const coupleName2 = getSecondNameFromWeddingName(draft.weddingName)
+  const weddingDate = draft.weddingDate || null
+
+  if (!coupleName1 && !coupleName2 && !weddingDate) return null
+
+  const { data: wedding, error } = await adminClient
+    .from('weddings')
+    .upsert({
+      owner_id: userId,
+      couple_name1: coupleName1,
+      couple_name2: coupleName2,
+      wedding_date: weddingDate,
+      account_id: userId,
+    }, { onConflict: 'owner_id' })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.warn('[Asaas Webhook] Não foi possível aplicar rascunho do casamento:', error.message)
+    return null
+  }
+
+  if (wedding?.id) {
+    await adminClient
+      .from('profiles')
+      .update({ wedding_id: wedding.id })
+      .eq('id', userId)
+  }
+
+  return wedding?.id || null
+}
+
 const updateAccountAndSubscription = async (adminClient: any, checkout: any, userId: string, payment: any, status: string) => {
   const asaasCustomerId = payment?.customer || checkout.asaas_customer_id
   const asaasSubscriptionId = payment?.subscription || checkout.asaas_subscription_id
@@ -94,6 +136,8 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
       role: 'couple',
     }, { onConflict: 'id' })
 
+  const weddingId = await applyWeddingDraft(adminClient, checkout, userId)
+
   const subscriptionPayload = {
     account_id: userId,
     plan_id: checkout.plan_id,
@@ -106,6 +150,7 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
     metadata: {
       lastPaymentId: payment?.id || checkout.asaas_payment_id || null,
       checkoutSessionId: checkout.id,
+      weddingId,
     },
   }
 
@@ -185,7 +230,7 @@ serve(async (req) => {
 
     let checkoutQuery = adminClient
       .from('checkout_sessions')
-      .select('id, plan_id, billing_interval, status, full_name, email, asaas_customer_id, asaas_subscription_id, asaas_payment_id, checkout_url, created_user_id')
+      .select('id, plan_id, billing_interval, status, full_name, email, asaas_customer_id, asaas_subscription_id, asaas_payment_id, checkout_url, created_user_id, metadata')
       .order('created_at', { ascending: false })
       .limit(1)
 

@@ -19,7 +19,7 @@ import { cn } from "../../lib/utils";
 
 type LandingPageProps = {
   onLogin: () => void;
-  onGetStarted: () => void;
+  onGetStarted: (options?: { plan?: string; billing?: 'monthly' | 'yearly' }) => void;
 };
 
 const metrics = [
@@ -80,12 +80,14 @@ const includedItems = [
 
 const pricingPlans = [
   {
+    code: "essential",
     name: "Essencial",
     price: "14,90",
     caption: "para começar sem planilhas",
     features: ["Até 150 convidados", "Fornecedores e tarefas", "Organização do casal"],
   },
   {
+    code: "premium",
     name: "Premium",
     price: "24,90",
     caption: "gestão completa do evento",
@@ -93,6 +95,7 @@ const pricingPlans = [
     highlight: "Mais escolhido",
   },
   {
+    code: "pro_couple",
     name: "Pro Casal",
     price: "39,90",
     caption: "site, RSVP e presentes",
@@ -286,7 +289,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   </ul>
 
                   <Button
-                    onClick={onGetStarted}
+                    onClick={() => onGetStarted({ plan: plan.code, billing: "monthly" })}
                     className="mt-7 h-12 w-full rounded-lg text-sm font-extrabold"
                     variant={plan.name === "Pro Casal" ? "primary" : "outline"}
                   >
@@ -325,7 +328,12 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
       </main>
 
       <footer className="bg-[#fbfaf8] px-4 py-8 text-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-        WedPlan 2026. Planejamento do casamento, sem caos.
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <span>WedPlan 2026. Planejamento do casamento, sem caos.</span>
+          <span className="hidden text-slate-300 sm:inline">|</span>
+          <a href="/termos-de-uso" className="hover:text-primary">Termos</a>
+          <a href="/politica-de-privacidade" className="hover:text-primary">Privacidade</a>
+        </div>
       </footer>
     </div>
   );

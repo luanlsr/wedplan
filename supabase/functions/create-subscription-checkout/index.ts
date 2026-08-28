@@ -13,6 +13,33 @@ const ASAAS_BASE_URL = 'https://api.asaas.com/v3'
 
 const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase()
 const onlyDigits = (value?: string) => String(value || '').replace(/\D/g, '')
+const genericPaymentMessage = 'Não conseguimos iniciar o pagamento agora. Tente novamente em alguns minutos ou fale com o suporte.'
+
+class PublicCheckoutError extends Error {
+  constructor(message: string, status = 400, code = 'VALIDATION_ERROR') {
+    super(message)
+    this.status = status
+    this.code = code
+    this.publicMessage = message
+  }
+}
+
+class InternalCheckoutError extends Error {
+  constructor(code = 'CHECKOUT_ERROR', publicMessage = genericPaymentMessage, status = 400) {
+    super(code)
+    this.status = status
+    this.code = code
+    this.publicMessage = publicMessage
+  }
+}
+
+const safeJson = async (res: Response) => {
+  try {
+    return await res.json()
+  } catch {
+    return {}
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -33,7 +60,10 @@ serve(async (req) => {
     )
 
     const ASAAS_API_KEY = Deno.env.get('ASAAS_API_KEY')
-    if (!ASAAS_API_KEY) throw new Error('ASAAS_API_KEY not configured')
+    if (!ASAAS_API_KEY) {
+      console.error('[create-subscription-checkout] ASAAS_API_KEY não configurada')
+      throw new InternalCheckoutError('PAYMENT_PROVIDER_NOT_CONFIGURED')
+    }
 
     const body = await req.json()
     const fullName = String(body.fullName || '').trim()
@@ -44,11 +74,12 @@ serve(async (req) => {
     const billingInterval = body.billingInterval === 'yearly' ? 'yearly' : 'monthly'
     const acceptedTerms = Boolean(body.acceptedTerms)
     const acceptedPrivacy = Boolean(body.acceptedPrivacy)
-    const marketingConsent = Boolean(body.marketingConsent)
+    const weddingDraft = typeof body.weddingDraft === 'object' && body.weddingDraft ? body.weddingDraft : null
+    const paymentMethod = String(body.paymentMethod || 'asaas_checkout')
 
-    if (!fullName) throw new Error('Informe o nome completo')
-    if (!email || !email.includes('@')) throw new Error('Informe um e-mail válido')
-    if (!acceptedTerms || !acceptedPrivacy) throw new Error('Aceite os termos e a política de privacidade')
+    if (!fullName) throw new PublicCheckoutError('Informe o nome completo')
+    if (!email || !email.includes('@')) throw new PublicCheckoutError('Informe um e-mail válido')
+    if (!acceptedTerms || !acceptedPrivacy) throw new PublicCheckoutError('Aceite os termos e a política de privacidade')
 
     const { data: plan, error: planError } = await supabaseClient
       .from('plans')
@@ -57,11 +88,14 @@ serve(async (req) => {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (planError) throw planError
-    if (!plan) throw new Error('Plano indisponível')
+    if (planError) {
+      console.error('[create-subscription-checkout] Erro ao buscar plano:', planError)
+      throw new InternalCheckoutError('PLAN_LOOKUP_ERROR')
+    }
+    if (!plan) throw new PublicCheckoutError('Plano indisponível')
 
     const value = Number(billingInterval === 'yearly' ? (plan.price_yearly || plan.price_monthly * 12) : plan.price_monthly)
-    if (!value || value <= 0) throw new Error('Valor do plano inválido')
+    if (!value || value <= 0) throw new PublicCheckoutError('Valor do plano inválido')
 
     const customerRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
       method: 'POST',
@@ -79,10 +113,10 @@ serve(async (req) => {
       }),
     })
 
-    const customer = await customerRes.json()
+    const customer = await safeJson(customerRes)
     if (!customerRes.ok) {
       console.error('[create-subscription-checkout] Erro ao criar cliente:', customer)
-      throw new Error(customer.errors?.[0]?.description || 'Erro ao criar cliente no Asaas')
+      throw new InternalCheckoutError('ASAAS_CUSTOMER_ERROR', genericPaymentMessage, 502)
     }
 
     const nextDueDate = new Date()
@@ -106,10 +140,10 @@ serve(async (req) => {
       }),
     })
 
-    const subscription = await subscriptionRes.json()
+    const subscription = await safeJson(subscriptionRes)
     if (!subscriptionRes.ok) {
       console.error('[create-subscription-checkout] Erro ao criar assinatura:', subscription)
-      throw new Error(subscription.errors?.[0]?.description || 'Erro ao criar assinatura no Asaas')
+      throw new InternalCheckoutError('ASAAS_SUBSCRIPTION_ERROR', genericPaymentMessage, 502)
     }
 
     let paymentUrl = subscription.invoiceUrl || subscription.bankSlipUrl || null
@@ -124,11 +158,13 @@ serve(async (req) => {
         },
       })
 
-      const payments = await paymentsRes.json()
+      const payments = await safeJson(paymentsRes)
       const firstPayment = payments?.data?.[0]
       if (paymentsRes.ok && firstPayment) {
         firstPaymentId = firstPayment.id || null
         paymentUrl = firstPayment.invoiceUrl || firstPayment.bankSlipUrl || null
+      } else if (!paymentsRes.ok) {
+        console.warn('[create-subscription-checkout] Não foi possível buscar primeira cobrança:', payments)
       }
     }
 
@@ -148,7 +184,7 @@ serve(async (req) => {
         checkout_url: paymentUrl,
         accepted_terms_at: new Date().toISOString(),
         accepted_privacy_at: new Date().toISOString(),
-        marketing_consent: marketingConsent,
+        marketing_consent: false,
         source: body.source || 'landing',
         user_agent: req.headers.get('user-agent'),
         metadata: {
@@ -156,12 +192,17 @@ serve(async (req) => {
           planName: plan.name,
           value,
           billingInterval,
+          weddingDraft,
+          paymentMethod,
         },
       })
       .select('id')
       .single()
 
-    if (checkoutError) throw checkoutError
+    if (checkoutError) {
+      console.error('[create-subscription-checkout] Erro ao salvar checkout:', checkoutError)
+      throw new InternalCheckoutError('CHECKOUT_PERSISTENCE_ERROR')
+    }
 
     return new Response(JSON.stringify({
       success: true,
@@ -178,10 +219,19 @@ serve(async (req) => {
       status: 200,
     })
   } catch (error) {
-    console.error('[create-subscription-checkout] Erro:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
+    const publicMessage = error.publicMessage || genericPaymentMessage
+    const status = error.status || 400
+    const code = error.code || 'CHECKOUT_ERROR'
+
+    console.error('[create-subscription-checkout] Erro:', {
+      code,
+      message: error.message,
+      publicMessage,
+    })
+
+    return new Response(JSON.stringify({ error: publicMessage, userMessage: publicMessage, code }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status,
     })
   }
 })

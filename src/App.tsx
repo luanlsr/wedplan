@@ -8,6 +8,7 @@ import { ResetPassword } from './components/auth/ResetPassword';
 import { LandingPage } from './components/layout/LandingPage';
 import { CookieConsent } from './components/layout/CookieConsent';
 import { WeddingSitePublic } from './components/site/WeddingSitePublic';
+import { LegalPage } from './components/legal/LegalPage';
 import { Loader2 } from 'lucide-react';
 import { ConfirmProvider } from './components/ui';
 
@@ -31,29 +32,38 @@ function AppRoutes() {
       <Route path="/" element={
         (user || hasToken) ? <MainApp /> : 
         <LandingPage 
-          onGetStarted={() => navigate('/signup')} 
+          onGetStarted={(options) => {
+            const params = new URLSearchParams();
+            if (options?.plan) params.set('plan', options.plan);
+            if (options?.billing) params.set('billing', options.billing);
+            navigate(`/checkout/dados-pessoais${params.toString() ? `?${params.toString()}` : ''}`);
+          }}
           onLogin={() => navigate('/login')} 
         />
       } />
 
       <Route path="/casamento/:slug" element={<WeddingSitePublic />} />
-
-      <Route path="/login" element={
+      <Route path="/termos-de-uso" element={<LegalPage type="terms" />} />
+      <Route path="/politica-de-privacidade" element={<LegalPage type="privacy" />} />
+      <Route path="/checkout" element={<Navigate to="/checkout/dados-pessoais" replace />} />
+      <Route path="/checkout/:step" element={
         user ? <Navigate to="/" replace /> :
-        <LoginForm 
-          onSuccess={() => navigate('/')} 
-          onNavigateToSignUp={() => navigate('/signup')}
-          onNavigateToForgot={() => navigate('/forgot-password')}
-        />
-      } />
-
-      <Route path="/signup" element={
-        user ? <Navigate to="/" replace /> :
-        <SignUpForm 
+        <SignUpForm
           onSuccess={() => navigate('/')} 
           onNavigateToLogin={() => navigate('/login')}
         />
       } />
+
+      <Route path="/login" element={
+        user ? <Navigate to="/" replace /> :
+        <LoginForm
+          onSuccess={() => navigate('/')} 
+          onNavigateToSignUp={() => navigate('/checkout/dados-pessoais')}
+          onNavigateToForgot={() => navigate('/forgot-password')}
+        />
+      } />
+
+      <Route path="/signup" element={<Navigate to="/checkout/dados-pessoais" replace />} />
 
       <Route path="/forgot-password" element={
         <ForgotPassword 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Cookie, ShieldCheck, X } from 'lucide-react';
 import { Button } from '../ui';
 import { supabase } from '../../lib/supabase';
@@ -64,7 +65,10 @@ export const CookieConsent = () => {
           <div>
             <p className="text-sm font-black text-foreground">Privacidade e cookies</p>
             <p className="mt-1 max-w-3xl text-xs font-medium leading-5 text-muted-foreground">
-              Usamos cookies necessários para o funcionamento do WedPlan. Cookies de análise, preferências e marketing só serão usados se você autorizar.
+              Usamos cookies necessários para o funcionamento do WedPlan. Cookies de análise, preferências e marketing só serão usados se você autorizar.{' '}
+              <Link to="/politica-de-privacidade" className="font-black text-primary underline underline-offset-4">
+                Política de Privacidade
+              </Link>
             </p>
 
             {settingsOpen && (
