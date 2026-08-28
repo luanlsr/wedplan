@@ -1,52 +1,27 @@
-import { useEffect, useState, type ElementType, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, Gift, Heart, Loader2, Mail, MessageSquareHeart, Phone, Send, User } from 'lucide-react';
+import { useEffect, useMemo, useState, type CSSProperties, type ElementType, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { CheckCircle2, Gift, Heart, Loader2, Mail, MessageSquareHeart, Phone, Send, User } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Button, Input } from '../ui';
 import { supabase } from '../../lib/supabase';
-import heroImage from '../../assets/hero.png';
-
-type PublicSite = {
-  id: string;
-  wedding_id: string;
-  slug: string;
-  title: string | null;
-  welcome_message: string | null;
-  cover_image_url: string | null;
-  rsvp_enabled: boolean;
-  gift_list_enabled: boolean;
-  messages_enabled: boolean;
-};
-
-type GiftItem = {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  image_url: string | null;
-  price: number | null;
-  buy_url: string | null;
-  is_bought: boolean;
-};
-
-type GuestMessage = {
-  id: string;
-  author_name: string;
-  message: string;
-  created_at: string;
-};
-
-const formatMoney = (value?: number | null) => {
-  if (!value) return null;
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { maskPhone } from '../../utils/masks';
+import { WeddingSitePreview } from './WeddingSitePreview';
+import type { GiftCategory, GiftItem, SiteEvent, SiteImage, StoryItem, WeddingSite } from './weddingSiteTypes';
 
 export const WeddingSitePublic = () => {
   const { slug } = useParams();
-  const [site, setSite] = useState<PublicSite | null>(null);
+  const [site, setSite] = useState<WeddingSite | null>(null);
+  const [heroImages, setHeroImages] = useState<SiteImage[]>([]);
+  const [galleryImages, setGalleryImages] = useState<SiteImage[]>([]);
+  const [storyItems, setStoryItems] = useState<StoryItem[]>([]);
+  const [events, setEvents] = useState<SiteEvent[]>([]);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
-  const [messages, setMessages] = useState<GuestMessage[]>([]);
+  const [categories, setCategories] = useState<GiftCategory[]>([]);
+  const [messages, setMessages] = useState<{ id: string; author_name: string; message: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [rsvpSent, setRsvpSent] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
+  const [submittingRsvp, setSubmittingRsvp] = useState(false);
   const [rsvpForm, setRsvpForm] = useState({ full_name: '', phone: '', email: '', is_attending: true });
   const [messageForm, setMessageForm] = useState({ author_name: '', author_email: '', message: '' });
 
@@ -61,40 +36,79 @@ export const WeddingSitePublic = () => {
     try {
       const { data: siteData, error: siteError } = await supabase
         .from('wedding_sites')
-        .select('id, wedding_id, slug, title, welcome_message, cover_image_url, rsvp_enabled, gift_list_enabled, messages_enabled')
+        .select('*')
         .eq('slug', slug)
         .eq('status', 'published')
         .maybeSingle();
 
       if (siteError) throw siteError;
-      setSite(siteData as PublicSite | null);
+      if (!siteData) {
+        setSite(null);
+        return;
+      }
 
-      if (!siteData) return;
+      const currentSite = siteData as WeddingSite;
+      setSite(currentSite);
 
-      const [giftsResult, messagesResult] = await Promise.all([
-        siteData.gift_list_enabled
+      const [imagesResult, storyResult, eventsResult, giftsResult, categoriesResult, messagesResult] = await Promise.all([
+        supabase
+          .from('wedding_site_images')
+          .select('*')
+          .eq('wedding_site_id', currentSite.id)
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('wedding_site_story_items')
+          .select('*')
+          .eq('wedding_site_id', currentSite.id)
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('wedding_site_events')
+          .select('*')
+          .eq('wedding_site_id', currentSite.id)
+          .order('sort_order', { ascending: true }),
+        currentSite.gift_list_enabled
           ? supabase
               .from('lista_presentes')
-              .select('id, title, subtitle, image_url, price, buy_url, is_bought')
-              .eq('wedding_id', siteData.wedding_id)
+              .select('id, title, subtitle, image_url, price, buy_url, wedding_id, brand, is_featured, is_bought, bought_by, category, created_at')
+              .eq('wedding_id', currentSite.wedding_id)
+              .order('is_bought', { ascending: true })
+              .order('is_featured', { ascending: false })
               .order('created_at', { ascending: false })
           : Promise.resolve({ data: [], error: null }),
-        siteData.messages_enabled
+        currentSite.gift_list_enabled
+          ? supabase
+              .from('categorias_presentes')
+              .select('id, wedding_id, name, active')
+              .eq('wedding_id', currentSite.wedding_id)
+              .eq('active', true)
+              .order('name', { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
+        currentSite.messages_enabled
           ? supabase
               .from('guest_messages')
-              .select('id, author_name, message, created_at')
-              .eq('wedding_id', siteData.wedding_id)
+              .select('id, author_name, message')
+              .eq('wedding_id', currentSite.wedding_id)
               .eq('status', 'approved')
               .order('created_at', { ascending: false })
               .limit(12)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
+      if (imagesResult.error) throw imagesResult.error;
+      if (storyResult.error) throw storyResult.error;
+      if (eventsResult.error) throw eventsResult.error;
       if (giftsResult.error) throw giftsResult.error;
+      if (categoriesResult.error) throw categoriesResult.error;
       if (messagesResult.error) throw messagesResult.error;
 
+      const images = (imagesResult.data || []) as SiteImage[];
+      setHeroImages(images.filter((image) => image.image_role === 'hero'));
+      setGalleryImages(images.filter((image) => image.image_role === 'gallery'));
+      setStoryItems((storyResult.data || []) as StoryItem[]);
+      setEvents((eventsResult.data || []) as SiteEvent[]);
       setGifts((giftsResult.data || []) as GiftItem[]);
-      setMessages((messagesResult.data || []) as GuestMessage[]);
+      setCategories((categoriesResult.data || []) as GiftCategory[]);
+      setMessages((messagesResult.data || []) as { id: string; author_name: string; message: string }[]);
     } catch (error) {
       console.error('[WeddingSitePublic] Erro ao carregar site:', error);
     } finally {
@@ -104,19 +118,26 @@ export const WeddingSitePublic = () => {
 
   const submitRsvp = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!site) return;
+    if (!site || !slug) return;
+    setSubmittingRsvp(true);
 
-    const { error } = await supabase.from('confirmacoes').insert({
-      wedding_id: site.wedding_id,
-      full_name: rsvpForm.full_name,
-      phone: rsvpForm.phone || null,
-      email: rsvpForm.email || null,
-      is_attending: rsvpForm.is_attending,
+    const { error } = await supabase.rpc('submit_wedding_site_rsvp', {
+      p_slug: slug,
+      p_full_name: rsvpForm.full_name,
+      p_phone: rsvpForm.phone || null,
+      p_email: rsvpForm.email || null,
+      p_is_attending: rsvpForm.is_attending,
+      p_children: [],
     });
+
+    setSubmittingRsvp(false);
 
     if (!error) {
       setRsvpSent(true);
       setRsvpForm({ full_name: '', phone: '', email: '', is_attending: true });
+      if (rsvpForm.is_attending) {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.65 }, colors: ['#2f3829', '#c7a76b', '#fbfaf7'] });
+      }
     }
   };
 
@@ -138,9 +159,21 @@ export const WeddingSitePublic = () => {
     }
   };
 
+  const hasPublicContent = useMemo(() => {
+    return storyItems.length > 0 || galleryImages.length > 0 || events.length > 0 || gifts.length > 0;
+  }, [storyItems.length, galleryImages.length, events.length, gifts.length]);
+  const themeStyle = site ? {
+    '--wedsite-font-primary': `'${site.font_primary || 'Playfair Display'}', serif`,
+    '--wedsite-font-secondary': `'${site.font_secondary || 'Manrope'}', sans-serif`,
+    '--wedsite-color-primary': site.color_primary || '#8b6f43',
+    '--wedsite-color-secondary': site.color_secondary || '#2f3829',
+    '--wedsite-bg-primary': site.background_primary || '#fbfaf7',
+    '--wedsite-bg-secondary': site.background_secondary || '#ffffff',
+  } as CSSProperties : undefined;
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#fbfaf8]">
+      <div className="flex min-h-screen items-center justify-center bg-[#fbfaf7]">
         <Loader2 className="animate-spin text-primary" size={36} />
       </div>
     );
@@ -148,7 +181,7 @@ export const WeddingSitePublic = () => {
 
   if (!site) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#fbfaf8] px-4 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#fbfaf7] px-4 text-center">
         <div>
           <Heart className="mx-auto mb-4 text-primary" size={40} />
           <h1 className="text-3xl font-bold text-slate-950 [font-family:'Outfit',sans-serif]">Site não encontrado</h1>
@@ -159,178 +192,139 @@ export const WeddingSitePublic = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#fbfaf8] text-slate-950 [font-family:'Manrope',sans-serif]">
-      <section className="relative min-h-[92vh] overflow-hidden">
-        <img
-          src={site.cover_image_url || heroImage}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#fbfaf8]" />
+    <div style={themeStyle} className="bg-[var(--wedsite-bg-primary)] [font-family:var(--wedsite-font-secondary)]">
+      <WeddingSitePreview
+        site={site}
+        heroImages={heroImages}
+        galleryImages={galleryImages}
+        storyItems={storyItems}
+        events={events}
+        gifts={gifts}
+        categories={categories}
+        showRsvpPreview={false}
+        giftHref={`/casamento/${site.slug}/presentes`}
+      />
 
-        <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-end px-4 pb-14 pt-20 sm:px-6 lg:px-8">
-          <div className="max-w-3xl text-white">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/15 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] backdrop-blur">
-              <CalendarDays size={14} />
-              Nosso casamento
-            </div>
-            <h1 className="text-6xl font-bold leading-[0.9] [font-family:'Outfit',sans-serif] sm:text-8xl">
-              {site.title || 'Nosso grande dia'}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-white/90">
-              {site.welcome_message || 'Estamos muito felizes em compartilhar esse momento com você.'}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              {site.rsvp_enabled && (
-                <a href="#rsvp" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-black text-white shadow-xl shadow-black/20">
-                  Confirmar presença <Send size={16} />
-                </a>
-              )}
-              {site.gift_list_enabled && (
-                <a href="#presentes" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/15 px-5 text-sm font-black text-white backdrop-blur">
-                  Ver presentes <Gift size={16} />
-                </a>
-              )}
-            </div>
-          </div>
+      {!hasPublicContent && (
+        <div className="mx-auto max-w-4xl px-5 py-12 text-center text-sm font-medium text-[#69645d]">
+          O casal ainda está preparando os detalhes dessa página.
         </div>
-      </section>
+      )}
 
-      <main className="mx-auto max-w-6xl space-y-16 px-4 py-14 sm:px-6 lg:px-8">
-        {site.rsvp_enabled && (
-          <section id="rsvp" className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+      {site.rsvp_enabled && (
+        <section id="rsvp-form" className="mx-auto max-w-6xl px-5 pb-16 sm:px-8">
+          <div className="grid gap-8 rounded-[1.5rem] border border-black/10 bg-[var(--wedsite-bg-secondary)] p-6 shadow-sm lg:grid-cols-[0.8fr_1.2fr] lg:p-8">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">RSVP</p>
-              <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Outfit',sans-serif]">Confirme sua presença</h2>
-              <p className="mt-4 text-sm font-medium leading-6 text-slate-600">Sua resposta ajuda o casal a organizar cada detalhe com carinho.</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--wedsite-color-primary)]">RSVP</p>
+              <h2 className="mt-2 text-4xl font-black leading-none text-[#202018] [font-family:var(--wedsite-font-primary)]">Confirmação de presença</h2>
+              <p className="mt-4 text-sm font-medium leading-6 text-[#69645d]">Sua resposta atualiza a lista do casal automaticamente quando o nome estiver cadastrado.</p>
             </div>
-
-            <form onSubmit={submitRsvp} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <form onSubmit={submitRsvp}>
               {rsvpSent ? (
-                <div className="flex min-h-48 flex-col items-center justify-center text-center">
-                  <CheckCircle2 className="mb-3 text-emerald-600" size={38} />
-                  <p className="text-lg font-black">Resposta recebida</p>
-                  <p className="mt-1 text-sm font-medium text-slate-600">Obrigado por confirmar.</p>
+                <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl bg-[#eef5ed] text-center">
+                  <CheckCircle2 className="mb-3 text-emerald-700" size={40} />
+                  <p className="text-lg font-black text-[#202018]">Resposta recebida</p>
+                  <button type="button" onClick={() => setRsvpSent(false)} className="mt-4 text-sm font-black text-[var(--wedsite-color-primary)]">
+                    Confirmar outra pessoa
+                  </button>
                 </div>
               ) : (
                 <div className="grid gap-4">
                   <InputBlock icon={User}>
-                    <Input required value={rsvpForm.full_name} onChange={(event) => setRsvpForm((current) => ({ ...current, full_name: event.target.value }))} placeholder="Seu nome completo" className="h-12 border-slate-200 bg-slate-50 pl-11" />
+                    <Input required value={rsvpForm.full_name} onChange={(event) => setRsvpForm((current) => ({ ...current, full_name: event.target.value }))} placeholder="Seu nome completo" className="h-12 border-[#ded8cf] bg-[#fbfaf7] pl-11" />
                   </InputBlock>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <InputBlock icon={Phone}>
-                      <Input value={rsvpForm.phone} onChange={(event) => setRsvpForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Telefone" className="h-12 border-slate-200 bg-slate-50 pl-11" />
+                      <Input value={rsvpForm.phone} onChange={(event) => setRsvpForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} placeholder="Telefone" className="h-12 border-[#ded8cf] bg-[#fbfaf7] pl-11" />
                     </InputBlock>
                     <InputBlock icon={Mail}>
-                      <Input type="email" value={rsvpForm.email} onChange={(event) => setRsvpForm((current) => ({ ...current, email: event.target.value }))} placeholder="E-mail" className="h-12 border-slate-200 bg-slate-50 pl-11" />
+                      <Input type="email" value={rsvpForm.email} onChange={(event) => setRsvpForm((current) => ({ ...current, email: event.target.value }))} placeholder="E-mail" className="h-12 border-[#ded8cf] bg-[#fbfaf7] pl-11" />
                     </InputBlock>
                   </div>
-                  <div className="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
-                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: true }))} className={`h-11 rounded-md text-xs font-black uppercase ${rsvpForm.is_attending ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}>
+                  <div className="grid grid-cols-2 rounded-xl border border-[#ded8cf] bg-[#fbfaf7] p-1">
+                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: true }))} className={`h-11 rounded-lg text-xs font-black uppercase ${rsvpForm.is_attending ? 'bg-white text-[var(--wedsite-color-primary)] shadow-sm' : 'text-[#69645d]'}`}>
                       Vou
                     </button>
-                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: false }))} className={`h-11 rounded-md text-xs font-black uppercase ${!rsvpForm.is_attending ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}>
+                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: false }))} className={`h-11 rounded-lg text-xs font-black uppercase ${!rsvpForm.is_attending ? 'bg-white text-[var(--wedsite-color-primary)] shadow-sm' : 'text-[#69645d]'}`}>
                       Não vou
                     </button>
                   </div>
-                  <Button type="submit" className="h-12 rounded-lg">
-                    Enviar confirmação <Send size={16} />
+                  <Button type="submit" disabled={submittingRsvp || rsvpForm.full_name.trim().length < 4} className="h-12 rounded-xl bg-[var(--wedsite-color-secondary)]">
+                    {submittingRsvp ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                    Enviar confirmação
                   </Button>
                 </div>
               )}
             </form>
-          </section>
-        )}
+          </div>
+        </section>
+      )}
 
-        {site.gift_list_enabled && (
-          <section id="presentes">
-            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      {site.gift_list_enabled && (
+        <section className="mx-auto max-w-6xl px-5 pb-16 sm:px-8">
+          <div className="rounded-[1.5rem] bg-[var(--wedsite-color-secondary)] p-7 text-white sm:p-10">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Lista de presentes</p>
-                <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Outfit',sans-serif]">Escolha um presente</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/55">Lista de presentes</p>
+                <h2 className="mt-2 text-4xl font-black leading-none [font-family:var(--wedsite-font-primary)]">Escolha com carinho</h2>
               </div>
+              <Link to={`/casamento/${site.slug}/presentes`} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#202018]">
+                Ver lista completa <Gift size={16} />
+              </Link>
             </div>
+          </div>
+        </section>
+      )}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {gifts.length === 0 ? (
-                <p className="text-sm font-medium text-slate-600">A lista de presentes ainda está sendo preparada.</p>
-              ) : gifts.map((gift) => (
-                <article key={gift.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                  {gift.image_url && <img src={gift.image_url} alt="" className="h-44 w-full object-cover" />}
-                  <div className="p-5">
-                    <p className="text-lg font-black">{gift.title}</p>
-                    {gift.subtitle && <p className="mt-1 text-sm font-medium text-slate-600">{gift.subtitle}</p>}
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <span className="text-sm font-black text-primary">{formatMoney(gift.price) || 'Valor livre'}</span>
-                      {gift.buy_url && !gift.is_bought && (
-                        <a href={gift.buy_url} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-black uppercase text-white">
-                          Presentear
-                        </a>
-                      )}
-                      {gift.is_bought && <span className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black uppercase text-emerald-700">Reservado</span>}
-                    </div>
-                  </div>
-                </article>
+      {site.messages_enabled && (
+        <section className="mx-auto grid max-w-6xl gap-8 px-5 pb-20 sm:px-8 lg:grid-cols-[1fr_1fr]">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--wedsite-color-primary)]">Mensagens</p>
+            <h2 className="mt-2 text-4xl font-black leading-none text-[#202018] [font-family:var(--wedsite-font-primary)]">Deixe seu carinho</h2>
+            <div className="mt-6 grid gap-3">
+              {messages.length === 0 ? (
+                <p className="text-sm font-medium text-[#69645d]">As mensagens aprovadas aparecerão aqui.</p>
+              ) : messages.map((message) => (
+                <div key={message.id} className="rounded-2xl border border-[#ded8cf] bg-white p-4 shadow-sm">
+                  <p className="text-sm font-black text-[#202018]">{message.author_name}</p>
+                  <p className="mt-2 text-sm font-medium leading-6 text-[#69645d]">{message.message}</p>
+                </div>
               ))}
             </div>
-          </section>
-        )}
-
-        {site.messages_enabled && (
-          <section className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Mensagens</p>
-              <h2 className="mt-2 text-5xl font-bold leading-none [font-family:'Outfit',sans-serif]">Deixe seu carinho</h2>
-              <div className="mt-6 grid gap-3">
-                {messages.length === 0 ? (
-                  <p className="text-sm font-medium text-slate-600">As mensagens aprovadas aparecerão aqui.</p>
-                ) : messages.map((message) => (
-                  <div key={message.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-sm font-black">{message.author_name}</p>
-                    <p className="mt-2 text-sm font-medium leading-6 text-slate-600">{message.message}</p>
-                  </div>
-                ))}
+          </div>
+          <form onSubmit={submitMessage} className="h-fit rounded-2xl border border-[#ded8cf] bg-white p-5 shadow-sm">
+            {messageSent ? (
+              <div className="flex min-h-48 flex-col items-center justify-center text-center">
+                <MessageSquareHeart className="mb-3 text-[var(--wedsite-color-primary)]" size={38} />
+                <p className="text-lg font-black text-[#202018]">Mensagem enviada</p>
+                <p className="mt-1 text-sm font-medium text-[#69645d]">Ela aparecerá após aprovação do casal.</p>
               </div>
-            </div>
-
-            <form onSubmit={submitMessage} className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              {messageSent ? (
-                <div className="flex min-h-48 flex-col items-center justify-center text-center">
-                  <MessageSquareHeart className="mb-3 text-primary" size={38} />
-                  <p className="text-lg font-black">Mensagem enviada</p>
-                  <p className="mt-1 text-sm font-medium text-slate-600">Ela aparecerá após aprovação do casal.</p>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  <Input required value={messageForm.author_name} onChange={(event) => setMessageForm((current) => ({ ...current, author_name: event.target.value }))} placeholder="Seu nome" className="h-12 border-slate-200 bg-slate-50" />
-                  <Input type="email" value={messageForm.author_email} onChange={(event) => setMessageForm((current) => ({ ...current, author_email: event.target.value }))} placeholder="Seu e-mail" className="h-12 border-slate-200 bg-slate-50" />
-                  <textarea
-                    required
-                    value={messageForm.message}
-                    onChange={(event) => setMessageForm((current) => ({ ...current, message: event.target.value }))}
-                    placeholder="Escreva sua mensagem"
-                    className="min-h-32 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
-                  />
-                  <Button type="submit" className="h-12 rounded-lg">
-                    Enviar mensagem <Send size={16} />
-                  </Button>
-                </div>
-              )}
-            </form>
-          </section>
-        )}
-      </main>
-
-      <footer className="border-t border-slate-200 px-4 py-8 text-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-        Criado com WedPlan
-      </footer>
+            ) : (
+              <div className="grid gap-4">
+                <Input required value={messageForm.author_name} onChange={(event) => setMessageForm((current) => ({ ...current, author_name: event.target.value }))} placeholder="Seu nome" className="h-12 border-[#ded8cf] bg-[#fbfaf7]" />
+                <Input type="email" value={messageForm.author_email} onChange={(event) => setMessageForm((current) => ({ ...current, author_email: event.target.value }))} placeholder="Seu e-mail" className="h-12 border-[#ded8cf] bg-[#fbfaf7]" />
+                <textarea
+                  required
+                  value={messageForm.message}
+                  onChange={(event) => setMessageForm((current) => ({ ...current, message: event.target.value }))}
+                  placeholder="Escreva sua mensagem"
+                  className="min-h-32 rounded-xl border border-[#ded8cf] bg-[#fbfaf7] px-4 py-3 text-sm font-medium outline-none transition focus:border-[#9b865f] focus:ring-4 focus:ring-[#9b865f]/10"
+                />
+                <Button type="submit" className="h-12 rounded-xl bg-[var(--wedsite-color-secondary)]">
+                  Enviar mensagem <Send size={16} />
+                </Button>
+              </div>
+            )}
+          </form>
+        </section>
+      )}
     </div>
   );
 };
 
 const InputBlock = ({ icon: Icon, children }: { icon: ElementType; children: ReactNode }) => (
   <div className="relative">
-    <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+    <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9b958c]" size={17} />
     {children}
   </div>
 );
