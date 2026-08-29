@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { Button } from "../ui";
 import { cn } from "../../lib/utils";
 import { BrandLogo } from "./BrandLogo";
+import { setDefaultPageMetadata } from "../../utils/meta";
 
 type LandingPageProps = {
   onLogin: () => void;
@@ -237,6 +238,10 @@ const finalValue = [
 ];
 
 export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
+  useEffect(() => {
+    setDefaultPageMetadata();
+  }, []);
+
   return (
     <div className="wedplan-landing relative isolate min-h-screen overflow-x-hidden bg-[#fbfaf8] text-slate-950 [font-family:'Manrope',sans-serif]">
       <div className="pointer-events-none fixed inset-0 z-0 wedplan-soft-grid opacity-40" />

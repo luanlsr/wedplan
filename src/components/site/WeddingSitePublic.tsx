@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { Button, Input } from '../ui';
 import { supabase } from '../../lib/supabase';
 import { maskPhone } from '../../utils/masks';
+import { setPageMetadata } from '../../utils/meta';
 import { WeddingSitePreview } from './WeddingSitePreview';
 import { getWeddingSiteTemplate, type GiftCategory, type GiftItem, type SiteEvent, type SiteImage, type StoryItem, type WeddingSite } from './weddingSiteTypes';
 
@@ -28,6 +29,21 @@ export const WeddingSitePublic = () => {
   useEffect(() => {
     loadSite();
   }, [slug]);
+
+  useEffect(() => {
+    if (!site) return;
+
+    const title = `${site.title || 'Site do casal'} | WedPlan`;
+    const description = (site.welcome_message || `Confira os detalhes do casamento de ${site.title || 'um casal especial'}, confirme presença e veja a lista de presentes.`).replace(/\s+/g, ' ').trim();
+    const image = heroImages[0]?.image_url || site.cover_image_url || '/image/wedplan_logo.png';
+
+    setPageMetadata({
+      title,
+      description: description.slice(0, 180),
+      image,
+      url: window.location.href,
+    });
+  }, [heroImages, site]);
 
   const loadSite = async () => {
     if (!slug) return;

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Copy, Gift, Heart, Loader2, MapPin, Search, ShoppingBag, SlidersHorizontal, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
+import { setPageMetadata } from '../../utils/meta';
 import { Button, Input } from '../ui';
 import { cn } from '../../lib/utils';
 import { formatMoney, getWeddingSiteTemplate, type GiftCategory, type GiftItem, type WeddingSite } from './weddingSiteTypes';
@@ -40,6 +41,21 @@ export const WeddingGiftsPublic = () => {
   useEffect(() => {
     loadGifts();
   }, [slug]);
+
+  useEffect(() => {
+    if (!site) return;
+
+    const title = `Lista de presentes de ${site.title || 'um casal especial'} | WedPlan`;
+    const description = (site.gift_intro || `Veja a lista de presentes preparada por ${site.title || 'este casal'} e escolha uma sugestão com carinho.`).replace(/\s+/g, ' ').trim();
+    const image = gifts.find((gift) => gift.image_url)?.image_url || site.cover_image_url || '/image/wedplan_logo.png';
+
+    setPageMetadata({
+      title,
+      description: description.slice(0, 180),
+      image,
+      url: window.location.href,
+    });
+  }, [gifts, site]);
 
   const loadGifts = async () => {
     if (!slug) return;
