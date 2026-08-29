@@ -3,6 +3,7 @@ import type { WeddingData, Supplier, Installment, Guest, Task, UserRole } from "
 import { INITIAL_DATA } from "../data/initialData";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
+import { logError, logEvent, setObservabilityContext } from "../utils/observability";
 
 const STORAGE_KEY = "wedding_manager_data";
 
@@ -91,7 +92,7 @@ export const useWeddingData = () => {
         if (user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('full_name, wedding_id, role, role_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_end, roles(name), accounts(status)')
+            .select('full_name, wedding_id, role, role_id, account_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_end, roles(name), accounts(status)')
             .eq('id', user.id)
             .maybeSingle();
           
@@ -153,6 +154,7 @@ export const useWeddingData = () => {
       if (!weddingId) {
         setData({
           ...INITIAL_DATA,
+          account_id: userProfile?.account_id || null,
           role: userRole as UserRole,
           account_status: accountStatus,
           plan_id: userProfile?.plan_id || null,
@@ -182,6 +184,7 @@ export const useWeddingData = () => {
 
       const transformedData: WeddingData = {
         id: wedding.id,
+        account_id: userProfile?.account_id || null,
         role: userRole as UserRole,
         account_status: accountStatus,
         plan_id: userProfile?.plan_id || null,
@@ -252,8 +255,15 @@ export const useWeddingData = () => {
         }
       };
       setData(transformedData);
+      setObservabilityContext({
+        userId: user?.id || null,
+        accountId: userProfile?.account_id || null,
+        weddingId,
+        role: userRole,
+      });
     } catch (error) {
       console.error('Falha ao carregar dados do Supabase:', error);
+      logError('wedding_data.load.error', error);
       setData(INITIAL_DATA);
     } finally {
       setLoading(false);
@@ -317,7 +327,19 @@ export const useWeddingData = () => {
           }
         ]
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'supplier.created',
+        entityType: 'supplier',
+        entityId: sData.id,
+        metadata: {
+          weddingId: data.id,
+          category: supplier.categoria,
+          installmentsCount: parcelas.length,
+        },
+      });
+    } catch (err) {
+      logError('supplier.create.error', err, { weddingId: data.id, category: supplier.categoria });
+    }
   };
 
   const updateSupplier = async (id: string, updated: Partial<Supplier>) => {
@@ -345,7 +367,18 @@ export const useWeddingData = () => {
           supplier.id === id ? { ...supplier, ...localUpdated } : supplier
         )
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'supplier.updated',
+        entityType: 'supplier',
+        entityId: id,
+        metadata: {
+          weddingId: data.id,
+          fields: Object.keys(payload),
+        },
+      });
+    } catch (err) {
+      logError('supplier.update.error', err, { supplierId: id, weddingId: data.id });
+    }
   };
 
   const deleteSupplier = async (id: string) => {
@@ -357,7 +390,15 @@ export const useWeddingData = () => {
         ...prev,
         fornecedores: prev.fornecedores.filter((supplier) => supplier.id !== id)
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'supplier.deleted',
+        entityType: 'supplier',
+        entityId: id,
+        metadata: { weddingId: data.id },
+      });
+    } catch (err) {
+      logError('supplier.delete.error', err, { supplierId: id, weddingId: data.id });
+    }
   };
 
   const updateInstallment = async (_supplierId: string, installmentId: string, updated: Partial<Installment>) => {
@@ -388,8 +429,19 @@ export const useWeddingData = () => {
       if (updated.dataPagamento !== undefined) payload.data_pagamento = updated.dataPagamento;
       const { error } = await supabase.from('installments').update(payload).eq('id', installmentId);
       if (error) throw error;
+      void logEvent({
+        eventName: 'installment.updated',
+        entityType: 'installment',
+        entityId: installmentId,
+        metadata: {
+          supplierId: _supplierId,
+          weddingId: data.id,
+          fields: Object.keys(payload),
+          status: updated.status,
+        },
+      });
     } catch (err) {
-      console.error(err);
+      logError('installment.update.error', err, { installmentId, supplierId: _supplierId, weddingId: data.id });
       setData(prev => ({ ...prev, fornecedores: previousSuppliers }));
     }
   };
@@ -430,7 +482,20 @@ export const useWeddingData = () => {
           }
         ].sort((a, b) => a.nome.localeCompare(b.nome))
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'guest.created',
+        entityType: 'guest',
+        entityId: guestData.id,
+        metadata: {
+          weddingId: data.id,
+          category: guest.categoria,
+          adults: guest.adultos,
+          children: guest.criancas,
+        },
+      });
+    } catch (err) {
+      logError('guest.create.error', err, { weddingId: data.id, category: guest.categoria });
+    }
   };
 
   const updateGuest = async (id: string, updated: Partial<Guest>) => {
@@ -466,8 +531,23 @@ export const useWeddingData = () => {
           })
         : await supabase.from('guests').update(payload).eq('id', id);
       if (error) throw error;
+      void logEvent({
+        eventName: publicToken ? 'guest.public_presence_updated' : 'guest.updated',
+        entityType: 'guest',
+        entityId: id,
+        metadata: {
+          weddingId: data.id,
+          publicMode: Boolean(publicToken),
+          fields: Object.keys(payload),
+          isPresent: updated.is_present,
+        },
+      });
     } catch (err) {
-      console.error(err);
+      logError(publicToken ? 'guest.public_presence_update.error' : 'guest.update.error', err, {
+        guestId: id,
+        weddingId: data.id,
+        publicMode: Boolean(publicToken),
+      });
       if (previousGuest) {
         setData(prev => ({
           ...prev,
@@ -488,7 +568,15 @@ export const useWeddingData = () => {
         ...prev,
         convidados: (prev.convidados || []).filter((guest) => guest.id !== id)
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'guest.deleted',
+        entityType: 'guest',
+        entityId: id,
+        metadata: { weddingId: data.id },
+      });
+    } catch (err) {
+      logError('guest.delete.error', err, { guestId: id, weddingId: data.id });
+    }
   };
 
   const addTask = async (task: Omit<Task, 'id'>) => {
@@ -519,7 +607,19 @@ export const useWeddingData = () => {
           }
         ]
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'task.created',
+        entityType: 'task',
+        entityId: taskData.id,
+        metadata: {
+          weddingId: data.id,
+          category: task.categoria,
+          status: task.status,
+        },
+      });
+    } catch (err) {
+      logError('task.create.error', err, { weddingId: data.id, category: task.categoria });
+    }
   };
 
   const updateTask = async (id: string, updated: Partial<Task>) => {
@@ -542,8 +642,18 @@ export const useWeddingData = () => {
       if (updated.ordem !== undefined) payload.ordem = updated.ordem;
       const { error } = await supabase.from('tasks').update(payload).eq('id', id);
       if (error) throw error;
+      void logEvent({
+        eventName: 'task.updated',
+        entityType: 'task',
+        entityId: id,
+        metadata: {
+          weddingId: data.id,
+          fields: Object.keys(payload),
+          status: updated.status,
+        },
+      });
     } catch (err) {
-      console.error(err);
+      logError('task.update.error', err, { taskId: id, weddingId: data.id });
       setData(prev => ({ ...prev, tarefas: previousTasks }));
     }
   };
@@ -557,7 +667,15 @@ export const useWeddingData = () => {
         ...prev,
         tarefas: (prev.tarefas || []).filter((task) => task.id !== id)
       }));
-    } catch (err) { console.error(err); }
+      void logEvent({
+        eventName: 'task.deleted',
+        entityType: 'task',
+        entityId: id,
+        metadata: { weddingId: data.id },
+      });
+    } catch (err) {
+      logError('task.delete.error', err, { taskId: id, weddingId: data.id });
+    }
   };
 
   const updateWeddingInfo = async (info: Partial<WeddingData["casal"]>) => {
@@ -578,8 +696,16 @@ export const useWeddingData = () => {
       if (info.data) payload.wedding_date = info.data;
       const { error } = await supabase.from('weddings').update(payload).eq('id', data.id);
       if (error) throw error;
+      void logEvent({
+        eventName: 'wedding.info_updated',
+        entityType: 'wedding',
+        entityId: data.id,
+        metadata: {
+          fields: Object.keys(payload),
+        },
+      });
     } catch (err) {
-      console.error(err);
+      logError('wedding.info_update.error', err, { weddingId: data.id });
       setData(prev => ({ ...prev, casal: previousCasal }));
     }
   };
@@ -602,10 +728,19 @@ export const useWeddingData = () => {
       if (config.orcamentoTotal !== undefined) payload.total_budget = config.orcamentoTotal;
       if (config.tema) payload.theme = config.tema;
       await supabase.from('weddings').update(payload).eq('id', data.id);
+      void logEvent({
+        eventName: 'wedding.config_updated',
+        entityType: 'wedding',
+        entityId: data.id,
+        metadata: {
+          fields: Object.keys(payload),
+          theme: config.tema,
+        },
+      });
       // Não chamamos loadData() aqui para evitar o reflash completo do app
       // O estado local já foi atualizado
     } catch (err) { 
-      console.error(err); 
+      logError('wedding.config_update.error', err, { weddingId: data.id });
       setData(oldData); // Reverte se der erro
     }
   };
@@ -627,8 +762,14 @@ export const useWeddingData = () => {
         .eq('id', user.id);
 
       if (error) throw error;
+      void logEvent({
+        eventName: 'guided_tour.completed',
+        entityType: 'profile',
+        entityId: user.id,
+        metadata: { weddingId: data.id },
+      });
     } catch (err) {
-      console.error('Erro ao salvar conclusão do tour:', err);
+      logError('guided_tour.complete.error', err, { weddingId: data.id });
       setData(prev => ({
         ...prev,
         guided_tour_completed_at: previousValue
@@ -650,8 +791,15 @@ export const useWeddingData = () => {
       for (const [index, supplier] of suppliers.entries()) {
         await supabase.from('suppliers').update({ ordem: index }).eq('id', supplier.id);
       }
+      void logEvent({
+        eventName: 'supplier.reordered',
+        metadata: {
+          weddingId: data.id,
+          count: suppliers.length,
+        },
+      });
     } catch (err) {
-      console.error(err);
+      logError('supplier.reorder.error', err, { weddingId: data.id, count: suppliers.length });
       setData(prev => ({ ...prev, fornecedores: previousSuppliers }));
     }
   };

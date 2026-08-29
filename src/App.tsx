@@ -7,9 +7,11 @@ import { ForgotPassword } from './components/auth/ForgotPassword';
 import { ResetPassword } from './components/auth/ResetPassword';
 import { LandingPage } from './components/layout/LandingPage';
 import { CookieConsent } from './components/layout/CookieConsent';
+import { ObservabilityBootstrap } from './components/layout/ObservabilityBootstrap';
 import { WeddingSitePublic } from './components/site/WeddingSitePublic';
 import { WeddingGiftsPublic } from './components/site/WeddingGiftsPublic';
 import { LegalPage } from './components/legal/LegalPage';
+import { FreeWeddingTools } from './components/tools/FreeWeddingTools';
 import { Loader2 } from 'lucide-react';
 import { ConfirmProvider } from './components/ui';
 
@@ -45,6 +47,8 @@ function AppRoutes() {
 
       <Route path="/casamento/:slug" element={<WeddingSitePublic />} />
       <Route path="/casamento/:slug/presentes" element={<WeddingGiftsPublic />} />
+      <Route path="/ferramentas" element={user ? <MainApp /> : <FreeWeddingTools />} />
+      <Route path="/ferramentas/:toolId" element={user ? <MainApp /> : <FreeWeddingTools />} />
       <Route path="/termos-de-uso" element={<LegalPage type="terms" />} />
       <Route path="/politica-de-privacidade" element={<LegalPage type="privacy" />} />
       <Route path="/checkout" element={<Navigate to="/checkout/dados-pessoais" replace />} />
@@ -95,6 +99,7 @@ function App() {
     <AuthProvider>
       <ConfirmProvider>
         <Router>
+          <ObservabilityBootstrap />
           <AppRoutes />
           <CookieConsent />
         </Router>

@@ -22,8 +22,10 @@ import { AdminUsers } from './admin/AdminUsers';
 import { AdminSubscriptions } from './admin/AdminSubscriptions';
 import { AdminDomainRequests } from './admin/AdminDomainRequests';
 import { AdminSettings } from './admin/AdminSettings';
+import { AdminLogs } from './admin/AdminLogs';
 import { PaymentGate } from './auth/PaymentGate';
 import { WeddingSiteView } from './site/WeddingSiteView';
+import { LoggedWeddingTools } from './tools/LoggedWeddingTools';
 
 import { useWeddingData } from '../hooks/useWeddingData';
 import { useAuth } from '../hooks/useAuth';
@@ -31,6 +33,7 @@ import { useConfirm } from './ui';
 import { useAppModals } from '../hooks/useAppModals';
 import { calculateStats, formatDate } from '../utils/calculations';
 import { cn } from '../lib/utils';
+import { logError, logEvent, setObservabilityContext } from '../utils/observability';
 import type { Installment } from '../types';
 
 export function MainApp() {
@@ -76,12 +79,26 @@ export function MainApp() {
     }
   }, [isDark]);
 
+  useEffect(() => {
+    setObservabilityContext({
+      userId: user?.id || null,
+      accountId: data.account_id || null,
+      weddingId: data.id || null,
+      role: data.role || null,
+    });
+  }, [data.account_id, data.id, data.role, user?.id]);
+
   const handleSyncData = async () => {
     if (!user) return;
     setIsSyncing(true);
     try {
       const { migrateLocalStorageToSupabase } = await import('../services/migrationService');
       const result = await migrateLocalStorageToSupabase(user.id, data);
+      void logEvent({
+        eventName: result.success ? 'sync.local_data.success' : 'sync.local_data.failure',
+        level: result.success ? 'info' : 'warn',
+        metadata: { weddingId: data.id },
+      });
       if (result.success) {
         await customAlert({
           title: "Sincronização Concluída",
@@ -99,7 +116,7 @@ export function MainApp() {
         });
       }
     } catch (e) {
-      console.error(e);
+      logError('sync.local_data.error', e, { weddingId: data.id });
     } finally {
       setIsSyncing(false);
     }
@@ -143,7 +160,7 @@ export function MainApp() {
         colors: ['#a8863d', '#ffffff', '#e0c090']
       });
     } catch (err) {
-      console.error(err);
+      logError('onboarding.initial_setup.error', err, { weddingId: data.id });
     }
   };
 
@@ -152,6 +169,15 @@ export function MainApp() {
     updateInstallment(supplierId, p.id, {
       status: newStatus,
       dataPagamento: newStatus === 'pago' ? new Date().toISOString().split("T")[0] : null
+    });
+    void logEvent({
+      eventName: 'installment.status_toggled',
+      entityType: 'installment',
+      entityId: p.id,
+      metadata: {
+        supplierId,
+        status: newStatus,
+      },
     });
 
     if (newStatus === 'pago') {
@@ -198,6 +224,7 @@ export function MainApp() {
     if (path === "/financeiro") return "Fluxo de Caixa";
     if (path === "/planejamento") return "Planejamento Financeiro";
     if (path === "/site") return "Site do Casal";
+    if (path.startsWith("/ferramentas")) return "Ferramentas";
     if (path === "/configuracoes") return "Configurações";
     if (path === "/dominios") return "Domínios";
     if (path === "/checkin") return "Visão Geral do Evento";
@@ -292,6 +319,7 @@ export function MainApp() {
             <Route path="usuarios" element={<AdminUsers />} />
             <Route path="assinaturas" element={<AdminSubscriptions />} />
             <Route path="dominios" element={<AdminDomainRequests />} />
+            <Route path="logs" element={<AdminLogs />} />
             <Route path="configuracoes-master" element={<AdminSettings />} />
           </>
         )}
@@ -348,6 +376,9 @@ export function MainApp() {
         } />
 
         <Route path="site" element={<WeddingSiteView data={data} />} />
+
+        <Route path="ferramentas" element={<LoggedWeddingTools data={data} />} />
+        <Route path="ferramentas/:toolId" element={<LoggedWeddingTools data={data} />} />
 
         <Route path="checkin" element={
           <CheckInView

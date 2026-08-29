@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { getSiteUrl } from '../utils/url';
+import { logError, logEvent } from '../utils/observability';
 
 interface AuthContextType {
   user: User | null;
@@ -31,12 +32,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (error) {
         console.warn('[Auth] Sessão local inválida. Limpando autenticação local:', error.message);
+        logError('auth.session.invalid', error);
         await supabase.auth.signOut({ scope: 'local' });
         setSession(null);
         setUser(null);
       } else {
         setSession(session);
         setUser(session?.user ?? null);
+        if (session?.user) {
+          void logEvent({ eventName: 'auth.session.loaded', metadata: { provider: session.user.app_metadata?.provider || null } });
+        }
       }
       setLoading(false);
     });
@@ -46,6 +51,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user?.id !== user?.id || event === 'SIGNED_OUT') {
         setSession(session);
         setUser(session?.user ?? null);
+        void logEvent({
+          eventName: `auth.${event.toLowerCase()}`,
+          metadata: {
+            hasUser: Boolean(session?.user),
+            provider: session?.user?.app_metadata?.provider || null,
+          },
+        });
       }
       setLoading(false);
     });
@@ -56,19 +68,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.id]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const result = await supabase.auth.signOut();
+    if (result.error) {
+      logError('auth.sign_out.error', result.error);
+      return;
+    }
+    void logEvent({ eventName: 'auth.sign_out.success' });
   };
 
   const resetPassword = async (email: string) => {
-
-    return await supabase.auth.resetPasswordForEmail(email, {
+    const result = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${getSiteUrl()}/reset-password`,
     });
+    if (result.error) logError('auth.reset_password.error', result.error);
+    else void logEvent({ eventName: 'auth.reset_password.requested' });
+    return result;
   };
 
   
   const updatePassword = async (password: string) => {
-    return await supabase.auth.updateUser({ password });
+    const result = await supabase.auth.updateUser({ password });
+    if (result.error) logError('auth.update_password.error', result.error);
+    else void logEvent({ eventName: 'auth.update_password.success' });
+    return result;
   };
 
   return (

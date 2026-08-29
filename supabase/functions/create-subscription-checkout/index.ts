@@ -41,7 +41,22 @@ const safeJson = async (res: Response) => {
   }
 }
 
+const recordEvent = async (client: any, event: any) => {
+  try {
+    await client.from('app_events').insert({
+      source: 'edge:create-subscription-checkout',
+      occurred_at: new Date().toISOString(),
+      ...event,
+    })
+  } catch (error) {
+    console.warn('[create-subscription-checkout] Observabilidade indisponível:', error.message)
+  }
+}
+
 serve(async (req) => {
+  let supabaseClient = null
+  const startedAt = performance.now()
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -54,7 +69,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
@@ -76,6 +91,20 @@ serve(async (req) => {
     const acceptedPrivacy = Boolean(body.acceptedPrivacy)
     const weddingDraft = typeof body.weddingDraft === 'object' && body.weddingDraft ? body.weddingDraft : null
     const paymentMethod = String(body.paymentMethod || 'asaas_checkout')
+
+    await recordEvent(supabaseClient, {
+      level: 'info',
+      event_name: 'edge.checkout.started',
+      route: '/functions/v1/create-subscription-checkout',
+      metadata: {
+        planCode,
+        billingInterval,
+        paymentMethod,
+        source: body.source || 'landing',
+        hasWeddingDraft: Boolean(weddingDraft),
+      },
+      user_agent: req.headers.get('user-agent'),
+    })
 
     if (!fullName) throw new PublicCheckoutError('Informe o nome completo')
     if (!email || !email.includes('@')) throw new PublicCheckoutError('Informe um e-mail válido')
@@ -204,6 +233,25 @@ serve(async (req) => {
       throw new InternalCheckoutError('CHECKOUT_PERSISTENCE_ERROR')
     }
 
+    await recordEvent(supabaseClient, {
+      level: 'info',
+      event_name: 'edge.checkout.created',
+      route: '/functions/v1/create-subscription-checkout',
+      entity_type: 'checkout_session',
+      entity_id: checkout.id,
+      duration_ms: Math.round(performance.now() - startedAt),
+      metadata: {
+        planCode: plan.code,
+        billingInterval,
+        paymentMethod,
+        hasPaymentUrl: Boolean(paymentUrl),
+        value,
+        asaasCustomerId: customer.id,
+        asaasSubscriptionId: subscription.id,
+      },
+      user_agent: req.headers.get('user-agent'),
+    })
+
     return new Response(JSON.stringify({
       success: true,
       checkoutSessionId: checkout.id,
@@ -228,6 +276,23 @@ serve(async (req) => {
       message: error.message,
       publicMessage,
     })
+
+    if (supabaseClient) {
+      await recordEvent(supabaseClient, {
+        level: 'error',
+        event_name: 'edge.checkout.error',
+        route: '/functions/v1/create-subscription-checkout',
+        duration_ms: Math.round(performance.now() - startedAt),
+        metadata: {
+          code,
+          status,
+          publicMessage,
+        },
+        error_message: error.message,
+        stack: error.stack || null,
+        user_agent: req.headers.get('user-agent'),
+      })
+    }
 
     return new Response(JSON.stringify({ error: publicMessage, userMessage: publicMessage, code }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

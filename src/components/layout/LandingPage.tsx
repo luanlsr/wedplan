@@ -1,7 +1,9 @@
 import { useEffect, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BadgeCheck,
+  Calculator,
   CalendarCheck2,
   Check,
   ChevronRight,
@@ -18,6 +20,7 @@ import {
   Sparkles,
   Users,
   Wallet,
+  Wine,
   X,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -46,6 +49,48 @@ const metrics = [
   { value: "R$ 84k", label: "exemplo de orçamento" },
   { value: "126", label: "exemplo de convidados" },
   { value: "18", label: "exemplo de contratos" },
+];
+
+const freeToolCards = [
+  {
+    icon: Calculator,
+    title: "Quanto vai custar?",
+    text: "Estimativa por convidados e orçamento.",
+    href: "/ferramentas/custo-casamento",
+  },
+  {
+    icon: CalendarCheck2,
+    title: "O que fazer agora?",
+    text: "Checklist automático pela data.",
+    href: "/ferramentas/checklist",
+  },
+  {
+    icon: Wine,
+    title: "Quantas bebidas?",
+    text: "Cálculo por convidados e duração.",
+    href: "/ferramentas/bebidas",
+  },
+  {
+    icon: Users,
+    title: "Começar lista",
+    text: "Organize convidados antes da conta.",
+    href: "/ferramentas/convidados",
+  },
+];
+
+const partnerCards = [
+  {
+    title: "Acompanhamento profissional",
+    text: "Profissionais podem organizar casamentos com mais clareza e menos retrabalho operacional.",
+  },
+  {
+    title: "Experiência para o casal",
+    text: "O casal acompanha decisões, prazos e informações importantes em um ambiente centralizado.",
+  },
+  {
+    title: "Parceria com o ecossistema",
+    text: "Assessores, espaços e fornecedores podem conversar conosco sobre uso profissional do WedPlan.",
+  },
 ];
 
 const productCards = [
@@ -259,6 +304,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
           <nav className="hidden items-center gap-8 text-sm font-bold text-slate-600 lg:flex">
             <a href="#problema" className="hover:text-primary">Problema</a>
             <a href="#produto" className="hover:text-primary">Produto</a>
+            <Link to="/ferramentas/custo-casamento" className="hover:text-primary">Ferramentas grátis</Link>
             <a href="#preco" className="hover:text-primary">Planos</a>
             <a href="#duvidas" className="hover:text-primary">Dúvidas</a>
           </nav>
@@ -309,13 +355,13 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   Começar meu planejamento
                   <ArrowRight size={18} />
                 </Button>
-                <a
-                  href="#produto"
+                <Link
+                  to="/ferramentas/custo-casamento"
                   className="inline-flex h-14 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-6 text-base font-extrabold text-slate-900 transition hover:bg-slate-50"
                 >
-                  Ver como funciona
+                  Calcular custo grátis
                   <ChevronRight size={18} />
-                </a>
+                </Link>
               </div>
 
               <p className="mt-4 text-sm font-bold text-slate-500">
@@ -358,6 +404,95 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
               </motion.div>
             ))}
           </motion.div>
+        </section>
+
+        <section className="bg-white py-12">
+          <Reveal className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <Badge className="mb-4 border-primary/20 bg-[#fbfaf8] text-primary">
+                  <Sparkles size={13} />
+                  Ferramentas grátis
+                </Badge>
+                <h2 className="max-w-2xl text-4xl font-bold leading-[0.95] text-slate-950 [font-family:'Outfit',sans-serif] sm:text-5xl">
+                  Primeiro ajude. Depois convide para organizar tudo.
+                </h2>
+              </div>
+              <Link to="/ferramentas" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50">
+                Ver todas as ferramentas
+                <ChevronRight size={17} />
+              </Link>
+            </div>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-4">
+              {freeToolCards.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link key={tool.href} to={tool.href} data-landing-card className="rounded-lg border border-slate-200 bg-[#fbfaf8] p-5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Icon size={19} />
+                    </span>
+                    <p className="mt-5 text-lg font-black text-slate-950">{tool.title}</p>
+                    <p className="mt-2 text-sm font-medium leading-6 text-slate-600">{tool.text}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </Reveal>
+        </section>
+
+        <section className="wedplan-section-mesh border-y border-slate-200 bg-[#fbfaf8] py-14 sm:py-16">
+          <Reveal className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+              <div>
+                <Badge className="mb-4 border-primary/20 bg-white text-primary">
+                  <Users size={13} />
+                  Para profissionais
+                </Badge>
+                <h2 className="text-4xl font-bold leading-[0.95] text-slate-950 [font-family:'Outfit',sans-serif] sm:text-5xl">
+                  Também funciona para quem organiza casamentos com clientes.
+                </h2>
+                <p className="mt-5 text-base font-medium leading-7 text-slate-600">
+                  Se você é assessor, cerimonialista, espaço ou fornecedor e quer usar o WedPlan de forma profissional, podemos conversar sobre um fluxo pensado para acompanhar mais de um casal com organização e segurança.
+                </p>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                  <Button onClick={() => onGetStarted({ plan: "partner" })} className="h-12 rounded-lg px-5 text-sm font-extrabold">
+                    Quero falar sobre parceria
+                    <ArrowRight size={17} />
+                  </Button>
+                  <Link to="/ferramentas/convidados" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50">
+                    Ver ferramentas gratuitas
+                    <ChevronRight size={17} />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-lg bg-slate-950 p-5 text-white">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Organização profissional</p>
+                  <div className="mt-5 grid gap-2">
+                    {["Planejamento centralizado", "Dados separados por casamento", "Acompanhamento do casal", "Rotina mais previsível"].map((item, index) => (
+                      <div key={item} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/10 px-4 py-3">
+                        <span className="text-sm font-black">{item}</span>
+                        <span className="rounded-full bg-primary/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-primary">
+                          {index === 0 ? "Pro" : "Em breve"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  {partnerCards.map((card) => (
+                    <article key={card.title} className="rounded-lg border border-slate-200 bg-[#fbfaf8] p-4">
+                      <p className="text-sm font-black leading-5 text-slate-950">{card.title}</p>
+                      <p className="mt-2 text-xs font-medium leading-5 text-slate-600">{card.text}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </section>
 
         <section id="problema" className="wedplan-section-mesh bg-white py-16 sm:py-20">

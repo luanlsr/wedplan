@@ -136,6 +136,15 @@ export const LegalPage = ({ type }: LegalPageProps) => {
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            {isPrivacy && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('wedplan:open-cookie-preferences'))}
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-card px-5 text-sm font-black text-foreground transition-colors hover:bg-accent"
+              >
+                Gerenciar preferências de cookies
+              </button>
+            )}
             <Link
               to={isPrivacy ? '/termos-de-uso' : '/politica-de-privacidade'}
               className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-card px-5 text-sm font-black text-foreground transition-colors hover:bg-accent"

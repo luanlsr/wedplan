@@ -27,6 +27,7 @@ import { BrandLogo } from '../layout/BrandLogo';
 import { Button, Input } from '../ui';
 import { cn } from '../../lib/utils';
 import { maskPhone } from '../../utils/masks';
+import { logError, logEvent } from '../../utils/observability';
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -385,6 +386,7 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
   const startCheckout = async () => {
     setLoading(true);
     setError(null);
+    const startedAt = performance.now();
 
     try {
       const personalValidation = validatePersonal(checkout);
@@ -394,6 +396,16 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
       if (!checkout.acceptedTerms || !checkout.acceptedPrivacy) {
         throw new Error('Aceite os Termos de Uso e a Política de Privacidade para continuar.');
       }
+
+      void logEvent({
+        eventName: 'checkout.subscription.started',
+        metadata: {
+          planCode: checkout.planCode,
+          billingInterval: checkout.billingInterval,
+          paymentMethod: checkout.paymentMethod,
+          source: 'checkout_multistep',
+        },
+      });
 
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`, {
@@ -425,6 +437,19 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
       const result = await res.json();
       if (!res.ok) throw new Error(getCheckoutErrorMessage(result));
 
+      void logEvent({
+        eventName: 'checkout.subscription.created',
+        entityType: 'checkout_session',
+        entityId: result.checkoutSessionId || null,
+        durationMs: performance.now() - startedAt,
+        metadata: {
+          planCode: result.planCode || checkout.planCode,
+          billingInterval: result.billingInterval || checkout.billingInterval,
+          hasPaymentUrl: Boolean(result.paymentUrl),
+          paymentValue: Number(result.paymentValue || selectedValue),
+        },
+      });
+
       updateCheckout({
         paymentUrl: result.paymentUrl || null,
         checkoutSessionId: result.checkoutSessionId || null,
@@ -433,6 +458,12 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
       });
       goToStep('sucesso');
     } catch (err: any) {
+      logError('checkout.subscription.error', err, {
+        planCode: checkout.planCode,
+        billingInterval: checkout.billingInterval,
+        paymentMethod: checkout.paymentMethod,
+        durationMs: performance.now() - startedAt,
+      });
       setError(err.message || 'Não foi possível iniciar o checkout');
     } finally {
       setLoading(false);

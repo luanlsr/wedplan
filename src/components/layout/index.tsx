@@ -1,4 +1,4 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard, Globe2 } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard, Globe2, Bug, Calculator } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
@@ -79,6 +79,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "financial", path: "/financeiro", label: "Financeiro", icon: DollarSign, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "planning", path: "/planejamento", label: "Planejamento", icon: TrendingUp, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "tools", path: "/ferramentas", label: "Ferramentas", icon: Calculator, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "wedding-site", path: "/site", label: "Site do Casal", icon: Globe2, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "checkin", path: "/checkin", label: "Check-in Dia", icon: UserCheck, hidden: userRole === 'master' || isPublicMode },
     { id: "settings", path: "/configuracoes", label: "Configurações", icon: Settings, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
@@ -89,6 +90,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     { id: "admin-users", path: "/usuarios", label: "Usuários", icon: Users },
     { id: "admin-subscriptions", path: "/assinaturas", label: "Assinaturas", icon: CreditCard },
     { id: "admin-domains", path: "/dominios", label: "Domínios", icon: Globe2 },
+    { id: "admin-logs", path: "/logs", label: "Logs", icon: Bug },
     { id: "admin-settings", path: "/configuracoes-master", label: "Configurações", icon: Settings },
   ] as MenuItem[];
 
@@ -316,6 +318,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
   const coupleMoreActions = [
     { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "tools", path: "/ferramentas", icon: Calculator, label: "Ferramentas", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "wedding-site", path: "/site", icon: Globe2, label: "Site do Casal", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "checkin", path: "/checkin", icon: UserCheck, label: "Check-in", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "settings", path: "/configuracoes", icon: Settings, label: "Configurações", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
@@ -323,6 +326,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 
   const masterMoreActions = [
     { id: "admin-domains", path: "/dominios", icon: Globe2, label: "Domínios" },
+    { id: "admin-logs", path: "/logs", icon: Bug, label: "Logs" },
     { id: "admin-settings", path: "/configuracoes-master", icon: Settings, label: "Configurações" },
   ] as MenuItem[];
 

@@ -67,6 +67,7 @@ export interface Task {
 
 export interface WeddingData {
   id?: string;
+  account_id?: string | null;
   role?: UserRole;
   public_checkin_token?: string;
   asaas_subscription_id?: string;

@@ -28,6 +28,7 @@ import { Badge, Button, Card, Input, cn } from '../ui';
 import { supabase } from '../../lib/supabase';
 import { usePlanFeatures } from '../../hooks/usePlanFeatures';
 import type { WeddingData } from '../../types';
+import { compressImageFile } from '../../utils/imageCompression';
 import { WeddingSitePreview } from './WeddingSitePreview';
 import {
   defaultWeddingSiteTemplateId,
@@ -420,11 +421,20 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
         if (!file.type.startsWith('image/')) continue;
         if (file.size > 8 * 1024 * 1024) throw new Error('Cada imagem deve ter no máximo 8MB.');
 
-        const extension = file.name.split('.').pop() || 'jpg';
+        const compressed = await compressImageFile(file, {
+          maxWidth: role === 'hero' ? 2200 : 1600,
+          maxHeight: role === 'hero' ? 1600 : 1600,
+          quality: role === 'hero' ? 0.84 : 0.78,
+        });
+        const uploadFile = compressed.file;
+        const extension = uploadFile.name.split('.').pop() || 'jpg';
         const safeName = file.name.replace(/\.[^/.]+$/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
         const filePath = `${data.id}/site/${Date.now()}-${safeName}.${extension}`;
 
-        const { error: uploadError } = await supabase.storage.from('casamentos').upload(filePath, file);
+        const { error: uploadError } = await supabase.storage.from('casamentos').upload(filePath, uploadFile, {
+          contentType: uploadFile.type || file.type,
+          upsert: false,
+        });
         if (uploadError) throw uploadError;
 
         const { data: publicData } = supabase.storage.from('casamentos').getPublicUrl(filePath);

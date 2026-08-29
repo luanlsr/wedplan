@@ -15,6 +15,18 @@ const canceledEvents = new Set(['PAYMENT_DELETED', 'PAYMENT_REFUNDED', 'SUBSCRIP
 
 const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase()
 
+const recordEvent = async (client: any, event: any) => {
+  try {
+    await client.from('app_events').insert({
+      source: 'edge:asaas-webhook',
+      occurred_at: new Date().toISOString(),
+      ...event,
+    })
+  } catch (error) {
+    console.warn('[Asaas Webhook] Observabilidade indisponível:', error.message)
+  }
+}
+
 const checkoutStatusFromSubscriptionStatus = (status: string) => {
   if (status === 'active') return 'paid'
   if (status === 'canceled') return 'canceled'
@@ -188,6 +200,9 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
 }
 
 serve(async (req) => {
+  let adminClient = null
+  const startedAt = performance.now()
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -204,7 +219,7 @@ serve(async (req) => {
       })
     }
 
-    const adminClient = createClient(
+    adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
@@ -223,6 +238,22 @@ serve(async (req) => {
       paymentId: asaasPaymentId,
       subscriptionId: asaasSubscriptionId,
       customerId: asaasCustomerId,
+    })
+
+    await recordEvent(adminClient, {
+      level: 'info',
+      event_name: 'edge.asaas_webhook.received',
+      route: '/functions/v1/asaas-webhook',
+      request_id: providerEventId,
+      entity_type: asaasSubscriptionId ? 'asaas_subscription' : 'asaas_payment',
+      entity_id: asaasSubscriptionId || asaasPaymentId || null,
+      metadata: {
+        event,
+        hasPaymentId: Boolean(asaasPaymentId),
+        hasSubscriptionId: Boolean(asaasSubscriptionId),
+        hasCustomerId: Boolean(asaasCustomerId),
+      },
+      user_agent: req.headers.get('user-agent'),
     })
 
     await adminClient
@@ -247,6 +278,15 @@ serve(async (req) => {
     } else if (asaasCustomerId) {
       checkoutQuery = checkoutQuery.eq('asaas_customer_id', asaasCustomerId)
     } else {
+      await recordEvent(adminClient, {
+        level: 'warn',
+        event_name: 'edge.asaas_webhook.ignored_missing_identifiers',
+        route: '/functions/v1/asaas-webhook',
+        request_id: providerEventId,
+        metadata: { event },
+        user_agent: req.headers.get('user-agent'),
+      })
+
       return new Response(JSON.stringify({ success: true, ignored: 'missing identifiers', event }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -266,6 +306,20 @@ serve(async (req) => {
         const accountStatus = overdueEvents.has(event) ? 'past_due' : canceledEvents.has(event) ? 'canceled' : 'active'
         await adminClient.from('accounts').update({ status: accountStatus }).eq('id', account.id)
       }
+
+      await recordEvent(adminClient, {
+        level: 'warn',
+        event_name: 'edge.asaas_webhook.checkout_not_found',
+        route: '/functions/v1/asaas-webhook',
+        request_id: providerEventId,
+        account_id: account?.id || null,
+        duration_ms: Math.round(performance.now() - startedAt),
+        metadata: {
+          event,
+          accountUpdated: Boolean(account?.id),
+        },
+        user_agent: req.headers.get('user-agent'),
+      })
 
       return new Response(JSON.stringify({ success: true, warning: 'checkout not found', event }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -307,12 +361,43 @@ serve(async (req) => {
         .eq('provider_event_id', providerEventId)
     }
 
+    await recordEvent(adminClient, {
+      level: 'info',
+      event_name: 'edge.asaas_webhook.processed',
+      route: '/functions/v1/asaas-webhook',
+      request_id: providerEventId,
+      user_id: processedUserId,
+      account_id: processedUserId,
+      entity_type: subscriptionId ? 'subscription' : 'checkout_session',
+      entity_id: subscriptionId || checkout.id,
+      duration_ms: Math.round(performance.now() - startedAt),
+      metadata: {
+        event,
+        checkoutId: checkout.id,
+        subscriptionId,
+        processedUser: Boolean(processedUserId),
+      },
+      user_agent: req.headers.get('user-agent'),
+    })
+
     return new Response(JSON.stringify({ success: true, event }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
     console.error('[Asaas Webhook] Erro:', error.message)
+    if (adminClient) {
+      await recordEvent(adminClient, {
+        level: 'error',
+        event_name: 'edge.asaas_webhook.error',
+        route: '/functions/v1/asaas-webhook',
+        duration_ms: Math.round(performance.now() - startedAt),
+        error_message: error.message,
+        stack: error.stack || null,
+        user_agent: req.headers.get('user-agent'),
+      })
+    }
+
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
