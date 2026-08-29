@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { Button, Input } from '../ui';
 import { cn } from '../../lib/utils';
-import { formatMoney, type GiftCategory, type GiftItem, type WeddingSite } from './weddingSiteTypes';
+import { formatMoney, getWeddingSiteTemplate, type GiftCategory, type GiftItem, type WeddingSite } from './weddingSiteTypes';
 
 const priceRanges = [
   { id: 'all', label: 'Todos os valores' },
@@ -134,13 +134,17 @@ export const WeddingGiftsPublic = () => {
     setVisibleCount(PUBLIC_GIFTS_PAGE_SIZE);
   }, [brand, category, gifts.length, priceRange, search, sortOrder]);
 
-  const themeStyle = site ? {
+  const template = site ? getWeddingSiteTemplate(site.template_id) : null;
+  const themeStyle = site && template ? {
     '--wedsite-font-primary': `'${site.font_primary || 'Playfair Display'}', serif`,
     '--wedsite-font-secondary': `'${site.font_secondary || 'Manrope'}', sans-serif`,
     '--wedsite-color-primary': site.color_primary || '#8b6f43',
     '--wedsite-color-secondary': site.color_secondary || '#2f3829',
     '--wedsite-bg-primary': site.background_primary || '#fbfaf7',
     '--wedsite-bg-secondary': site.background_secondary || '#ffffff',
+    '--wedsite-text': template.textColor,
+    '--wedsite-muted': template.mutedColor,
+    '--wedsite-border': template.borderColor,
   } as CSSProperties : undefined;
 
   const copyAddress = async () => {
@@ -197,11 +201,11 @@ export const WeddingGiftsPublic = () => {
   }
 
   return (
-    <div style={themeStyle} className="min-h-screen bg-[var(--wedsite-bg-primary)] text-[#202018] [font-family:var(--wedsite-font-secondary)]">
-      <header className="sticky top-0 z-30 border-b border-black/10 bg-[var(--wedsite-bg-primary)]/85 px-4 py-4 backdrop-blur-xl">
+    <div style={themeStyle} className={cn('min-h-screen bg-[var(--wedsite-bg-primary)] text-[var(--wedsite-text)] [font-family:var(--wedsite-font-secondary)]', template && `wedsite-template-${template.id}`)}>
+      <header className="sticky top-0 z-30 border-b border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)]/85 px-4 py-4 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
-            <Link to={`/casamento/${site.slug}`} className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#ded8cf] bg-white">
+            <Link to={`/casamento/${site.slug}`} className="flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)]">
               <ArrowLeft size={18} />
             </Link>
             <div>
@@ -212,20 +216,20 @@ export const WeddingGiftsPublic = () => {
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative min-w-[260px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9b958c]" size={17} />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar presente, marca..." className="h-11 border-[#ded8cf] bg-white pl-10 pr-10" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar presente, marca..." className="h-11 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] pl-10 pr-10" />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-[#9b958c] hover:bg-[#f0ebe3]">
                   <X size={15} />
                 </button>
               )}
             </div>
-            <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value as SortOrder)} className="h-11 rounded-xl border border-[#ded8cf] bg-white px-3 text-sm font-bold outline-none">
+            <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value as SortOrder)} className="h-11 rounded-xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] px-3 text-sm font-bold outline-none">
               <option value="latest">Mais recentes</option>
               <option value="low-high">Menor preço</option>
               <option value="high-low">Maior preço</option>
               <option value="az">Ordem alfabética</option>
             </select>
-            <button onClick={() => setMobileFilters(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#ded8cf] bg-white px-4 text-sm font-black lg:hidden">
+            <button onClick={() => setMobileFilters(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] px-4 text-sm font-black lg:hidden">
               <SlidersHorizontal size={16} /> Filtros
             </button>
           </div>
@@ -246,10 +250,10 @@ export const WeddingGiftsPublic = () => {
         />
 
         <main>
-          {site.gift_intro && <p className="mb-6 max-w-3xl text-sm font-medium leading-6 text-[#69645d]">{site.gift_intro}</p>}
+          {site.gift_intro && <p className="mb-6 max-w-3xl text-sm font-medium leading-6 text-[var(--wedsite-muted)]">{site.gift_intro}</p>}
 
           {filteredGifts.length === 0 ? (
-            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#ded8cf] bg-white text-center">
+            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] text-center">
               <Gift className="mb-3 text-[var(--wedsite-color-primary)]" size={36} />
               <p className="font-black">Nenhum presente encontrado</p>
               <button onClick={() => { setSearch(''); setCategory('all'); setBrand('all'); setPriceRange('all'); }} className="mt-3 text-sm font-black text-[var(--wedsite-color-primary)]">Limpar filtros</button>
@@ -258,7 +262,7 @@ export const WeddingGiftsPublic = () => {
             <div className="space-y-6">
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {visibleGifts.map((gift) => (
-                  <article key={gift.id} className={cn('overflow-hidden rounded-2xl border border-black/10 bg-[var(--wedsite-bg-secondary)] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10', gift.is_bought && 'opacity-70')}>
+                  <article key={gift.id} className={cn('overflow-hidden rounded-2xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10', gift.is_bought && 'opacity-70')}>
                     <div className="relative flex h-56 items-center justify-center bg-[#f0ebe3]">
                       {gift.image_url ? <img src={gift.image_url} alt={gift.title} className="h-full w-full object-cover" loading="lazy" /> : <Gift className="text-[var(--wedsite-color-primary)]" size={42} />}
                       {gift.is_featured && <span className="absolute left-3 top-3 rounded-full bg-[var(--wedsite-color-secondary)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">Sugestão</span>}
@@ -269,7 +273,7 @@ export const WeddingGiftsPublic = () => {
                         {gift.category && <span>{categoryById.get(gift.category)}</span>}
                         {gift.brand && <span>{gift.brand}</span>}
                       </div>
-                      {gift.subtitle && <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-[#69645d]">{gift.subtitle}</p>}
+                      {gift.subtitle && <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-[var(--wedsite-muted)]">{gift.subtitle}</p>}
                       <div className="mt-5 flex items-center justify-between gap-3">
                         <span className="text-lg font-black text-[var(--wedsite-color-primary)]">{formatMoney(gift.price)}</span>
                         {gift.is_bought ? (
@@ -288,8 +292,8 @@ export const WeddingGiftsPublic = () => {
               </div>
 
               {visibleCount < filteredGifts.length && (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#ded8cf] bg-[var(--wedsite-bg-secondary)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
-                  <p className="text-sm font-bold text-[#69645d]">
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+                  <p className="text-sm font-bold text-[var(--wedsite-muted)]">
                     Exibindo {visibleGifts.length} de {filteredGifts.length} presentes.
                   </p>
                   <button onClick={() => setVisibleCount((current) => current + PUBLIC_GIFTS_PAGE_SIZE)} className="inline-flex h-11 items-center justify-center rounded-xl bg-[var(--wedsite-color-secondary)] px-5 text-xs font-black uppercase text-white">
@@ -305,13 +309,13 @@ export const WeddingGiftsPublic = () => {
       <AnimatePresence>
         {mobileFilters && (
           <motion.div className="fixed inset-0 z-50 bg-black/45 lg:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileFilters(false)}>
-            <motion.div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-[1.5rem] bg-[#fbfaf7] p-4" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} onClick={(event) => event.stopPropagation()}>
+            <motion.div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-[1.5rem] bg-[var(--wedsite-bg-primary)] p-4" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} onClick={(event) => event.stopPropagation()}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-black [font-family:'Outfit',sans-serif]">Filtros</h2>
                 <button onClick={() => setMobileFilters(false)}><X size={22} /></button>
               </div>
               <Filters categories={categories} brands={brands} category={category} brand={brand} priceRange={priceRange} setCategory={setCategory} setBrand={setBrand} setPriceRange={setPriceRange} />
-              <Button onClick={() => setMobileFilters(false)} className="mt-5 h-12 w-full rounded-xl bg-[#2f3829]">Aplicar filtros</Button>
+              <Button onClick={() => setMobileFilters(false)} className="mt-5 h-12 w-full rounded-xl bg-[var(--wedsite-color-secondary)]">Aplicar filtros</Button>
             </motion.div>
           </motion.div>
         )}
@@ -320,25 +324,25 @@ export const WeddingGiftsPublic = () => {
       <AnimatePresence>
         {selectedGift && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedGift(null)}>
-            <motion.div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" initial={{ opacity: 0, y: 20, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.98 }} onClick={(event) => event.stopPropagation()}>
+            <motion.div className="w-full max-w-lg rounded-2xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] p-5 shadow-2xl" initial={{ opacity: 0, y: 20, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.98 }} onClick={(event) => event.stopPropagation()}>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--wedsite-color-primary)]">Confirmar presente</p>
                   <h2 className="mt-1 text-2xl font-black [font-family:var(--wedsite-font-primary)]">{selectedGift.title}</h2>
                 </div>
-                <button onClick={() => setSelectedGift(null)} className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-[#f0ebe3]"><X size={18} /></button>
+                <button onClick={() => setSelectedGift(null)} className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-[var(--wedsite-bg-primary)]"><X size={18} /></button>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-dashed border-[#c7a76b] bg-[#fbfaf7] p-4">
+              <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--wedsite-color-primary)] bg-[var(--wedsite-bg-primary)] p-4">
                 <div className="flex gap-3">
                     <MapPin className="mt-1 shrink-0 text-[var(--wedsite-color-primary)]" size={20} />
                   <div className="min-w-0">
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--wedsite-color-primary)]">Endereço de entrega</p>
-                    <pre className="mt-2 whitespace-pre-wrap break-words text-sm font-medium leading-6 text-[#4f4a43] [font-family:inherit]">{deliveryAddress || 'O casal ainda não configurou o endereço de entrega.'}</pre>
+                    <pre className="mt-2 whitespace-pre-wrap break-words text-sm font-medium leading-6 text-[var(--wedsite-muted)] [font-family:inherit]">{deliveryAddress || 'O casal ainda não configurou o endereço de entrega.'}</pre>
                   </div>
                 </div>
                 {deliveryAddress && (
-                  <button onClick={copyAddress} className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#ded8cf] bg-white text-xs font-black uppercase text-[var(--wedsite-color-primary)]">
+                  <button onClick={copyAddress} className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] text-xs font-black uppercase text-[var(--wedsite-color-primary)]">
                     <Copy size={15} /> {copied ? 'Endereço copiado' : 'Copiar endereço'}
                   </button>
                 )}
@@ -346,9 +350,9 @@ export const WeddingGiftsPublic = () => {
 
               <form onSubmit={reserveGift} className="mt-5 space-y-4">
                 <div>
-                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#69645d]">Seu nome</label>
-                  <Input value={guestName} onChange={(event) => setGuestName(event.target.value)} placeholder="Digite seu nome" className="h-12 border-[#ded8cf] bg-[#fbfaf7]" />
-                  <p className="mt-2 text-xs font-medium text-[#9b958c]">O link do produto será liberado após informar pelo menos 4 letras.</p>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[var(--wedsite-muted)]">Seu nome</label>
+                  <Input value={guestName} onChange={(event) => setGuestName(event.target.value)} placeholder="Digite seu nome" className="h-12 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)]" />
+                  <p className="mt-2 text-xs font-medium text-[var(--wedsite-muted)]">O link do produto será liberado após informar pelo menos 4 letras.</p>
                 </div>
                 <Button type="submit" disabled={submitting || guestName.trim().length < 4} className="h-12 w-full rounded-xl bg-[var(--wedsite-color-secondary)]">
                   {submitting ? <Loader2 className="animate-spin" size={16} /> : <ShoppingBag size={16} />}
@@ -360,8 +364,8 @@ export const WeddingGiftsPublic = () => {
         )}
       </AnimatePresence>
 
-      <footer className="px-5 py-8 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[#9b958c]">
-        <Heart className="mx-auto mb-2 text-[#c7a76b]" size={16} />
+      <footer className="px-5 py-8 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[var(--wedsite-muted)]">
+        <Heart className="mx-auto mb-2 text-[var(--wedsite-color-primary)]" size={16} />
         Criado com WedPlan
       </footer>
     </div>
@@ -389,7 +393,7 @@ const Filters = ({
   setPriceRange: (value: PriceRange) => void;
   className?: string;
 }) => (
-  <aside className={cn('h-fit rounded-2xl border border-[#ded8cf] bg-white p-4 shadow-sm', className)}>
+  <aside className={cn('h-fit rounded-2xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] p-4 shadow-sm', className)}>
     <FilterGroup title="Categorias">
       <FilterButton active={category === 'all'} onClick={() => setCategory('all')}>Todas</FilterButton>
       {categories.map((item) => (
@@ -412,14 +416,14 @@ const Filters = ({
 );
 
 const FilterGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="border-b border-[#ede8df] py-4 first:pt-0 last:border-b-0 last:pb-0">
-    <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#9b865f]">{title}</h3>
+  <div className="border-b border-[color:var(--wedsite-border)] py-4 first:pt-0 last:border-b-0 last:pb-0">
+    <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--wedsite-color-primary)]">{title}</h3>
     <div className="grid gap-1">{children}</div>
   </div>
 );
 
 const FilterButton = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
-  <button onClick={onClick} className={cn('rounded-xl px-3 py-2 text-left text-sm font-bold text-[#69645d] transition hover:bg-[#fbfaf7]', active && 'bg-[#2f3829] text-white hover:bg-[#2f3829]')}>
+  <button onClick={onClick} className={cn('rounded-xl px-3 py-2 text-left text-sm font-bold text-[var(--wedsite-muted)] transition hover:bg-[var(--wedsite-bg-primary)]', active && 'bg-[var(--wedsite-color-secondary)] text-white hover:bg-[var(--wedsite-color-secondary)]')}>
     {children}
   </button>
 );

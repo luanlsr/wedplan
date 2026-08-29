@@ -1,10 +1,12 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import type { CSSProperties } from 'react';
 import { CalendarDays, Camera, Gift, Heart, MapPin, MessageSquareHeart, Navigation, Send } from 'lucide-react';
 import heroImage from '../../assets/hero.png';
+import { cn } from '../../lib/utils';
 import {
   formatMoney,
   formatPublicDate,
+  getWeddingSiteTemplate,
   googleMapsEmbedUrl,
   googleMapsUrl,
   mapsQuery,
@@ -55,14 +57,31 @@ export const WeddingSitePreview = ({
     image_role: 'hero' as const,
     sort_order: 0,
   }];
-  const firstHero = orderedHeroImages[0]?.image_url || heroImage;
   const coupleTitle = site.title || 'Nosso grande dia';
-  const dateLabel = events.find((event) => event.event_date)?.event_date;
   const featuredGifts = gifts.slice(0, compact ? 3 : 6);
   const categoryById = new Map(categories.map((category) => [category.id, category.name]));
+  const template = getWeddingSiteTemplate(site.template_id);
   const visibleEvents = site.party_same_as_ceremony
     ? events.filter((event) => event.event_type === 'ceremony').slice(0, 1)
     : events;
+  const eventWithDate = visibleEvents.find((event) => event.event_date) || events.find((event) => event.event_date);
+  const dateLabel = eventWithDate?.event_date;
+  const dateParts = dateLabel ? (() => {
+    const parsed = new Date(`${dateLabel}T12:00:00`);
+    return {
+      month: new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(parsed).replace('.', '').toUpperCase(),
+      day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(parsed),
+      year: new Intl.DateTimeFormat('pt-BR', { year: 'numeric' }).format(parsed),
+      weekday: new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(parsed).toUpperCase(),
+    };
+  })() : null;
+  const eventTime = eventWithDate?.event_time?.slice(0, 5);
+  const initials = coupleTitle
+    .split(/&| e /i)
+    .map((name) => name.trim()[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(' & ') || 'W';
   const themeStyle = {
     '--wedsite-font-primary': `'${site.font_primary || 'Playfair Display'}', serif`,
     '--wedsite-font-secondary': `'${site.font_secondary || 'Manrope'}', sans-serif`,
@@ -70,70 +89,123 @@ export const WeddingSitePreview = ({
     '--wedsite-color-secondary': site.color_secondary || '#2f3829',
     '--wedsite-bg-primary': site.background_primary || '#fbfaf7',
     '--wedsite-bg-secondary': site.background_secondary || '#ffffff',
+    '--wedsite-text': template.textColor,
+    '--wedsite-muted': template.mutedColor,
+    '--wedsite-border': template.borderColor,
+    '--wedsite-hero-overlay': template.heroOverlay,
   } as CSSProperties;
+  const heroToneClass = template.heroTone === 'dark' ? 'text-[var(--wedsite-text)]' : 'text-white';
+  const heroCopyClass = cn(
+    'wedsite-hero-copy mx-auto max-w-3xl text-center',
+    heroToneClass,
+    template.heroTone === 'boxed' && 'rounded-[2rem] border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)]/90 p-7 text-[var(--wedsite-text)] shadow-2xl backdrop-blur sm:p-10',
+    template.id === 'modern-minimal' && 'max-w-2xl',
+    template.id === 'classic-invitation' && 'max-w-4xl',
+    template.id === 'black-tie' && 'border border-[color:var(--wedsite-color-primary)]/40 bg-black/18 px-6 py-8 backdrop-blur'
+  );
+  const cardClass = cn(
+    'overflow-hidden border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] shadow-sm',
+    template.sectionStyle === 'clean' ? 'rounded-xl' : 'rounded-2xl',
+    template.sectionStyle === 'organic' && 'rounded-[1.8rem]',
+    template.sectionStyle === 'luxury' && 'shadow-2xl shadow-black/20'
+  );
 
   return (
-    <div style={themeStyle} className="wedsite-preview min-h-full overflow-hidden rounded-[1.5rem] bg-[var(--wedsite-bg-primary)] text-[#202018] shadow-2xl shadow-black/10 [font-family:var(--wedsite-font-secondary)]">
-      <section className={compact ? 'relative min-h-[520px] overflow-hidden' : 'relative min-h-screen overflow-hidden'}>
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={firstHero}
-            src={firstHero}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            initial={{ opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-          />
-        </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-[var(--wedsite-bg-primary)]" />
+    <div style={themeStyle} className={cn('wedsite-preview min-h-full overflow-hidden rounded-[1.5rem] bg-[var(--wedsite-bg-primary)] text-[var(--wedsite-text)] shadow-2xl shadow-black/10 [font-family:var(--wedsite-font-secondary)]', `wedsite-template-${template.id}`)}>
+      <section className={cn('wedsite-site-hero', compact ? 'relative min-h-[520px] overflow-hidden' : 'relative min-h-screen overflow-hidden')}>
+        {!compact && (
+          <header className="wedsite-portal-nav">
+            <div className="wedsite-portal-nav-inner">
+              <a href="#topo" className="wedsite-portal-logo">
+                {initials}
+              </a>
+              <nav className="wedsite-portal-links">
+                {storyItems.length > 0 && <a href="#historia">História</a>}
+                {visibleEvents.length > 0 && <a href="#cerimonia">Cerimônia</a>}
+                {site.rsvp_enabled !== false && <a href="#rsvp-form">Participar</a>}
+                {site.gift_list_enabled !== false && <a href={giftHref}>Presentes</a>}
+              </nav>
+            </div>
+          </header>
+        )}
+
+        <div id="topo" className="absolute inset-0 bg-black">
+          <motion.div
+            className="wedsite-hero-mosaic-track"
+            animate={orderedHeroImages.length > 1 && !compact ? { x: ['0%', '-50%'] } : undefined}
+            transition={orderedHeroImages.length > 1 && !compact ? { duration: 220, repeat: Infinity, ease: 'linear' } : undefined}
+          >
+            {[...orderedHeroImages, ...orderedHeroImages].map((image, index) => (
+              <img key={`${image.id}-${index}`} src={image.image_url} alt="" className="wedsite-hero-mosaic-img" />
+            ))}
+          </motion.div>
+        </div>
+        <div className="absolute inset-0 bg-[image:var(--wedsite-hero-overlay)]" />
 
         {orderedHeroImages.length > 1 && (
-          <div className="absolute right-4 top-4 z-10 hidden w-28 gap-2 sm:grid">
+          <div className="absolute right-4 top-24 z-10 hidden w-28 gap-2 sm:grid">
             {orderedHeroImages.slice(0, 3).map((image) => (
               <img key={image.id} src={image.image_url} alt="" className="h-16 rounded-xl border border-white/30 object-cover shadow-lg" />
             ))}
           </div>
         )}
 
-        <div className={`relative mx-auto flex ${compact ? 'min-h-[520px]' : 'min-h-screen'} max-w-6xl flex-col justify-end px-5 pb-12 pt-20 sm:px-8`}>
+        <div className={cn('relative z-10 mx-auto flex max-w-6xl flex-col items-center justify-center px-5 py-20 sm:px-8', compact ? 'min-h-[520px]' : 'min-h-screen')}>
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.55 }}
-            className="max-w-3xl text-white"
+            className={heroCopyClass}
           >
-            <p className="mb-4 inline-flex rounded-full border border-white/25 bg-white/15 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] backdrop-blur">
+            <p className="wedsite-hero-sup mb-5 inline-flex text-[10px] font-black uppercase tracking-[0.42em] text-[var(--wedsite-color-primary)]">
               {site.subtitle || 'Save the date'}
             </p>
-            <h1 className={`${compact ? 'text-5xl sm:text-7xl' : 'text-6xl sm:text-8xl'} font-black leading-[0.88] tracking-normal [font-family:var(--wedsite-font-primary)]`}>
+            <h1 className={`${compact ? 'text-6xl sm:text-8xl' : 'text-7xl sm:text-9xl'} font-normal leading-[0.82] tracking-normal [font-family:var(--wedsite-font-primary)]`}>
               {coupleTitle}
             </h1>
-            <p className="mt-6 max-w-2xl text-base font-medium leading-7 text-white/90 sm:text-lg">
-              {site.welcome_message || 'Estamos muito felizes em compartilhar esse momento com você.'}
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
+            {dateParts && (
+              <div className="wedsite-date-portal">
+                <div className="wedsite-date-top">
+                  <span>{dateParts.month}</span>
+                  <span className="wedsite-date-sep">|</span>
+                  <span className="wedsite-date-day">{dateParts.day}</span>
+                  <span className="wedsite-date-sep">|</span>
+                  <span>{dateParts.year}</span>
+                </div>
+                <p className="wedsite-date-sub">
+                  {dateParts.weekday}{eventTime ? ` AS ${eventTime}H` : ''}
+                </p>
+              </div>
+            )}
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
               {site.rsvp_enabled !== false && (
-                <a href="#rsvp-form" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#202018]">
-                  Confirmar presença <Send size={16} />
+                <a href="#rsvp-form" className="wedsite-inv-cta">
+                  Responder convite <Send size={16} />
                 </a>
               )}
               {site.gift_list_enabled !== false && (
-                <a href={giftHref} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/15 px-5 text-sm font-black text-white backdrop-blur">
+                <a href={giftHref} className="wedsite-inv-cta wedsite-inv-cta-outline">
                   Lista de presentes <Gift size={16} />
                 </a>
               )}
             </div>
-            {dateLabel && <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-white/75">{formatPublicDate(dateLabel)}</p>}
           </motion.div>
         </div>
       </section>
 
-      <main className={`${compact ? 'space-y-12 px-5 py-10' : 'space-y-20 px-5 py-16'} mx-auto max-w-6xl bg-[var(--wedsite-bg-primary)] sm:px-8`}>
+      <main className={cn('wedsite-site-main mx-auto max-w-6xl bg-[var(--wedsite-bg-primary)] sm:px-8', compact ? 'space-y-12 px-5 py-10' : 'space-y-20 px-5 py-16')}>
+        {(site.welcome_message || dateLabel) && (
+          <section className="wedsite-quote-section">
+            <div className="wedsite-quote-mark" />
+            <p>
+              {site.welcome_message || 'Queremos te convidar para celebrar esse dia tão especial ao nosso lado.'}
+            </p>
+          </section>
+        )}
+
         {storyItems.length > 0 && (
-          <section>
+          <section id="historia" className="wedsite-section-block">
             <SectionIntro eyebrow="Nossa história" title="Alguns capítulos até aqui" />
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {storyItems.map((item, index) => {
@@ -145,7 +217,7 @@ export const WeddingSitePreview = ({
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.25 }}
                     transition={{ duration: 0.4, delay: Math.min(index * 0.06, 0.2) }}
-                    className="overflow-hidden rounded-2xl border border-black/10 bg-[var(--wedsite-bg-secondary)] shadow-sm"
+                    className={cardClass}
                   >
                     {item.image_url && <img src={item.image_url} alt="" className="h-44 w-full object-cover" />}
                     <div className="p-5">
@@ -154,7 +226,7 @@ export const WeddingSitePreview = ({
                       </div>
                       {item.event_date && <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--wedsite-color-primary)]">{formatPublicDate(item.event_date)}</p>}
                       <h3 className="text-xl font-black [font-family:var(--wedsite-font-primary)]">{item.title}</h3>
-                      {item.body && <p className="mt-3 text-sm font-medium leading-6 text-[#69645d]">{item.body}</p>}
+                      {item.body && <p className="mt-3 text-sm font-medium leading-6 text-[var(--wedsite-muted)]">{item.body}</p>}
                     </div>
                   </motion.article>
                 );
@@ -164,7 +236,7 @@ export const WeddingSitePreview = ({
         )}
 
         {galleryImages.length > 0 && (
-          <section>
+          <section className="wedsite-section-block">
             <SectionIntro eyebrow="Galeria" title="Momentos que contam por imagem" />
             <div className="mt-8 grid auto-rows-[180px] grid-cols-2 gap-3 md:grid-cols-4">
               {galleryImages.slice(0, compact ? 6 : 10).map((image, index) => (
@@ -184,13 +256,13 @@ export const WeddingSitePreview = ({
         )}
 
         {visibleEvents.length > 0 && (
-          <section>
+          <section id="cerimonia" className="wedsite-section-block">
             <SectionIntro eyebrow="Quando e onde" title="Cerimônia e festa" />
             <div className="mt-8 grid gap-5 lg:grid-cols-2">
               {visibleEvents.map((event) => {
                 const query = mapsQuery(event);
                 return (
-                  <article key={event.id} className="overflow-hidden rounded-2xl border border-black/10 bg-[var(--wedsite-bg-secondary)] shadow-sm">
+                  <article key={event.id} className={cardClass}>
                     <div className="p-5">
                       <div className="flex items-start justify-between gap-4">
                         <div>
@@ -201,7 +273,7 @@ export const WeddingSitePreview = ({
                         </div>
                         <MapPin className="text-[var(--wedsite-color-primary)]" size={22} />
                       </div>
-                      <p className="mt-4 text-sm font-medium leading-6 text-[#69645d]">
+                      <p className="mt-4 text-sm font-medium leading-6 text-[var(--wedsite-muted)]">
                         {[formatPublicDate(event.event_date), event.event_time?.slice(0, 5)].filter(Boolean).join(' as ')}
                         {event.address ? <><br />{event.address}</> : null}
                       </p>
@@ -215,7 +287,7 @@ export const WeddingSitePreview = ({
                           loading="lazy"
                           allowFullScreen
                         />
-                        <div className="border-t border-[#ede8df] p-4">
+                        <div className="border-t border-[color:var(--wedsite-border)] p-4">
                           <a href={googleMapsUrl(query)} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--wedsite-color-secondary)] px-4 text-sm font-black text-white">
                             Como chegar <Navigation size={16} />
                           </a>
@@ -249,14 +321,14 @@ export const WeddingSitePreview = ({
         )}
 
         {site.gift_list_enabled !== false && (
-          <section id="presentes">
+          <section id="presentes" className="wedsite-section-block">
             <SectionIntro eyebrow="Presentes" title="Lista preparada pelo casal" />
-            {site.gift_intro && <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#69645d]">{site.gift_intro}</p>}
+            {site.gift_intro && <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[var(--wedsite-muted)]">{site.gift_intro}</p>}
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featuredGifts.length === 0 ? (
-                <p className="text-sm font-medium text-[#69645d]">A lista de presentes aparecerá aqui.</p>
+                <p className="text-sm font-medium text-[var(--wedsite-muted)]">A lista de presentes aparecerá aqui.</p>
               ) : featuredGifts.map((gift) => (
-                <article key={gift.id} className="overflow-hidden rounded-2xl border border-black/10 bg-[var(--wedsite-bg-secondary)] shadow-sm">
+                <article key={gift.id} className={cardClass}>
                   {gift.image_url ? <img src={gift.image_url} alt="" className="h-44 w-full object-cover" /> : <div className="flex h-44 items-center justify-center bg-[var(--wedsite-color-primary)]/10 text-[var(--wedsite-color-primary)]"><Gift size={36} /></div>}
                   <div className="p-5">
                     <p className="text-lg font-black">{gift.title}</p>
@@ -273,7 +345,7 @@ export const WeddingSitePreview = ({
         )}
       </main>
 
-      <footer className="border-t border-black/10 bg-[var(--wedsite-bg-secondary)] px-5 py-8 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[#9b958c]">
+      <footer className="border-t border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] px-5 py-8 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[var(--wedsite-muted)]">
         Criado com WedPlan
       </footer>
     </div>

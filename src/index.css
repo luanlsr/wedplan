@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Allura&family=Bodoni+Moda:wght@500;600;700;800&family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=DM+Serif+Display&family=Great+Vibes&family=Inter:wght@400;500;600;700;800&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Marcellus&family=Montserrat:wght@500;600;700;800&family=Nunito+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Parisienne&family=Petit+Formal+Script&family=Playfair+Display:wght@600;700;800&family=Poppins:wght@400;500;600;700;800&family=Prata&family=Quicksand:wght@400;500;600;700&family=Raleway:wght@500;600;700;800&family=Sacramento&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Allura&family=Bodoni+Moda:wght@500;600;700;800&family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=DM+Serif+Display&family=Great+Vibes&family=Inter:wght@400;500;600;700;800&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Marcellus&family=Montserrat:wght@500;600;700;800&family=Nunito+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Parisienne&family=Petit+Formal+Script&family=Pinyon+Script&family=Playfair+Display:wght@600;700;800&family=Poppins:wght@400;500;600;700;800&family=Prata&family=Quicksand:wght@400;500;600;700&family=Raleway:wght@500;600;700;800&family=Sacramento&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
@@ -241,6 +241,98 @@
   .wedplan-animated-bar {
     transform-origin: bottom;
     animation: wedplanBarRise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .wedsite-preview {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .wedsite-site-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .wedsite-site-main {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .wedsite-template-romantic-editorial .wedsite-site-main {
+    background-image:
+      linear-gradient(115deg, rgb(157 100 94 / 0.08), transparent 34%),
+      repeating-linear-gradient(90deg, transparent 0 42px, rgb(157 100 94 / 0.035) 42px 43px);
+  }
+
+  .wedsite-template-romantic-editorial .wedsite-site-hero::after {
+    background:
+      linear-gradient(90deg, rgb(255 255 255 / 0.12), transparent 20%, transparent 80%, rgb(255 255 255 / 0.08)),
+      repeating-linear-gradient(135deg, transparent 0 22px, rgb(255 255 255 / 0.055) 22px 23px);
+  }
+
+  .wedsite-template-classic-invitation .wedsite-site-main {
+    background-image:
+      linear-gradient(rgb(159 123 63 / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(159 123 63 / 0.08) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  .wedsite-template-classic-invitation .wedsite-hero-copy {
+    outline: 1px solid rgb(159 123 63 / 0.24);
+    outline-offset: -12px;
+  }
+
+  .wedsite-template-classic-invitation .wedsite-site-hero img {
+    filter: sepia(0.18) saturate(0.82) brightness(1.04);
+  }
+
+  .wedsite-template-botanical-garden .wedsite-site-main {
+    background-image:
+      linear-gradient(130deg, rgb(109 138 98 / 0.13), transparent 30%),
+      repeating-linear-gradient(120deg, transparent 0 34px, rgb(49 79 59 / 0.05) 34px 35px);
+  }
+
+  .wedsite-template-botanical-garden article {
+    box-shadow: 0 14px 34px rgb(49 79 59 / 0.08);
+  }
+
+  .wedsite-template-modern-minimal .wedsite-site-main {
+    background-image:
+      linear-gradient(rgb(23 25 29 / 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(23 25 29 / 0.055) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  .wedsite-template-modern-minimal .wedsite-site-hero img {
+    clip-path: polygon(43% 0, 100% 0, 100% 100%, 54% 100%);
+  }
+
+  .wedsite-template-modern-minimal .wedsite-hero-copy h1 {
+    letter-spacing: 0;
+  }
+
+  .wedsite-template-black-tie .wedsite-site-main {
+    background-image:
+      linear-gradient(125deg, rgb(212 179 109 / 0.13), transparent 28%),
+      repeating-linear-gradient(135deg, transparent 0 28px, rgb(244 234 212 / 0.045) 28px 29px);
+  }
+
+  .wedsite-template-black-tie .wedsite-site-hero img {
+    filter: saturate(0.8) brightness(0.78) contrast(1.08);
+  }
+
+  .wedsite-template-black-tie article,
+  .wedsite-template-black-tie iframe {
+    box-shadow: 0 18px 52px rgb(0 0 0 / 0.24);
+  }
+
+  @media (max-width: 640px) {
+    .wedsite-template-modern-minimal .wedsite-site-hero img {
+      clip-path: none;
+      opacity: 0.38;
+    }
   }
 
   .wedplan-app {

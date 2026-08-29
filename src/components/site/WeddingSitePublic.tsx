@@ -6,7 +6,7 @@ import { Button, Input } from '../ui';
 import { supabase } from '../../lib/supabase';
 import { maskPhone } from '../../utils/masks';
 import { WeddingSitePreview } from './WeddingSitePreview';
-import type { GiftCategory, GiftItem, SiteEvent, SiteImage, StoryItem, WeddingSite } from './weddingSiteTypes';
+import { getWeddingSiteTemplate, type GiftCategory, type GiftItem, type SiteEvent, type SiteImage, type StoryItem, type WeddingSite } from './weddingSiteTypes';
 
 export const WeddingSitePublic = () => {
   const { slug } = useParams();
@@ -162,13 +162,17 @@ export const WeddingSitePublic = () => {
   const hasPublicContent = useMemo(() => {
     return storyItems.length > 0 || galleryImages.length > 0 || events.length > 0 || gifts.length > 0;
   }, [storyItems.length, galleryImages.length, events.length, gifts.length]);
-  const themeStyle = site ? {
+  const template = site ? getWeddingSiteTemplate(site.template_id) : null;
+  const themeStyle = site && template ? {
     '--wedsite-font-primary': `'${site.font_primary || 'Playfair Display'}', serif`,
     '--wedsite-font-secondary': `'${site.font_secondary || 'Manrope'}', sans-serif`,
     '--wedsite-color-primary': site.color_primary || '#8b6f43',
     '--wedsite-color-secondary': site.color_secondary || '#2f3829',
     '--wedsite-bg-primary': site.background_primary || '#fbfaf7',
     '--wedsite-bg-secondary': site.background_secondary || '#ffffff',
+    '--wedsite-text': template.textColor,
+    '--wedsite-muted': template.mutedColor,
+    '--wedsite-border': template.borderColor,
   } as CSSProperties : undefined;
 
   if (loading) {
@@ -192,7 +196,7 @@ export const WeddingSitePublic = () => {
   }
 
   return (
-    <div style={themeStyle} className="bg-[var(--wedsite-bg-primary)] [font-family:var(--wedsite-font-secondary)]">
+    <div style={themeStyle} className="bg-[var(--wedsite-bg-primary)] text-[var(--wedsite-text)] [font-family:var(--wedsite-font-secondary)]">
       <WeddingSitePreview
         site={site}
         heroImages={heroImages}
@@ -206,18 +210,18 @@ export const WeddingSitePublic = () => {
       />
 
       {!hasPublicContent && (
-        <div className="mx-auto max-w-4xl px-5 py-12 text-center text-sm font-medium text-[#69645d]">
+        <div className="mx-auto max-w-4xl px-5 py-12 text-center text-sm font-medium text-[var(--wedsite-muted)]">
           O casal ainda está preparando os detalhes dessa página.
         </div>
       )}
 
       {site.rsvp_enabled && (
         <section id="rsvp-form" className="mx-auto max-w-6xl px-5 pb-16 sm:px-8">
-          <div className="grid gap-8 rounded-[1.5rem] border border-black/10 bg-[var(--wedsite-bg-secondary)] p-6 shadow-sm lg:grid-cols-[0.8fr_1.2fr] lg:p-8">
+          <div className="grid gap-8 rounded-[1.5rem] border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] p-6 shadow-sm lg:grid-cols-[0.8fr_1.2fr] lg:p-8">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--wedsite-color-primary)]">RSVP</p>
-              <h2 className="mt-2 text-4xl font-black leading-none text-[#202018] [font-family:var(--wedsite-font-primary)]">Confirmação de presença</h2>
-              <p className="mt-4 text-sm font-medium leading-6 text-[#69645d]">Sua resposta atualiza a lista do casal automaticamente quando o nome estiver cadastrado.</p>
+              <h2 className="mt-2 text-4xl font-black leading-none text-[var(--wedsite-text)] [font-family:var(--wedsite-font-primary)]">Confirmação de presença</h2>
+              <p className="mt-4 text-sm font-medium leading-6 text-[var(--wedsite-muted)]">Sua resposta atualiza a lista do casal automaticamente quando o nome estiver cadastrado.</p>
             </div>
             <form onSubmit={submitRsvp}>
               {rsvpSent ? (
@@ -231,21 +235,21 @@ export const WeddingSitePublic = () => {
               ) : (
                 <div className="grid gap-4">
                   <InputBlock icon={User}>
-                    <Input required value={rsvpForm.full_name} onChange={(event) => setRsvpForm((current) => ({ ...current, full_name: event.target.value }))} placeholder="Seu nome completo" className="h-12 border-[#ded8cf] bg-[#fbfaf7] pl-11" />
+                    <Input required value={rsvpForm.full_name} onChange={(event) => setRsvpForm((current) => ({ ...current, full_name: event.target.value }))} placeholder="Seu nome completo" className="h-12 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)] pl-11" />
                   </InputBlock>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <InputBlock icon={Phone}>
-                      <Input value={rsvpForm.phone} onChange={(event) => setRsvpForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} placeholder="Telefone" className="h-12 border-[#ded8cf] bg-[#fbfaf7] pl-11" />
+                      <Input value={rsvpForm.phone} onChange={(event) => setRsvpForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} placeholder="Telefone" className="h-12 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)] pl-11" />
                     </InputBlock>
                     <InputBlock icon={Mail}>
-                      <Input type="email" value={rsvpForm.email} onChange={(event) => setRsvpForm((current) => ({ ...current, email: event.target.value }))} placeholder="E-mail" className="h-12 border-[#ded8cf] bg-[#fbfaf7] pl-11" />
+                      <Input type="email" value={rsvpForm.email} onChange={(event) => setRsvpForm((current) => ({ ...current, email: event.target.value }))} placeholder="E-mail" className="h-12 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)] pl-11" />
                     </InputBlock>
                   </div>
-                  <div className="grid grid-cols-2 rounded-xl border border-[#ded8cf] bg-[#fbfaf7] p-1">
-                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: true }))} className={`h-11 rounded-lg text-xs font-black uppercase ${rsvpForm.is_attending ? 'bg-white text-[var(--wedsite-color-primary)] shadow-sm' : 'text-[#69645d]'}`}>
+                  <div className="grid grid-cols-2 rounded-xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)] p-1">
+                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: true }))} className={`h-11 rounded-lg text-xs font-black uppercase ${rsvpForm.is_attending ? 'bg-[var(--wedsite-bg-secondary)] text-[var(--wedsite-color-primary)] shadow-sm' : 'text-[var(--wedsite-muted)]'}`}>
                       Vou
                     </button>
-                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: false }))} className={`h-11 rounded-lg text-xs font-black uppercase ${!rsvpForm.is_attending ? 'bg-white text-[var(--wedsite-color-primary)] shadow-sm' : 'text-[#69645d]'}`}>
+                    <button type="button" onClick={() => setRsvpForm((current) => ({ ...current, is_attending: false }))} className={`h-11 rounded-lg text-xs font-black uppercase ${!rsvpForm.is_attending ? 'bg-[var(--wedsite-bg-secondary)] text-[var(--wedsite-color-primary)] shadow-sm' : 'text-[var(--wedsite-muted)]'}`}>
                       Não vou
                     </button>
                   </div>
@@ -280,35 +284,35 @@ export const WeddingSitePublic = () => {
         <section className="mx-auto grid max-w-6xl gap-8 px-5 pb-20 sm:px-8 lg:grid-cols-[1fr_1fr]">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--wedsite-color-primary)]">Mensagens</p>
-            <h2 className="mt-2 text-4xl font-black leading-none text-[#202018] [font-family:var(--wedsite-font-primary)]">Deixe seu carinho</h2>
+            <h2 className="mt-2 text-4xl font-black leading-none text-[var(--wedsite-text)] [font-family:var(--wedsite-font-primary)]">Deixe seu carinho</h2>
             <div className="mt-6 grid gap-3">
               {messages.length === 0 ? (
-                <p className="text-sm font-medium text-[#69645d]">As mensagens aprovadas aparecerão aqui.</p>
+                <p className="text-sm font-medium text-[var(--wedsite-muted)]">As mensagens aprovadas aparecerão aqui.</p>
               ) : messages.map((message) => (
-                <div key={message.id} className="rounded-2xl border border-[#ded8cf] bg-white p-4 shadow-sm">
-                  <p className="text-sm font-black text-[#202018]">{message.author_name}</p>
-                  <p className="mt-2 text-sm font-medium leading-6 text-[#69645d]">{message.message}</p>
+                <div key={message.id} className="rounded-2xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] p-4 shadow-sm">
+                  <p className="text-sm font-black text-[var(--wedsite-text)]">{message.author_name}</p>
+                  <p className="mt-2 text-sm font-medium leading-6 text-[var(--wedsite-muted)]">{message.message}</p>
                 </div>
               ))}
             </div>
           </div>
-          <form onSubmit={submitMessage} className="h-fit rounded-2xl border border-[#ded8cf] bg-white p-5 shadow-sm">
+          <form onSubmit={submitMessage} className="h-fit rounded-2xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-secondary)] p-5 shadow-sm">
             {messageSent ? (
               <div className="flex min-h-48 flex-col items-center justify-center text-center">
                 <MessageSquareHeart className="mb-3 text-[var(--wedsite-color-primary)]" size={38} />
-                <p className="text-lg font-black text-[#202018]">Mensagem enviada</p>
-                <p className="mt-1 text-sm font-medium text-[#69645d]">Ela aparecerá após aprovação do casal.</p>
+                <p className="text-lg font-black text-[var(--wedsite-text)]">Mensagem enviada</p>
+                <p className="mt-1 text-sm font-medium text-[var(--wedsite-muted)]">Ela aparecerá após aprovação do casal.</p>
               </div>
             ) : (
               <div className="grid gap-4">
-                <Input required value={messageForm.author_name} onChange={(event) => setMessageForm((current) => ({ ...current, author_name: event.target.value }))} placeholder="Seu nome" className="h-12 border-[#ded8cf] bg-[#fbfaf7]" />
-                <Input type="email" value={messageForm.author_email} onChange={(event) => setMessageForm((current) => ({ ...current, author_email: event.target.value }))} placeholder="Seu e-mail" className="h-12 border-[#ded8cf] bg-[#fbfaf7]" />
+                <Input required value={messageForm.author_name} onChange={(event) => setMessageForm((current) => ({ ...current, author_name: event.target.value }))} placeholder="Seu nome" className="h-12 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)]" />
+                <Input type="email" value={messageForm.author_email} onChange={(event) => setMessageForm((current) => ({ ...current, author_email: event.target.value }))} placeholder="Seu e-mail" className="h-12 border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)]" />
                 <textarea
                   required
                   value={messageForm.message}
                   onChange={(event) => setMessageForm((current) => ({ ...current, message: event.target.value }))}
                   placeholder="Escreva sua mensagem"
-                  className="min-h-32 rounded-xl border border-[#ded8cf] bg-[#fbfaf7] px-4 py-3 text-sm font-medium outline-none transition focus:border-[#9b865f] focus:ring-4 focus:ring-[#9b865f]/10"
+                  className="min-h-32 rounded-xl border border-[color:var(--wedsite-border)] bg-[var(--wedsite-bg-primary)] px-4 py-3 text-sm font-medium outline-none transition focus:border-[var(--wedsite-color-primary)] focus:ring-4 focus:ring-[var(--wedsite-color-primary)]/10"
                 />
                 <Button type="submit" className="h-12 rounded-xl bg-[var(--wedsite-color-secondary)]">
                   Enviar mensagem <Send size={16} />

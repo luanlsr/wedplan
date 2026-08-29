@@ -9,6 +9,7 @@ import {
   Globe2,
   ImagePlus,
   Info,
+  LayoutTemplate,
   Loader2,
   MapPin,
   MessageSquareHeart,
@@ -29,15 +30,19 @@ import { usePlanFeatures } from '../../hooks/usePlanFeatures';
 import type { WeddingData } from '../../types';
 import { WeddingSitePreview } from './WeddingSitePreview';
 import {
+  defaultWeddingSiteTemplateId,
   formatMoney,
+  getWeddingSiteTemplate,
   isTempId,
   tempId,
+  weddingSiteTemplates,
   type GiftCategory,
   type GiftItem,
   type SiteEvent,
   type SiteImage,
   type StoryItem,
   type WeddingSite,
+  type WeddingSiteTemplateId,
   type WeddingSiteStatus,
 } from './weddingSiteTypes';
 
@@ -90,6 +95,7 @@ const fontOptions = [
   { value: 'Parisienne', label: 'Parisienne' },
   { value: 'Allura', label: 'Allura' },
   { value: 'Petit Formal Script', label: 'Petit Formal Script' },
+  { value: 'Pinyon Script', label: 'Pinyon Script' },
   { value: 'Sacramento', label: 'Sacramento' },
   { value: 'Great Vibes', label: 'Great Vibes' },
   { value: 'Outfit', label: 'Outfit' },
@@ -157,6 +163,10 @@ const getFriendlyError = (err: any, fallback: string) => {
   const message = String(err?.message || err?.error_description || err || '');
   const lowerMessage = message.toLowerCase();
 
+  if (lowerMessage.includes('template_id')) {
+    return 'Não foi possível salvar porque a migration dos templates do site ainda não foi aplicada no Supabase.';
+  }
+
   if (
     lowerMessage.includes('schema cache') ||
     lowerMessage.includes('could not find') ||
@@ -191,6 +201,7 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
     rsvp_enabled: true,
     gift_list_enabled: true,
     messages_enabled: true,
+    template_id: defaultWeddingSiteTemplateId,
     hero_layout: 'editorial' as WeddingSite['hero_layout'],
     party_same_as_ceremony: false,
     font_primary: 'Playfair Display',
@@ -316,6 +327,7 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
           rsvp_enabled: currentSite.rsvp_enabled,
           gift_list_enabled: currentSite.gift_list_enabled,
           messages_enabled: currentSite.messages_enabled,
+          template_id: currentSite.template_id || defaultWeddingSiteTemplateId,
           hero_layout: currentSite.hero_layout || 'editorial',
           party_same_as_ceremony: currentSite.party_same_as_ceremony || false,
           font_primary: currentSite.font_primary || 'Playfair Display',
@@ -475,6 +487,7 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
           rsvp_enabled: form.rsvp_enabled,
           gift_list_enabled: form.gift_list_enabled,
           messages_enabled: form.messages_enabled,
+          template_id: form.template_id,
           hero_layout: form.hero_layout,
           party_same_as_ceremony: form.party_same_as_ceremony,
           font_primary: form.font_primary,
@@ -501,9 +514,9 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
       setForm((current) => ({ ...current, slug: cleanSlug }));
 
       await Promise.all([
-        supabase.from('wedding_site_images').delete().eq('wedding_site_id', currentSite.id),
-        supabase.from('wedding_site_story_items').delete().eq('wedding_site_id', currentSite.id),
-        supabase.from('wedding_site_events').delete().eq('wedding_site_id', currentSite.id),
+        supabase.from('wedding_site_images').delete().eq('wedding_site_id', currentSite.id).eq('wedding_id', data.id),
+        supabase.from('wedding_site_story_items').delete().eq('wedding_site_id', currentSite.id).eq('wedding_id', data.id),
+        supabase.from('wedding_site_events').delete().eq('wedding_site_id', currentSite.id).eq('wedding_id', data.id),
       ]);
 
       const imagesToInsert = [...heroImages, ...galleryImages].map((image, index) => ({
@@ -561,7 +574,8 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
           const { error: categoryError } = await supabase
             .from('categorias_presentes')
             .update({ name: category.name.trim(), active: category.active ?? true })
-            .eq('id', category.id);
+            .eq('id', category.id)
+            .eq('wedding_id', data.id);
           if (categoryError) throw categoryError;
         }
       }
@@ -577,7 +591,7 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
       if (eventsInsert.error) throw eventsInsert.error;
 
       if (deletedGiftIds.length > 0) {
-        const { error: deleteGiftError } = await supabase.from('lista_presentes').delete().in('id', deletedGiftIds);
+        const { error: deleteGiftError } = await supabase.from('lista_presentes').delete().in('id', deletedGiftIds).eq('wedding_id', data.id);
         if (deleteGiftError) throw deleteGiftError;
       }
 
@@ -600,7 +614,7 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
           const { error: giftError } = await supabase.from('lista_presentes').insert(payload);
           if (giftError) throw giftError;
         } else {
-          const { error: giftError } = await supabase.from('lista_presentes').update(payload).eq('id', gift.id);
+          const { error: giftError } = await supabase.from('lista_presentes').update(payload).eq('id', gift.id).eq('wedding_id', data.id);
           if (giftError) throw giftError;
         }
       }
@@ -632,6 +646,20 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
     setGifts((current) => [gift, ...current]);
     setExpandedGiftId(gift.id);
     setEditingGift(gift);
+  };
+
+  const applyTemplate = (templateId: WeddingSiteTemplateId) => {
+    const template = getWeddingSiteTemplate(templateId);
+    setForm((current) => ({
+      ...current,
+      template_id: template.id,
+      font_primary: template.fontPrimary,
+      font_secondary: template.fontSecondary,
+      color_primary: template.colorPrimary,
+      color_secondary: template.colorSecondary,
+      background_primary: template.backgroundPrimary,
+      background_secondary: template.backgroundSecondary,
+    }));
   };
 
   const copyPublicUrl = async () => {
@@ -845,6 +873,55 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
                     <p className="text-sm font-black">Aparência do site</p>
                     <p className="text-xs font-medium text-muted-foreground">Fontes e cores aparecem na prévia em tempo real.</p>
                   </div>
+                </div>
+
+                <div className="mb-5">
+                  <Field label="Template">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                      {weddingSiteTemplates.map((template) => {
+                        const isSelected = form.template_id === template.id;
+
+                        return (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() => applyTemplate(template.id)}
+                            className={cn(
+                              'group flex min-h-[154px] flex-col justify-between rounded-2xl border bg-card p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md',
+                              isSelected ? 'border-primary shadow-sm ring-4 ring-primary/10' : 'border-border'
+                            )}
+                          >
+                            <div
+                              className="relative h-16 overflow-hidden rounded-xl border"
+                              style={{
+                                background: `linear-gradient(135deg, ${template.backgroundPrimary}, ${template.backgroundSecondary})`,
+                                borderColor: template.borderColor,
+                              }}
+                            >
+                              <div
+                                className="absolute inset-0 opacity-80"
+                                style={{
+                                  background: `linear-gradient(135deg, ${template.colorPrimary}33, transparent 45%, ${template.colorSecondary}33)`,
+                                }}
+                              />
+                              <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
+                                <span className="h-8 w-14 rounded-lg" style={{ backgroundColor: template.colorPrimary }} />
+                                <span className="h-5 w-9 rounded-full" style={{ backgroundColor: template.colorSecondary }} />
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <div className="flex items-center gap-2">
+                                <LayoutTemplate size={14} className={isSelected ? 'text-primary' : 'text-muted-foreground'} />
+                                <p className="text-sm font-black text-foreground">{template.name}</p>
+                              </div>
+                              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-primary">{template.tagline}</p>
+                              <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-muted-foreground">{template.description}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Field>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
