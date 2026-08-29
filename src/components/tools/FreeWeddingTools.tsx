@@ -13,6 +13,7 @@ import {
   Wine,
 } from 'lucide-react';
 import { Button, Card, Input, cn } from '../ui';
+import { WhatsAppFloatingButton } from '../layout/WhatsAppFloatingButton';
 import { setPageMetadata } from '../../utils/meta';
 
 type ToolId = 'custo-casamento' | 'checklist' | 'bebidas' | 'buffet' | 'convidados' | 'lua-de-mel' | 'doces-bolo';
@@ -67,7 +68,7 @@ export const FreeWeddingTools = () => {
               Ver sistema
             </Button>
             <Button onClick={startCheckout} className="h-10 rounded-xl bg-[#2d3820] px-4 text-xs">
-              Criar meu casamento grátis
+              Ver planos
             </Button>
           </div>
         </div>
@@ -114,6 +115,7 @@ export const FreeWeddingTools = () => {
           <ToolContent toolId={activeTool.id} onStart={startCheckout} />
         </section>
       </main>
+      <WhatsAppFloatingButton />
     </div>
   );
 };
@@ -144,7 +146,7 @@ const LeadCta = ({ onStart, children }: { onStart: () => void; children: string 
         <p className="mt-2 text-lg font-black">{children}</p>
       </div>
       <Button onClick={onStart} className="h-12 rounded-xl bg-white px-5 text-[#2d3820] hover:bg-[#f8f1e6]">
-        Criar meu casamento grátis <ChevronRight size={16} />
+        Começar meu planejamento <ChevronRight size={16} />
       </Button>
     </div>
   </Card>

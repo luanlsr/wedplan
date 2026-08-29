@@ -7,7 +7,19 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "marketing:check-demo": "playwright test -c playwright.marketing.config.ts scripts/marketing/playwright/demo-readiness.spec.ts",
+    "marketing:screenshots": "playwright test -c playwright.marketing.config.ts scripts/marketing/playwright/screenshots.spec.ts",
+    "marketing:record": "playwright test -c playwright.marketing.config.ts scripts/marketing/playwright/recordings.spec.ts",
+    "marketing:prepare-assets": "node scripts/marketing/prepare-remotion-assets.mjs",
+    "marketing:render": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx GeneralAd marketing-output/ads/general-ad.mp4",
+    "marketing:render:general": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx GeneralAd marketing-output/ads/general-ad.mp4",
+    "marketing:render:budget": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx BudgetAd marketing-output/ads/budget-ad.mp4",
+    "marketing:render:guests": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx GuestsAd marketing-output/ads/guests-ad.mp4",
+    "marketing:render:checklist": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx ChecklistAd marketing-output/ads/checklist-ad.mp4",
+    "marketing:render:horizontal": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx GeneralHorizontalAd marketing-output/ads/general-horizontal-ad.mp4",
+    "marketing:render:all": "node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx GeneralAd marketing-output/ads/general-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx BudgetAd marketing-output/ads/budget-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx GuestsAd marketing-output/ads/guests-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx ChecklistAd marketing-output/ads/checklist-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx GeneralHorizontalAd marketing-output/ads/general-horizontal-ad.mp4",
+    "marketing:all": "playwright test -c playwright.marketing.config.ts scripts/marketing/playwright/screenshots.spec.ts && playwright test -c playwright.marketing.config.ts scripts/marketing/playwright/recordings.spec.ts && node scripts/marketing/prepare-remotion-assets.mjs && remotion render scripts/marketing/remotion/Root.tsx GeneralAd marketing-output/ads/general-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx BudgetAd marketing-output/ads/budget-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx GuestsAd marketing-output/ads/guests-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx ChecklistAd marketing-output/ads/checklist-ad.mp4 && remotion render scripts/marketing/remotion/Root.tsx GeneralHorizontalAd marketing-output/ads/general-horizontal-ad.mp4"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
@@ -27,6 +39,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.62.1",
+    "@remotion/cli": "^4.0.518",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.12.2",
@@ -39,6 +53,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "postcss": "^8.5.9",
+    "remotion": "^4.0.518",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",

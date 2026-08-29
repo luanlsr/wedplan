@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+.pnpm-store/
+marketing-output/
+scripts/marketing/playwright/.auth/
+public/marketing/screenshots/**
+!public/marketing/screenshots/.gitkeep
 
 # Environment variables (contains live API keys/secrets)
 .env

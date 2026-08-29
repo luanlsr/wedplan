@@ -79,21 +79,15 @@
   .wedplan-hero-surface {
     background:
       linear-gradient(115deg, #fffaf7 0%, #fff3ef 34%, #f4ddd8 64%, #e6f2f5 100%);
-    background-size: 190% 190%;
-    animation: wedplanGradientDrift 18s ease-in-out infinite;
   }
 
   .wedplan-aurora-field {
     position: absolute;
-    inset: -18% -12%;
+    inset: 0;
     background:
-      linear-gradient(100deg, transparent 0 18%, rgb(200 124 115 / 0.24) 31%, transparent 47%),
-      linear-gradient(142deg, transparent 0 42%, rgb(86 154 174 / 0.22) 55%, transparent 72%),
-      linear-gradient(64deg, transparent 0 48%, rgb(232 182 123 / 0.16) 67%, transparent 86%);
-    background-size: 180% 180%;
-    filter: blur(26px);
-    opacity: 0.9;
-    animation: wedplanAuroraSweep 22s ease-in-out infinite;
+      linear-gradient(110deg, transparent 0 20%, rgb(200 124 115 / 0.18) 36%, transparent 56%),
+      linear-gradient(145deg, transparent 0 48%, rgb(86 154 174 / 0.16) 66%, transparent 88%);
+    opacity: 0.82;
   }
 
   .wedplan-noise-layer {
@@ -133,10 +127,9 @@
     inset: 0;
     z-index: -1;
     background:
-      linear-gradient(115deg, rgb(200 124 115 / 0.1), transparent 31%),
-      linear-gradient(245deg, rgb(86 154 174 / 0.11), transparent 36%),
-      repeating-linear-gradient(90deg, transparent 0 36px, rgb(15 23 42 / 0.035) 36px 37px);
-    opacity: 0.9;
+      linear-gradient(115deg, rgb(200 124 115 / 0.08), transparent 31%),
+      linear-gradient(245deg, rgb(86 154 174 / 0.08), transparent 36%);
+    opacity: 0.85;
   }
 
   .wedplan-dark-mesh {
@@ -151,9 +144,8 @@
     inset: 0;
     z-index: -1;
     background:
-      linear-gradient(130deg, rgb(200 124 115 / 0.18), transparent 34%),
-      linear-gradient(250deg, rgb(66 153 174 / 0.18), transparent 40%),
-      repeating-linear-gradient(135deg, transparent 0 22px, rgb(255 255 255 / 0.035) 22px 23px);
+      linear-gradient(130deg, rgb(200 124 115 / 0.16), transparent 34%),
+      linear-gradient(250deg, rgb(66 153 174 / 0.14), transparent 40%);
   }
 
   .wedplan-premium-card {
@@ -162,7 +154,7 @@
       linear-gradient(#fff, #fff) padding-box,
       linear-gradient(135deg, rgb(200 124 115 / 0.95), rgb(86 154 174 / 0.8)) border-box;
     box-shadow:
-      0 24px 60px hsl(5 41% 42% / 0.22),
+      0 18px 44px hsl(5 41% 42% / 0.18),
       0 0 0 1px rgb(255 255 255 / 0.55) inset;
   }
 
@@ -189,10 +181,15 @@
   }
 
   .wedplan-landing .wedplan-premium-card:hover {
-    transform: translateY(-15px);
+    transform: translateY(-6px);
     box-shadow:
-      0 30px 70px hsl(5 41% 42% / 0.28),
+      0 22px 54px hsl(5 41% 42% / 0.22),
       0 0 0 1px rgb(255 255 255 / 0.65) inset;
+  }
+
+  .wedplan-reveal {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 520px;
   }
 
   .wedplan-gradient-text {
@@ -215,8 +212,8 @@
   .wedplan-landing article:hover,
   .wedplan-landing details:hover,
   .wedplan-landing [data-landing-card]:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 18px 42px hsl(225 30% 16% / 0.11);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px hsl(225 30% 16% / 0.08);
   }
 
   .wedplan-shine {
@@ -230,17 +227,16 @@
     inset: 0;
     background: linear-gradient(110deg, transparent 0%, rgb(255 255 255 / 0.28) 45%, transparent 58%);
     transform: translateX(-120%);
-    animation: wedplanShine 5.8s ease-in-out infinite;
     pointer-events: none;
   }
 
   .wedplan-float-card {
-    animation: wedplanFloat 7s ease-in-out infinite;
+    transform: translateZ(0);
   }
 
   .wedplan-animated-bar {
     transform-origin: bottom;
-    animation: wedplanBarRise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: wedplanBarRise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .wedsite-preview {

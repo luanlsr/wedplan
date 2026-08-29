@@ -23,18 +23,16 @@ import {
   Wine,
   X,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { Button } from "../ui";
 import { cn } from "../../lib/utils";
 import { BrandLogo } from "./BrandLogo";
+import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { setDefaultPageMetadata } from "../../utils/meta";
 
 type LandingPageProps = {
   onLogin: () => void;
   onGetStarted: (options?: { plan?: string; billing?: "monthly" | "yearly" }) => void;
 };
-
-const revealViewport = { once: true, amount: 0.22 } as const;
 
 const chaosItems = [
   "Uma planilha para orçamento",
@@ -55,41 +53,41 @@ const freeToolCards = [
   {
     icon: Calculator,
     title: "Quanto vai custar?",
-    text: "Estimativa por convidados e orçamento.",
+    text: "Veja uma estimativa inicial para planejar com mais segurança.",
     href: "/ferramentas/custo-casamento",
   },
   {
     icon: CalendarCheck2,
     title: "O que fazer agora?",
-    text: "Checklist automático pela data.",
+    text: "Receba uma lista de próximos passos pela data do casamento.",
     href: "/ferramentas/checklist",
   },
   {
     icon: Wine,
     title: "Quantas bebidas?",
-    text: "Cálculo por convidados e duração.",
+    text: "Calcule quantidades de forma simples para a festa.",
     href: "/ferramentas/bebidas",
   },
   {
     icon: Users,
     title: "Começar lista",
-    text: "Organize convidados antes da conta.",
+    text: "Monte sua primeira lista de convidados sem complicação.",
     href: "/ferramentas/convidados",
   },
 ];
 
 const partnerCards = [
   {
-    title: "Acompanhamento profissional",
-    text: "Profissionais podem organizar casamentos com mais clareza e menos retrabalho operacional.",
+    title: "Mais clareza na rotina",
+    text: "Organize informações importantes em um painel fácil de acompanhar.",
   },
   {
-    title: "Experiência para o casal",
-    text: "O casal acompanha decisões, prazos e informações importantes em um ambiente centralizado.",
+    title: "Casais mais informados",
+    text: "Compartilhe decisões, prazos e dados essenciais com mais transparência.",
   },
   {
-    title: "Parceria com o ecossistema",
-    text: "Assessores, espaços e fornecedores podem conversar conosco sobre uso profissional do WedPlan.",
+    title: "Uso profissional",
+    text: "Uma opção para quem deseja levar organização digital aos casamentos que acompanha.",
   },
 ];
 
@@ -170,7 +168,7 @@ const featureSections = [
     eyebrow: "Pro Casal",
     title: "Um site personalizado para o casal receber confirmações e mensagens.",
     description:
-      "No plano Pro, o casal ganha uma landing page própria com RSVP, lista de presentes, mensagens e integração com os convidados do sistema.",
+      "No plano Pro, o casal ganha um site próprio com RSVP, lista de presentes, mensagens e integração com os convidados do sistema.",
     bullets: ["Site do casal", "Lista de presentes", "Domínio como extra"],
   },
 ];
@@ -216,7 +214,7 @@ const pricingPlans = [
     price: "39,90",
     caption: "site, RSVP e presentes",
     audience: "Para transformar o planejamento em experiência para os convidados.",
-    features: ["Landing page do casal", "Lista de presentes integrada", "Mensagens e RSVP"],
+    features: ["Site personalizado do casal", "Lista de presentes integrada", "Mensagens e RSVP"],
     highlight: "Pro",
   },
 ];
@@ -236,7 +234,7 @@ const objections = [
   },
   {
     title: "Não quero pagar por mais uma assinatura.",
-    text: "A ideia é cobrar pouco para o WedPlan acompanhar o casamento por meses, reduzindo retrabalho e centralizando decisões importantes.",
+    text: "Os planos são mensais e acessíveis para acompanhar o casamento pelo tempo que fizer sentido para vocês.",
   },
 ];
 
@@ -244,12 +242,12 @@ const faqs = [
   {
     question: "Quando a conta é criada?",
     answer:
-      "A compra passa pelo Asaas. Depois que o pagamento é confirmado, o sistema libera a criação da conta e envia o acesso inicial por email.",
+      "Depois que o pagamento é confirmado, o sistema libera a criação da conta e envia o acesso inicial por email.",
   },
   {
     question: "Posso cancelar quando quiser?",
     answer:
-      "Sim. A proposta do WedPlan é assinatura mensal, sem prender o casal em uma cobrança longa antes de perceber valor.",
+      "Sim. A assinatura é mensal para vocês manterem o WedPlan pelo período em que precisarem.",
   },
   {
     question: "Funciona pelo celular?",
@@ -264,7 +262,7 @@ const faqs = [
   {
     question: "Meus dados ficam protegidos?",
     answer:
-      "O acesso é separado por usuário e casamento, com políticas de banco para impedir que um cliente visualize dados de outro.",
+      "Sim. Cada casamento tem acesso separado, com regras de segurança para proteger as informações cadastradas.",
   },
   {
     question: "O plano Pro inclui domínio próprio?",
@@ -289,9 +287,8 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
 
   return (
     <div className="wedplan-landing relative isolate min-h-screen overflow-x-hidden bg-[#fbfaf8] text-slate-950 [font-family:'Manrope',sans-serif]">
-      <div className="pointer-events-none fixed inset-0 z-0 wedplan-soft-grid opacity-40" />
-      <div className="pointer-events-none fixed inset-0 z-0 wedplan-noise-layer" />
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/70 bg-white/75 shadow-sm shadow-slate-900/5 backdrop-blur-2xl">
+      <div className="pointer-events-none absolute inset-0 z-0 wedplan-soft-grid opacity-30" />
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/70 bg-white/85 shadow-sm shadow-slate-900/5 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             onClick={onLogin}
@@ -302,8 +299,8 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
           </button>
 
           <nav className="hidden items-center gap-8 text-sm font-bold text-slate-600 lg:flex">
-            <a href="#problema" className="hover:text-primary">Problema</a>
-            <a href="#produto" className="hover:text-primary">Produto</a>
+            <a href="#problema" className="hover:text-primary">Organização</a>
+            <a href="#produto" className="hover:text-primary">Recursos</a>
             <Link to="/ferramentas/custo-casamento" className="hover:text-primary">Ferramentas grátis</Link>
             <a href="#preco" className="hover:text-primary">Planos</a>
             <a href="#duvidas" className="hover:text-primary">Dúvidas</a>
@@ -378,32 +375,18 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
             <ProductPreview />
           </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={revealViewport}
-            variants={{
-              hidden: {},
-              visible: { transition: { staggerChildren: 0.08 } },
-            }}
-            className="mx-auto grid max-w-7xl gap-3 px-4 pb-8 sm:grid-cols-3 sm:px-6 lg:px-8"
-          >
+          <div className="mx-auto grid max-w-7xl gap-3 px-4 pb-8 sm:grid-cols-3 sm:px-6 lg:px-8">
             {metrics.map((metric) => (
-              <motion.div
+              <div
                 key={metric.label}
-                variants={{
-                  hidden: { opacity: 0, y: 18 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                transition={{ duration: 0.55, ease: "easeOut" }}
                 data-landing-card
-                className="flex items-end justify-between rounded-lg border border-white/80 bg-white/75 p-4 shadow-sm backdrop-blur"
+                className="flex items-end justify-between rounded-lg border border-white/80 bg-white/80 p-4 shadow-sm"
               >
                 <span className="text-2xl font-black text-slate-950">{metric.value}</span>
                 <span className="max-w-28 text-right text-xs font-black uppercase tracking-[0.12em] text-slate-500">{metric.label}</span>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </section>
 
         <section className="bg-white py-12">
@@ -415,8 +398,11 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   Ferramentas grátis
                 </Badge>
                 <h2 className="max-w-2xl text-4xl font-bold leading-[0.95] text-slate-950 [font-family:'Outfit',sans-serif] sm:text-5xl">
-                  Primeiro ajude. Depois convide para organizar tudo.
+                  Ferramentas gratuitas para começar com mais clareza.
                 </h2>
+                <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-slate-600">
+                  Use calculadoras e listas simples para dar os primeiros passos no planejamento do casamento.
+                </p>
               </div>
               <Link to="/ferramentas" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50">
                 Ver todas as ferramentas
@@ -450,20 +436,20 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   Para profissionais
                 </Badge>
                 <h2 className="text-4xl font-bold leading-[0.95] text-slate-950 [font-family:'Outfit',sans-serif] sm:text-5xl">
-                  Também funciona para quem organiza casamentos com clientes.
+                  Uma opção para profissionais que acompanham casamentos.
                 </h2>
                 <p className="mt-5 text-base font-medium leading-7 text-slate-600">
-                  Se você é assessor, cerimonialista, espaço ou fornecedor e quer usar o WedPlan de forma profissional, podemos conversar sobre um fluxo pensado para acompanhar mais de um casal com organização e segurança.
+                  Assessores, cerimonialistas e empresas do setor podem usar o WedPlan para deixar informações, prazos e decisões mais fáceis de acompanhar.
                 </p>
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <Button onClick={() => onGetStarted({ plan: "partner" })} className="h-12 rounded-lg px-5 text-sm font-extrabold">
-                    Quero falar sobre parceria
+                    Quero ser parceiro
                     <ArrowRight size={17} />
                   </Button>
-                  <Link to="/ferramentas/convidados" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50">
-                    Ver ferramentas gratuitas
+                  <a href="#preco" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50">
+                    Conhecer planos
                     <ChevronRight size={17} />
-                  </Link>
+                  </a>
                 </div>
               </div>
 
@@ -507,7 +493,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   Organizar casamento não deveria parecer um segundo emprego.
                 </h2>
                 <p className="mt-5 text-base font-medium leading-7 text-slate-600">
-                  O problema não é ter muita coisa para organizar. É não saber onde cada coisa está, quanto já foi pago e qual decisão precisa ser tomada agora.
+                  A dificuldade não é ter muita coisa para organizar. É não saber onde cada coisa está, quanto já foi pago e qual decisão precisa ser tomada agora.
                 </p>
                 <Button onClick={() => onGetStarted()} className="mt-7 h-12 rounded-lg px-5 text-sm font-extrabold">
                   Quero colocar tudo em ordem
@@ -542,7 +528,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                 </h2>
               </div>
               <p className="text-base font-medium leading-7 text-slate-300">
-                A transformação que o WedPlan vende é simples: sair de planilhas, mensagens e memória para um painel onde o casal entende o planejamento de verdade.
+                A diferença é simples: sair de planilhas, mensagens e memória para um painel onde o casal entende o planejamento de verdade.
               </p>
             </div>
 
@@ -590,7 +576,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
               <div className="max-w-2xl">
                 <Badge className="mb-4 border-slate-200 bg-slate-50 text-slate-700">
                   <Sparkles size={13} />
-                  Demonstração de valor
+                  Visão completa
                 </Badge>
                 <h2 className="text-4xl font-bold leading-[0.95] text-slate-950 [font-family:'Outfit',sans-serif] sm:text-6xl">
                   O WedPlan mostra o que antes ficava escondido.
@@ -633,18 +619,18 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
               <div>
                 <Badge className="mb-4 border-primary/20 bg-white text-primary">
                   <CreditCard size={13} />
-                  Começo fluido
+                  Cadastro seguro
                 </Badge>
                 <h2 className="text-4xl font-bold leading-[0.95] text-slate-950 [font-family:'Outfit',sans-serif] sm:text-6xl">
-                  Seu WedPlan começa antes do pagamento parecer complicado.
+                  Comece com os dados essenciais e pagamento seguro.
                 </h2>
                 <p className="mt-5 text-base font-medium leading-7 text-slate-600">
-                  O checkout pede os dados essenciais, monta o casamento, escolhe o plano e só libera a conta após a confirmação do pagamento.
+                  Você informa seus dados, adiciona as informações do casamento, escolhe o plano e recebe o acesso após a confirmação do pagamento.
                 </p>
               </div>
 
               <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-                {["Dados pessoais", "Dados do casamento", "Escolha do plano", "Pagamento seguro", "Onboarding inicial"].map((step, index) => (
+                {["Dados pessoais", "Dados do casamento", "Escolha do plano", "Pagamento seguro", "Primeiros passos"].map((step, index) => (
                   <div key={step} className="flex gap-4 border-b border-slate-100 py-4 last:border-b-0">
                     <span className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black",
@@ -658,8 +644,8 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                         {index === 0 && "Nome, email e telefone para iniciar o cadastro."}
                         {index === 1 && "Nome do casal e data para personalizar o planejamento."}
                         {index === 2 && "Escolha o nível ideal para a fase do casamento."}
-                        {index === 3 && "Cobrança via Asaas com liberação após confirmação."}
-                        {index === 4 && "Primeiras ações para o usuário perceber valor rápido."}
+                        {index === 3 && "Pagamento protegido com liberação após confirmação."}
+                        {index === 4 && "Orientação inicial para configurar o casamento."}
                       </p>
                     </div>
                   </div>
@@ -681,13 +667,13 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                   Um plano para cada fase do casamento.
                 </h2>
                 <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-300">
-                  Preços baixos para crescer com muitos casais, sem cobrar caro antes de provar valor.
+                  Planos mensais acessíveis para acompanhar vocês durante toda a organização.
                 </p>
               </div>
 
               <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm font-black text-emerald-100">
                 <ShieldCheck className="mb-2" size={20} />
-                Pagamento seguro via Asaas. A conta só é liberada depois do pagamento confirmado.
+                Pagamento seguro. A conta é liberada depois da confirmação.
               </div>
             </div>
 
@@ -848,30 +834,21 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
           <a href="/politica-de-privacidade" className="hover:text-primary">Privacidade</a>
         </div>
       </footer>
+
+      <WhatsAppFloatingButton />
     </div>
   );
 };
 
-const Reveal = ({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 28 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={revealViewport}
-    transition={{ duration: 0.68, ease: "easeOut", delay }}
-    className={className}
-  >
+const Reveal = ({ children, className }: { children: ReactNode; className?: string; delay?: number }) => (
+  <div className={cn("wedplan-reveal", className)}>
     {children}
-  </motion.div>
+  </div>
 );
 
 const ProductPreview = () => (
-  <motion.div
-    initial={{ opacity: 0, x: 34, scale: 0.98 }}
-    animate={{ opacity: 1, x: 0, scale: 1 }}
-    transition={{ duration: 0.75, ease: "easeOut", delay: 0.12 }}
-    className="relative z-10"
-  >
-    <div className="wedplan-float-card wedplan-shine rounded-lg border border-white/70 bg-slate-950 p-3 shadow-2xl shadow-slate-900/25">
+  <div className="relative z-10">
+    <div className="rounded-lg border border-white/70 bg-slate-950 p-3 shadow-2xl shadow-slate-900/20">
       <div className="rounded-md bg-[#f8fafc] p-4 sm:p-5">
         <div className="mb-5 flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
@@ -942,7 +919,7 @@ const ProductPreview = () => (
         </div>
       </div>
     </div>
-  </motion.div>
+  </div>
 );
 
 const CompareCard = ({ title, items, tone }: { title: string; items: string[]; tone: "old" | "new" }) => (
