@@ -111,13 +111,14 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     <>
     <style>{tooltipStyles}</style>
     <div className={cn(
-      "hidden lg:flex h-screen min-h-0 fixed left-0 top-0 bg-card/90 backdrop-blur-xl border-r border-border p-5 flex-col z-50 transition-all duration-500 shadow-sm overflow-hidden",
+      "hidden lg:flex h-screen min-h-0 fixed left-0 top-0 bg-card/90 backdrop-blur-xl border-r border-border p-5 flex-col z-50 transition-all duration-500 shadow-sm",
       isCollapsed ? "w-24" : "w-80"
     )}>
       {/* Collapse Toggle Button */}
       <button 
         onClick={onToggleCollapse}
-        className="absolute -right-3 top-24 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 hover:scale-110 transition-all duration-500 ease-in-out z-[60]"
+        className="absolute right-0 top-24 z-[80] flex h-8 w-8 translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-primary shadow-xl shadow-black/10 ring-4 ring-background transition-all duration-300 ease-in-out hover:scale-105 hover:bg-primary hover:text-white"
+        aria-label={isCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
       >
         <div className={cn("transition-transform duration-500", isCollapsed ? "rotate-0" : "rotate-0")}>
           {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}

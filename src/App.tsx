@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { LandingPage } from './components/layout/LandingPage';
 import { CookieConsent } from './components/layout/CookieConsent';
 import { ObservabilityBootstrap } from './components/layout/ObservabilityBootstrap';
-import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from './components/layout/LoadingScreen';
 import { ConfirmProvider } from './components/ui';
 
 const MainApp = lazy(() => import('./components/MainApp').then((module) => ({ default: module.MainApp })));
@@ -17,11 +17,7 @@ const WeddingGiftsPublic = lazy(() => import('./components/site/WeddingGiftsPubl
 const LegalPage = lazy(() => import('./components/legal/LegalPage').then((module) => ({ default: module.LegalPage })));
 const FreeWeddingTools = lazy(() => import('./components/tools/FreeWeddingTools').then((module) => ({ default: module.FreeWeddingTools })));
 
-const PageFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <Loader2 className="animate-spin text-primary" size={40} />
-  </div>
-);
+const PageFallback = () => <LoadingScreen label="Preparando sua experiência" />;
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -29,11 +25,7 @@ function AppRoutes() {
   const hasToken = new URLSearchParams(window.location.search).has('token');
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="animate-spin text-primary" size={40} />
-      </div>
-    );
+    return <LoadingScreen label="Verificando sua sessão" />;
   }
 
   return (

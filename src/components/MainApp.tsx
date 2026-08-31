@@ -7,7 +7,7 @@ import { AlertTriangle } from 'lucide-react';
 import { AppLayout } from './layout/AppLayout';
 import { GlobalModals } from './layout/GlobalModals';
 import { GuidedTour } from './layout/GuidedTour';
-import { BrandLogo } from './layout/BrandLogo';
+import { LoadingScreen } from './layout/LoadingScreen';
 import { Dashboard } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { SupplierDetails } from './suppliers/SupplierDetails';
@@ -243,15 +243,7 @@ export function MainApp() {
   const accessBlocked = !isPublicMode && data.role !== 'master' && isAccountAccessBlocked(data.account_status);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <BrandLogo size="md" />
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground font-bold tracking-widest uppercase text-xs">Carregando WedPlan...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen label="Carregando seu planejamento" />;
   }
 
   if (accessBlocked) {
