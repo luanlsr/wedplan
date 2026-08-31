@@ -217,6 +217,11 @@ export const useWeddingData = () => {
         const parsed = JSON.parse(stored);
         setData({
           ...parsed,
+          configuracoes: {
+            ...INITIAL_DATA.configuracoes,
+            ...parsed.configuracoes,
+            tema: parsed.configuracoes?.tema || INITIAL_DATA.configuracoes.tema,
+          },
           cronograma: parsed.cronograma?.length ? parsed.cronograma : createDefaultTimelineCategories(parsed.id),
         });
       } else {
@@ -419,7 +424,7 @@ export const useWeddingData = () => {
         cronograma,
         configuracoes: {
           orcamentoTotal: parseFloat(wedding.total_budget),
-          tema: wedding.theme || 'light'
+          tema: wedding.theme || INITIAL_DATA.configuracoes.tema
         }
       };
       setData(transformedData);

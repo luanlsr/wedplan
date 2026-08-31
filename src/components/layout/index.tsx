@@ -212,6 +212,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
             key={item.id}
             to={item.path}
             end={item.end}
+            data-tour-id={item.id}
             data-tooltip={isCollapsed ? item.label : undefined}
             className={({ isActive }) => cn(
               "w-full flex items-center rounded-xl transition-all duration-300 group relative overflow-visible",
@@ -344,6 +345,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
             key={item.id}
             to={item.path}
             end={item.end}
+            data-tour-id={item.id}
             onClick={() => setIsMenuOpen(false)}
             className={({ isActive }) => cn(
               "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[50px] xs:min-w-[64px]",
@@ -390,6 +392,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
                 <NavLink
                   key={item.id}
                   to={item.path}
+                  data-tour-id={item.id}
                   onClick={() => setIsMenuOpen(false)}
                   className={({ isActive }) => cn(
                     "p-5 rounded-[2rem] border border-white/5 flex flex-col gap-4 font-black transition-all",

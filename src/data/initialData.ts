@@ -10,6 +10,6 @@ export const INITIAL_DATA: WeddingData = {
   cronograma: [],
   configuracoes: {
     orcamentoTotal: 50000,
-    tema: "light"
+    tema: "dark"
   }
 };
