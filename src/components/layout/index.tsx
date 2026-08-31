@@ -111,7 +111,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
     <>
     <style>{tooltipStyles}</style>
     <div className={cn(
-      "hidden lg:flex h-screen fixed left-0 top-0 bg-card/90 backdrop-blur-xl border-r border-border p-5 flex-col z-50 transition-all duration-500 shadow-sm",
+      "hidden lg:flex h-screen min-h-0 fixed left-0 top-0 bg-card/90 backdrop-blur-xl border-r border-border p-5 flex-col z-50 transition-all duration-500 shadow-sm overflow-hidden",
       isCollapsed ? "w-24" : "w-80"
     )}>
       {/* Collapse Toggle Button */}
@@ -206,7 +206,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
       )}
 
 
-      <nav className="flex-1 space-y-2">
+      <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
         {menuItems.map((item) => (
           <NavLink
             key={item.id}
@@ -242,7 +242,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
         ))}
       </nav>
 
-      <div className="space-y-3 pt-5 mt-5 border-t border-border">
+      <div className="shrink-0 space-y-3 pt-5 mt-5 border-t border-border">
         <button 
           onClick={toggleTheme}
           data-tooltip={isCollapsed ? (isDark ? "Modo Claro" : "Modo Escuro") : undefined}
@@ -371,7 +371,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
       {/* Mobile Over-Menu */}
       {isMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-[55] bg-background animate-in fade-in slide-in-from-bottom-10 duration-300">
-          <div className="p-6 pt-20 space-y-6 flex flex-col h-full">
+          <div className="flex h-full min-h-0 flex-col space-y-6 p-6 pt-20">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-400 p-0.5 shadow-xl">
                 <div className="w-full h-full rounded-[0.9rem] bg-white dark:bg-card flex items-center justify-center text-primary font-black text-2xl italic">
@@ -385,7 +385,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 
             </div>
             <h3 className="text-xl font-black mb-2 italic uppercase tracking-tighter opacity-50">Menu do Sistema</h3>
-            <div className="grid grid-cols-2 gap-4 flex-1 content-start">
+            <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-4 overflow-y-auto pr-1 pb-4 custom-scrollbar">
               {moreActions.map((item) => (
                 <NavLink
                   key={item.id}
@@ -411,7 +411,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
               ))}
             </div>
             
-            <div className="mt-auto pb-24 border-t border-white/10 pt-6">
+            <div className="shrink-0 pb-24 border-t border-white/10 pt-6">
                {!isPublicMode && (
                  <button 
                    onClick={handleSignOut}
