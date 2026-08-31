@@ -1,11 +1,37 @@
 import { useState, useEffect, useCallback } from "react";
-import type { WeddingData, Supplier, Installment, Guest, Task, UserRole } from "../types";
+import type { WeddingData, Supplier, Installment, Guest, Task, UserRole, TimelineCategory, TimelineItem } from "../types";
 import { INITIAL_DATA } from "../data/initialData";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
 import { logError, logEvent, setObservabilityContext } from "../utils/observability";
+import { syncSubscriptionAccess } from "../services/subscriptionAccess";
 
 const STORAGE_KEY = "wedding_manager_data";
+const PROFILE_SELECT_WITH_ACCESS = 'full_name, wedding_id, role, role_id, account_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_start, plan_current_period_end, plan_access_expires_at, plan_access_checked_at, plan_access_source, refund_window_started_at, refund_window_ends_at, refund_window_status, roles(name), accounts(status)';
+const PROFILE_SELECT_LEGACY = 'full_name, wedding_id, role, role_id, account_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_end, roles(name), accounts(status)';
+
+const DEFAULT_TIMELINE_CATEGORIES = [
+  { nome: "Noivado", cor: "#65a765" },
+  { nome: "Planejamento inicial", cor: "#e7b548" },
+  { nome: "Fornecedores", cor: "#8b7fd7" },
+  { nome: "Convites e papelaria", cor: "#6f92d8" },
+  { nome: "Grande dia", cor: "#d8757c" },
+];
+
+const createClientId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const createDefaultTimelineCategories = (weddingId?: string): TimelineCategory[] =>
+  DEFAULT_TIMELINE_CATEGORIES.map((category, index) => ({
+    id: createClientId(),
+    wedding_id: weddingId,
+    nome: category.nome,
+    cor: category.cor,
+    ordem: index,
+    itens: [],
+  }));
 
 const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] => {
   if (parcelas.length === 0) return "pendente";
@@ -22,10 +48,38 @@ const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] =>
   return "pendente";
 };
 
+const fetchProfileWithAccessState = async (userId: string) => {
+  const result = await supabase
+    .from('profiles')
+    .select(PROFILE_SELECT_WITH_ACCESS)
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (result.error?.code === '42703') {
+    return supabase
+      .from('profiles')
+      .select(PROFILE_SELECT_LEGACY)
+      .eq('id', userId)
+      .maybeSingle();
+  }
+
+  return result;
+};
+
 export const useWeddingData = () => {
   const { user } = useAuth();
   const [data, setData] = useState<WeddingData>(INITIAL_DATA);
   const [loading, setLoading] = useState(true);
+
+  const persistTimelineLocally = useCallback((updater: (prev: WeddingData) => WeddingData) => {
+    setData(prev => {
+      const next = updater(prev);
+      if (!user) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, [user]);
 
   const ensureWeddingExists = useCallback(async (userId: string) => {
     try {
@@ -71,13 +125,106 @@ export const useWeddingData = () => {
     }
   }, []);
 
+  const loadTimelineData = useCallback(async (weddingId: string): Promise<TimelineCategory[]> => {
+    try {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('timeline_categories')
+        .select('*')
+        .eq('wedding_id', weddingId)
+        .order('ordem');
+
+      if (categoriesError) {
+        if (categoriesError.code !== '42P01') {
+          logError('timeline.categories.load.error', categoriesError, { weddingId });
+        }
+        return [];
+      }
+
+      let categories = categoriesData || [];
+
+      if (categories.length === 0) {
+        const defaults = DEFAULT_TIMELINE_CATEGORIES.map((category, index) => ({
+          wedding_id: weddingId,
+          nome: category.nome,
+          cor: category.cor,
+          ordem: index,
+        }));
+
+        const { data: seededCategories, error: seedError } = await supabase
+          .from('timeline_categories')
+          .insert(defaults)
+          .select('*')
+          .order('ordem');
+
+        if (seedError) {
+          logError('timeline.categories.seed.error', seedError, { weddingId });
+        } else {
+          categories = seededCategories || [];
+        }
+      }
+
+      if (categories.length === 0) return [];
+
+      const categoryIds = categories.map((category: any) => category.id);
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('timeline_items')
+        .select('*')
+        .in('category_id', categoryIds)
+        .order('data')
+        .order('ordem');
+
+      if (itemsError) {
+        logError('timeline.items.load.error', itemsError, { weddingId });
+      }
+
+      const itemsByCategory = new Map<string, TimelineItem[]>();
+      (itemsData || []).forEach((item: any) => {
+        const mappedItem: TimelineItem = {
+          id: item.id,
+          categoryId: item.category_id,
+          titulo: item.titulo,
+          descricao: item.descricao || '',
+          data: item.data,
+          status: item.status || 'pendente',
+          ordem: item.ordem || 0,
+        };
+        const categoryItems = itemsByCategory.get(mappedItem.categoryId) || [];
+        categoryItems.push(mappedItem);
+        itemsByCategory.set(mappedItem.categoryId, categoryItems);
+      });
+
+      return categories.map((category: any) => ({
+        id: category.id,
+        wedding_id: category.wedding_id,
+        nome: category.nome,
+        cor: category.cor || '#d8757c',
+        ordem: category.ordem || 0,
+        itens: itemsByCategory.get(category.id) || [],
+      }));
+    } catch (err) {
+      logError('timeline.load.error', err, { weddingId });
+      return [];
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     const searchParams = new URLSearchParams(window.location.search);
     const publicToken = searchParams.get('token');
 
     if (!user && !publicToken) {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setData(JSON.parse(stored));
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setData({
+          ...parsed,
+          cronograma: parsed.cronograma?.length ? parsed.cronograma : createDefaultTimelineCategories(parsed.id),
+        });
+      } else {
+        setData({
+          ...INITIAL_DATA,
+          cronograma: createDefaultTimelineCategories(),
+        });
+      }
       setLoading(false);
       return;
     }
@@ -90,11 +237,9 @@ export const useWeddingData = () => {
       let role = 'couple'; // Papel padrão
 
         if (user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('full_name, wedding_id, role, role_id, account_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_end, roles(name), accounts(status)')
-            .eq('id', user.id)
-            .maybeSingle();
+          await syncSubscriptionAccess();
+
+          const { data: profile, error: profileError } = await fetchProfileWithAccessState(user.id);
           
           if (profileError) console.error('Erro ao carregar perfil:', profileError);
           
@@ -131,6 +276,7 @@ export const useWeddingData = () => {
             convidados: publicData?.convidados || [],
             fornecedores: [],
             tarefas: [],
+            cronograma: [],
             role: 'staff'
           });
           setLoading(false);
@@ -144,7 +290,12 @@ export const useWeddingData = () => {
       const guidedTourCompletedAt = userProfile?.guided_tour_completed_at || null;
       const planStatus = userProfile?.plan_status || null;
       const legacyAccountStatus = userProfile?.accounts?.status || 'active';
+      const planPeriodExpired = Boolean(
+        userProfile?.plan_current_period_end &&
+        new Date(`${userProfile.plan_current_period_end}T23:59:59`).getTime() < Date.now()
+      );
       const accountStatus =
+        (planStatus === 'active' || planStatus === 'trialing') && planPeriodExpired ? 'past_due' :
         planStatus === 'active' || planStatus === 'trialing' ? 'active' :
         planStatus === 'past_due' ? 'past_due' :
         planStatus === 'canceled' || planStatus === 'expired' ? 'canceled' :
@@ -160,7 +311,14 @@ export const useWeddingData = () => {
           plan_id: userProfile?.plan_id || null,
           plan_status: planStatus,
           billing_interval: userProfile?.billing_interval || null,
+          plan_current_period_start: userProfile?.plan_current_period_start || null,
           plan_current_period_end: userProfile?.plan_current_period_end || null,
+          plan_access_expires_at: userProfile?.plan_access_expires_at || null,
+          plan_access_checked_at: userProfile?.plan_access_checked_at || null,
+          plan_access_source: userProfile?.plan_access_source || null,
+          refund_window_started_at: userProfile?.refund_window_started_at || null,
+          refund_window_ends_at: userProfile?.refund_window_ends_at || null,
+          refund_window_status: userProfile?.refund_window_status || null,
           userName,
           guided_tour_completed_at: guidedTourCompletedAt
         });
@@ -182,6 +340,8 @@ export const useWeddingData = () => {
 
       if (!wedding) throw new Error('Casamento não encontrado');
 
+      const cronograma = await loadTimelineData(weddingId);
+
       const transformedData: WeddingData = {
         id: wedding.id,
         account_id: userProfile?.account_id || null,
@@ -190,7 +350,14 @@ export const useWeddingData = () => {
         plan_id: userProfile?.plan_id || null,
         plan_status: planStatus,
         billing_interval: userProfile?.billing_interval || null,
+        plan_current_period_start: userProfile?.plan_current_period_start || null,
         plan_current_period_end: userProfile?.plan_current_period_end || null,
+        plan_access_expires_at: userProfile?.plan_access_expires_at || null,
+        plan_access_checked_at: userProfile?.plan_access_checked_at || null,
+        plan_access_source: userProfile?.plan_access_source || null,
+        refund_window_started_at: userProfile?.refund_window_started_at || null,
+        refund_window_ends_at: userProfile?.refund_window_ends_at || null,
+        refund_window_status: userProfile?.refund_window_status || null,
         userName,
         guided_tour_completed_at: guidedTourCompletedAt,
         public_checkin_token: wedding.public_checkin_token,
@@ -249,6 +416,7 @@ export const useWeddingData = () => {
           status: t.status,
           ordem: t.ordem
         })),
+        cronograma,
         configuracoes: {
           orcamentoTotal: parseFloat(wedding.total_budget),
           tema: wedding.theme || 'light'
@@ -268,7 +436,7 @@ export const useWeddingData = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, ensureWeddingExists]);
+  }, [user, ensureWeddingExists, loadTimelineData]);
 
   useEffect(() => {
     loadData();
@@ -678,6 +846,248 @@ export const useWeddingData = () => {
     }
   };
 
+  const addTimelineCategory = async (category: Omit<TimelineCategory, 'id' | 'itens' | 'wedding_id'>) => {
+    const nextOrder = data.cronograma?.length || 0;
+
+    if (!user || !data.id) {
+      const localCategory: TimelineCategory = {
+        id: createClientId(),
+        nome: category.nome,
+        cor: category.cor,
+        ordem: category.ordem ?? nextOrder,
+        itens: [],
+      };
+      persistTimelineLocally(prev => ({
+        ...prev,
+        cronograma: [...(prev.cronograma || []), localCategory],
+      }));
+      return;
+    }
+
+    try {
+      const { data: categoryData, error } = await supabase.from('timeline_categories').insert({
+        wedding_id: data.id,
+        nome: category.nome,
+        cor: category.cor,
+        ordem: category.ordem ?? nextOrder,
+      }).select().single();
+
+      if (error) throw error;
+
+      setData(prev => ({
+        ...prev,
+        cronograma: [
+          ...(prev.cronograma || []),
+          {
+            id: categoryData.id,
+            wedding_id: categoryData.wedding_id,
+            nome: categoryData.nome,
+            cor: categoryData.cor,
+            ordem: categoryData.ordem,
+            itens: [],
+          }
+        ]
+      }));
+
+      void logEvent({
+        eventName: 'timeline.category.created',
+        entityType: 'timeline_category',
+        entityId: categoryData.id,
+        metadata: { weddingId: data.id, name: category.nome },
+      });
+    } catch (err) {
+      logError('timeline.category.create.error', err, { weddingId: data.id, name: category.nome });
+    }
+  };
+
+  const updateTimelineCategory = async (id: string, updated: Partial<TimelineCategory>) => {
+    const previousTimeline = data.cronograma || [];
+    persistTimelineLocally(prev => ({
+      ...prev,
+      cronograma: (prev.cronograma || []).map((category) =>
+        category.id === id ? { ...category, ...updated } : category
+      )
+    }));
+
+    if (!user) return;
+
+    try {
+      const payload: any = {};
+      if (updated.nome !== undefined) payload.nome = updated.nome;
+      if (updated.cor !== undefined) payload.cor = updated.cor;
+      if (updated.ordem !== undefined) payload.ordem = updated.ordem;
+      const { error } = await supabase.from('timeline_categories').update(payload).eq('id', id);
+      if (error) throw error;
+      void logEvent({
+        eventName: 'timeline.category.updated',
+        entityType: 'timeline_category',
+        entityId: id,
+        metadata: { weddingId: data.id, fields: Object.keys(payload) },
+      });
+    } catch (err) {
+      logError('timeline.category.update.error', err, { categoryId: id, weddingId: data.id });
+      setData(prev => ({ ...prev, cronograma: previousTimeline }));
+    }
+  };
+
+  const deleteTimelineCategory = async (id: string) => {
+    const previousTimeline = data.cronograma || [];
+    persistTimelineLocally(prev => ({
+      ...prev,
+      cronograma: (prev.cronograma || []).filter((category) => category.id !== id)
+    }));
+
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.from('timeline_categories').delete().eq('id', id);
+      if (error) throw error;
+      void logEvent({
+        eventName: 'timeline.category.deleted',
+        entityType: 'timeline_category',
+        entityId: id,
+        metadata: { weddingId: data.id },
+      });
+    } catch (err) {
+      logError('timeline.category.delete.error', err, { categoryId: id, weddingId: data.id });
+      setData(prev => ({ ...prev, cronograma: previousTimeline }));
+    }
+  };
+
+  const addTimelineItem = async (categoryId: string, item: Omit<TimelineItem, 'id' | 'categoryId'>) => {
+    const category = (data.cronograma || []).find((timelineCategory) => timelineCategory.id === categoryId);
+    const nextOrder = category?.itens.length || 0;
+
+    if (!user || !data.id) {
+      const localItem: TimelineItem = {
+        id: createClientId(),
+        categoryId,
+        titulo: item.titulo,
+        descricao: item.descricao || '',
+        data: item.data,
+        status: item.status || 'pendente',
+        ordem: item.ordem ?? nextOrder,
+      };
+      persistTimelineLocally(prev => ({
+        ...prev,
+        cronograma: (prev.cronograma || []).map((timelineCategory) =>
+          timelineCategory.id === categoryId
+            ? { ...timelineCategory, itens: [...timelineCategory.itens, localItem] }
+            : timelineCategory
+        )
+      }));
+      return;
+    }
+
+    try {
+      const { data: itemData, error } = await supabase.from('timeline_items').insert({
+        wedding_id: data.id,
+        category_id: categoryId,
+        titulo: item.titulo,
+        descricao: item.descricao || null,
+        data: item.data,
+        status: item.status || 'pendente',
+        ordem: item.ordem ?? nextOrder,
+      }).select().single();
+
+      if (error) throw error;
+
+      const createdItem: TimelineItem = {
+        id: itemData.id,
+        categoryId: itemData.category_id,
+        titulo: itemData.titulo,
+        descricao: itemData.descricao || '',
+        data: itemData.data,
+        status: itemData.status,
+        ordem: itemData.ordem,
+      };
+
+      setData(prev => ({
+        ...prev,
+        cronograma: (prev.cronograma || []).map((timelineCategory) =>
+          timelineCategory.id === categoryId
+            ? { ...timelineCategory, itens: [...timelineCategory.itens, createdItem] }
+            : timelineCategory
+        )
+      }));
+
+      void logEvent({
+        eventName: 'timeline.item.created',
+        entityType: 'timeline_item',
+        entityId: itemData.id,
+        metadata: { weddingId: data.id, categoryId, status: createdItem.status },
+      });
+    } catch (err) {
+      logError('timeline.item.create.error', err, { weddingId: data.id, categoryId });
+    }
+  };
+
+  const updateTimelineItem = async (categoryId: string, itemId: string, updated: Partial<TimelineItem>) => {
+    const previousTimeline = data.cronograma || [];
+    persistTimelineLocally(prev => ({
+      ...prev,
+      cronograma: (prev.cronograma || []).map((category) => (
+        category.id === categoryId
+          ? {
+              ...category,
+              itens: category.itens.map((item) => item.id === itemId ? { ...item, ...updated } : item)
+            }
+          : category
+      ))
+    }));
+
+    if (!user) return;
+
+    try {
+      const payload: any = {};
+      if (updated.titulo !== undefined) payload.titulo = updated.titulo;
+      if (updated.descricao !== undefined) payload.descricao = updated.descricao;
+      if (updated.data !== undefined) payload.data = updated.data;
+      if (updated.status !== undefined) payload.status = updated.status;
+      if (updated.ordem !== undefined) payload.ordem = updated.ordem;
+      if (updated.categoryId !== undefined) payload.category_id = updated.categoryId;
+      const { error } = await supabase.from('timeline_items').update(payload).eq('id', itemId);
+      if (error) throw error;
+      void logEvent({
+        eventName: 'timeline.item.updated',
+        entityType: 'timeline_item',
+        entityId: itemId,
+        metadata: { weddingId: data.id, categoryId, fields: Object.keys(payload) },
+      });
+    } catch (err) {
+      logError('timeline.item.update.error', err, { itemId, categoryId, weddingId: data.id });
+      setData(prev => ({ ...prev, cronograma: previousTimeline }));
+    }
+  };
+
+  const deleteTimelineItem = async (categoryId: string, itemId: string) => {
+    const previousTimeline = data.cronograma || [];
+    persistTimelineLocally(prev => ({
+      ...prev,
+      cronograma: (prev.cronograma || []).map((category) => (
+        category.id === categoryId
+          ? { ...category, itens: category.itens.filter((item) => item.id !== itemId) }
+          : category
+      ))
+    }));
+
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.from('timeline_items').delete().eq('id', itemId);
+      if (error) throw error;
+      void logEvent({
+        eventName: 'timeline.item.deleted',
+        entityType: 'timeline_item',
+        entityId: itemId,
+        metadata: { weddingId: data.id, categoryId },
+      });
+    } catch (err) {
+      logError('timeline.item.delete.error', err, { itemId, categoryId, weddingId: data.id });
+      setData(prev => ({ ...prev, cronograma: previousTimeline }));
+    }
+  };
+
   const updateWeddingInfo = async (info: Partial<WeddingData["casal"]>) => {
     if (!user || !data.id) return;
     const previousCasal = data.casal;
@@ -817,6 +1227,12 @@ export const useWeddingData = () => {
     addTask,
     updateTask,
     deleteTask,
+    addTimelineCategory,
+    updateTimelineCategory,
+    deleteTimelineCategory,
+    addTimelineItem,
+    updateTimelineItem,
+    deleteTimelineItem,
     updateWeddingInfo,
     updateConfig,
     markGuidedTourCompleted,

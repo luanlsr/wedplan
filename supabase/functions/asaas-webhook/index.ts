@@ -17,6 +17,29 @@ const transactionalFromEmail = Deno.env.get('TRANSACTIONAL_FROM_EMAIL') || suppo
 
 const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase()
 
+const addBillingCycle = (dateValue: string | null, billingInterval = 'monthly') => {
+  if (!dateValue) return null
+  const date = new Date(`${dateValue}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return null
+  if (billingInterval === 'yearly') date.setFullYear(date.getFullYear() + 1)
+  else date.setMonth(date.getMonth() + 1)
+  return date.toISOString().split('T')[0]
+}
+
+const endOfDay = (dateValue: string | null) => {
+  if (!dateValue) return null
+  return `${dateValue}T23:59:59-03:00`
+}
+
+const getPaymentReferenceDate = (payment: any) =>
+  payment?.dueDate || payment?.originalDueDate || payment?.paymentDate || payment?.confirmedDate || new Date().toISOString().split('T')[0]
+
+const getRefundWindowStatus = (endsAt: string | null, existingStatus?: string | null) => {
+  if (['requested', 'refunded', 'denied'].includes(existingStatus || '')) return existingStatus
+  if (!endsAt) return 'not_started'
+  return new Date(endsAt).getTime() >= Date.now() ? 'eligible' : 'expired'
+}
+
 const recordEvent = async (client: any, event: any) => {
   try {
     await client.from('app_events').insert({
@@ -125,6 +148,22 @@ const applyWeddingDraft = async (adminClient: any, checkout: any, userId: string
 const updateAccountAndSubscription = async (adminClient: any, checkout: any, userId: string, payment: any, status: string) => {
   const asaasCustomerId = payment?.customer || checkout.asaas_customer_id
   const asaasSubscriptionId = payment?.subscription || checkout.asaas_subscription_id
+  const periodStart = getPaymentReferenceDate(payment)
+  const periodEnd = status === 'active'
+    ? addBillingCycle(periodStart, checkout.billing_interval)
+    : payment?.dueDate || payment?.originalDueDate || checkout.plan_current_period_end || null
+
+  const { data: existingSubscription } = asaasSubscriptionId
+    ? await adminClient
+        .from('subscriptions')
+        .select('id, refund_window_started_at, refund_window_ends_at, refund_window_status')
+        .eq('asaas_subscription_id', asaasSubscriptionId)
+        .maybeSingle()
+    : { data: null }
+
+  const refundWindowStartedAt = existingSubscription?.refund_window_started_at || new Date().toISOString()
+  const refundWindowEndsAt = existingSubscription?.refund_window_ends_at || new Date(new Date(refundWindowStartedAt).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  const refundWindowStatus = getRefundWindowStatus(refundWindowEndsAt, existingSubscription?.refund_window_status)
 
   const { data: coupleRole } = await adminClient
     .from('roles')
@@ -153,8 +192,15 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
       plan_id: checkout.plan_id,
       plan_status: status,
       billing_interval: checkout.billing_interval,
-      plan_current_period_end: payment?.dueDate || payment?.originalDueDate || null,
+      plan_current_period_start: periodStart,
+      plan_current_period_end: periodEnd,
+      plan_access_expires_at: endOfDay(periodEnd),
       plan_assigned_at: new Date().toISOString(),
+      plan_access_checked_at: new Date().toISOString(),
+      plan_access_source: 'asaas_webhook',
+      refund_window_started_at: refundWindowStartedAt,
+      refund_window_ends_at: refundWindowEndsAt,
+      refund_window_status: refundWindowStatus,
       asaas_customer_id: asaasCustomerId,
     }, { onConflict: 'id' })
 
@@ -167,12 +213,24 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
     billing_interval: checkout.billing_interval,
     asaas_customer_id: asaasCustomerId,
     asaas_subscription_id: asaasSubscriptionId,
-    current_period_start: new Date().toISOString().split('T')[0],
-    current_period_end: payment?.dueDate || payment?.originalDueDate || null,
+    current_period_start: periodStart,
+    current_period_end: periodEnd,
+    access_expires_at: endOfDay(periodEnd),
+    last_payment_id: payment?.id || checkout.asaas_payment_id || null,
+    last_payment_status: payment?.status || null,
+    last_payment_at: payment?.paymentDate ? `${payment.paymentDate}T12:00:00-03:00` : payment?.confirmedDate ? `${payment.confirmedDate}T12:00:00-03:00` : null,
+    last_status_checked_at: new Date().toISOString(),
+    last_status_source: 'asaas_webhook',
+    refund_window_days: 7,
+    refund_window_started_at: refundWindowStartedAt,
+    refund_window_ends_at: refundWindowEndsAt,
+    refund_window_status: refundWindowStatus,
+    refund_window_checked_at: new Date().toISOString(),
     metadata: {
       lastPaymentId: payment?.id || checkout.asaas_payment_id || null,
       checkoutSessionId: checkout.id,
       weddingId,
+      refundWindowStatus,
     },
   }
 
@@ -271,7 +329,7 @@ serve(async (req) => {
 
     let checkoutQuery = adminClient
       .from('checkout_sessions')
-      .select('id, plan_id, billing_interval, status, full_name, email, asaas_customer_id, asaas_subscription_id, asaas_payment_id, checkout_url, created_user_id, metadata')
+      .select('id, plan_id, billing_interval, status, full_name, email, asaas_customer_id, asaas_subscription_id, asaas_payment_id, checkout_url, created_user_id, metadata, created_at')
       .order('created_at', { ascending: false })
       .limit(1)
 

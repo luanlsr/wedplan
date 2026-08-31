@@ -27,7 +27,7 @@ const termsSections = [
   },
   {
     title: '5. Cancelamento e arrependimento',
-    body: 'O usuário pode solicitar cancelamento pelos canais de atendimento disponíveis. Quando aplicável às relações de consumo contratadas pela internet, será respeitado o direito de arrependimento de 7 dias e demais direitos previstos no Código de Defesa do Consumidor e nas normas brasileiras de comércio eletrônico.',
+    body: 'O usuário pode solicitar cancelamento pelos canais de atendimento disponíveis ou pela área de suporte da plataforma. O WedPlan oferece teste sem risco por 7 dias: se dentro desse período o usuário decidir que o serviço não é adequado, poderá solicitar cancelamento e reembolso. O sistema registra início, término e status da janela de reembolso, sem prejuízo dos demais direitos previstos no Código de Defesa do Consumidor e nas normas brasileiras de comércio eletrônico.',
   },
   {
     title: '6. Uso permitido',
@@ -66,11 +66,11 @@ const privacySections = [
   },
   {
     title: '2. Dados coletados',
-    body: 'Podemos coletar nome, e-mail, telefone, CPF/CNPJ para cobrança, dados do casamento, dados de convidados, fornecedores, tarefas, orçamento, mensagens, preferências de cookies, registros de suporte e informações técnicas como IP, user-agent, navegador, sistema operacional, tipo de dispositivo, idioma, fuso horário, páginas acessadas e identificadores de sessão.',
+    body: 'Podemos coletar nome, e-mail, telefone, CPF/CNPJ para cobrança, dados do casamento, dados de convidados, fornecedores, tarefas, orçamento, mensagens, preferências de cookies, registros de suporte, solicitações de cancelamento ou reembolso e informações técnicas como IP, user-agent, navegador, sistema operacional, tipo de dispositivo, idioma, fuso horário, páginas acessadas e identificadores de sessão.',
   },
   {
     title: '3. Finalidades do tratamento',
-    body: 'Tratamos dados para criar e manter conta, processar assinaturas, operar funcionalidades contratadas, salvar planejamentos, disponibilizar site do casal, prestar suporte, emitir comunicações transacionais, prevenir fraude, manter segurança, registrar aceite legal, cumprir obrigações legais e exercer direitos em processos administrativos, judiciais ou arbitrais.',
+    body: 'Tratamos dados para criar e manter conta, processar assinaturas, verificar renovação e status de pagamento, operar funcionalidades contratadas, salvar planejamentos, disponibilizar site do casal, prestar suporte, administrar cancelamentos e reembolsos, emitir comunicações transacionais, prevenir fraude, manter segurança, registrar aceite legal, cumprir obrigações legais e exercer direitos em processos administrativos, judiciais ou arbitrais.',
   },
   {
     title: '4. Bases legais',

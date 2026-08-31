@@ -962,6 +962,20 @@ const PaymentStep = ({
       </div>
     </div>
 
+    <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+      <div className="flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+          <ShieldCheck size={20} />
+        </div>
+        <div>
+          <h3 className="text-lg font-black text-foreground">Teste sem risco por 7 dias</h3>
+          <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
+            Assine agora e use todos os recursos. Se dentro de 7 dias você decidir que o WedPlan não é para você, basta solicitar o cancelamento e o reembolso.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div className="mt-4 space-y-2.5">
       <Checkbox checked={checkout.acceptedTerms} onChange={(acceptedTerms) => updateCheckout({ acceptedTerms })}>
         Li e aceito os <LegalLink to="/termos-de-uso">Termos de Uso</LegalLink> do WedPlan.
@@ -972,7 +986,7 @@ const PaymentStep = ({
     </div>
 
     <p className="mt-3 text-center text-xs font-bold leading-5 text-muted-foreground">
-      Ao continuar, registraremos data e hora, IP, dispositivo, navegador e versão dos documentos aceitos para fins de segurança, auditoria e exercício regular de direitos. Você pode cancelar sua assinatura quando quiser.
+      Ao continuar, registraremos data e hora, IP, dispositivo, navegador, versão dos documentos aceitos e início da janela de 7 dias para fins de segurança, auditoria e exercício regular de direitos.
     </p>
   </StepShell>
 );
@@ -1182,7 +1196,7 @@ const CheckoutSummary = ({
 
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs font-bold leading-5 text-muted-foreground">
               <ShieldCheck className="mb-2 text-emerald-600" size={18} />
-              Você pode cancelar sua assinatura quando quiser.
+              Teste sem risco por 7 dias. Solicite cancelamento e reembolso dentro desse período.
             </div>
           </>
         )}

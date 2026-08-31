@@ -1,17 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Card, Button, Input, Badge, cn, useConfirm } from './ui';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, Button, Input, Badge, cn, useConfirm, type ConfirmOptions } from './ui';
 import { Save, UserPlus, Shield, Database, RefreshCw, Copy, Check, Lock, Eye, EyeOff, LifeBuoy, Mail, ExternalLink, ClipboardList } from 'lucide-react';
 import { maskCurrency, unmaskCurrency } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
 import { SUPPORT_EMAIL, TRANSACTIONAL_FROM_EMAIL } from '../config/support';
+import { supabase } from '../lib/supabase';
+import { formatDatePt, isRefundWindowOpen } from '../services/subscriptionAccess';
+import type { WeddingData } from '../types';
+
+type SettingsTab = 'geral' | 'equipe' | 'conta' | 'suporte' | 'avancado';
 
 interface SettingsViewProps {
-  data: any;
-  updateWeddingInfo: (info: any) => Promise<void>;
-  updateConfig: (config: any) => Promise<void>;
+  data: WeddingData;
+  updateWeddingInfo: (info: Partial<WeddingData['casal']>) => Promise<void>;
+  updateConfig: (config: Partial<WeddingData['configuracoes']>) => Promise<void>;
   handleSyncData: () => Promise<void>;
   isSyncing: boolean;
-  customAlert: (info: any) => Promise<void>;
+  customAlert: (info: ConfirmOptions) => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -24,7 +29,7 @@ export const SettingsView = ({
   customAlert,
   refreshData
 }: SettingsViewProps) => {
-  const { user, resetPassword, updatePassword } = useAuth();
+  const { user, updatePassword } = useAuth();
   const { confirm } = useConfirm();
 
   // Local state for the form
@@ -35,7 +40,6 @@ export const SettingsView = ({
     orcamento: data.configuracoes.orcamentoTotal
   });
 
-  const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   
@@ -46,9 +50,12 @@ export const SettingsView = ({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [isRequestingCancellation, setIsRequestingCancellation] = useState(false);
 
   // Update local state when data changes (initial load)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalData({
       nome1: data.casal.nome1,
       nome2: data.casal.nome2,
@@ -57,14 +64,13 @@ export const SettingsView = ({
     });
   }, [data.casal, data.configuracoes]);
 
-  // Check if form is dirty
-  useEffect(() => {
-    const isChanged =
+  const isDirty = useMemo(() => {
+    return (
       localData.nome1 !== data.casal.nome1 ||
       localData.nome2 !== data.casal.nome2 ||
       localData.weddingDate !== data.casal.data ||
-      localData.orcamento !== data.configuracoes.orcamentoTotal;
-    setIsDirty(isChanged);
+      localData.orcamento !== data.configuracoes.orcamentoTotal
+    );
   }, [localData, data.casal, data.configuracoes]);
 
   const handleSave = async () => {
@@ -78,7 +84,6 @@ export const SettingsView = ({
       await updateConfig({
         orcamentoTotal: localData.orcamento
       });
-      setIsDirty(false);
       await customAlert({
         title: "Sucesso!",
         description: "Suas configurações foram atualizadas com sucesso.",
@@ -91,8 +96,10 @@ export const SettingsView = ({
     }
   };
 
-  const [activeTab, setActiveTab] = useState<'geral' | 'equipe' | 'conta' | 'suporte' | 'avancado'>('geral');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('geral');
   const supportSubject = encodeURIComponent(`Suporte WedPlan - ${data.casal.nome1 || 'Casamento'}`);
+  const refundEligible = isRefundWindowOpen(data.refund_window_status);
+  const refundWindowEnd = formatDatePt(data.refund_window_ends_at);
   const supportBody = encodeURIComponent([
     'Olá, equipe WedPlan.',
     '',
@@ -114,6 +121,60 @@ export const SettingsView = ({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleCancellationRequest = async () => {
+    if (!user) return;
+
+    const confirmed = await confirm({
+      title: refundEligible ? 'Solicitar cancelamento e reembolso?' : 'Solicitar cancelamento?',
+      description: refundEligible
+        ? 'Vamos registrar sua solicitação para análise dentro da janela de 7 dias.'
+        : 'Vamos registrar sua solicitação de cancelamento para análise do suporte.',
+      confirmLabel: 'Enviar solicitação',
+      type: 'warning',
+    });
+
+    if (!confirmed) return;
+
+    setIsRequestingCancellation(true);
+    try {
+      const { error } = await supabase
+        .from('subscription_cancellation_requests')
+        .insert({
+          account_id: data.account_id || user.id,
+          requested_by: user.id,
+          requested_refund: refundEligible,
+          refund_window_status_at_request: data.refund_window_status || 'not_started',
+          reason: cancellationReason.trim() || null,
+          metadata: {
+            page: window.location.href,
+            planStatus: data.plan_status || data.account_status || null,
+            currentPeriodEnd: data.plan_current_period_end || null,
+            refundWindowEndsAt: data.refund_window_ends_at || null,
+          },
+        });
+
+      if (error) throw error;
+
+      setCancellationReason('');
+      await customAlert({
+        title: 'Solicitação enviada',
+        description: refundEligible
+          ? 'Registramos seu pedido de cancelamento e reembolso. O suporte vai analisar a solicitação.'
+          : 'Registramos seu pedido de cancelamento. O suporte vai analisar a solicitação.',
+        type: 'success',
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : null;
+      await customAlert({
+        title: 'Erro ao registrar solicitação',
+        description: message || 'Não foi possível registrar o pedido agora. Tente novamente ou fale com o suporte.',
+        type: 'danger',
+      });
+    } finally {
+      setIsRequestingCancellation(false);
+    }
+  };
   
   const handleUpdatePassword = async () => {
     if (!passwordData.newPassword) return;
@@ -122,7 +183,7 @@ export const SettingsView = ({
       await customAlert({
         title: "Erro",
         description: "As senhas não coincidem.",
-        type: "error"
+        type: "danger"
       });
       return;
     }
@@ -131,7 +192,7 @@ export const SettingsView = ({
       await customAlert({
         title: "Senha Curta",
         description: "A senha deve ter pelo menos 6 caracteres.",
-        type: "error"
+        type: "danger"
       });
       return;
     }
@@ -147,11 +208,12 @@ export const SettingsView = ({
         type: "success"
       });
       setPasswordData({ newPassword: "", confirmPassword: "" });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : null;
       await customAlert({
         title: "Erro ao alterar",
-        description: err.message || "Não foi possível alterar sua senha no momento.",
-        type: "error"
+        description: message || "Não foi possível alterar sua senha no momento.",
+        type: "danger"
       });
     } finally {
       setIsChangingPassword(false);
@@ -173,7 +235,7 @@ export const SettingsView = ({
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id)}
             className={cn(
               "flex items-center justify-center gap-2 px-4 sm:px-6 py-3 rounded-xl text-[10px] sm:text-sm font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap",
               activeTab === tab.id
@@ -308,33 +370,6 @@ export const SettingsView = ({
 
         {activeTab === 'conta' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
-            <Card className="p-5 sm:p-8 border-white/5 shadow-lg space-y-6">
-              <div className="flex items-center gap-3 text-amber-500">
-                <Shield size={24} />
-                <h4 className="font-black uppercase italic tracking-tight">Segurança da Conta</h4>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Sua conta está protegida com criptografia ponta a ponta via Supabase.
-              </p>
-              <Button
-                variant="outline"
-                className="w-full h-14 border-amber-500/20 hover:bg-amber-500/5 text-amber-500 font-black uppercase tracking-widest text-xs rounded-2xl"
-                onClick={async () => {
-                  if (!user?.email) return;
-                  const { error } = await resetPassword(user.email);
-                  if (!error) {
-                    await customAlert({
-                      title: "E-mail Enviado!",
-                      description: `Um link para redefinição de senha foi enviado para seu e-mail pelo canal oficial ${TRANSACTIONAL_FROM_EMAIL}.`,
-                      type: "success"
-                    });
-                  }
-                }}
-              >
-                Solicitar Reset de Senha via E-mail
-              </Button>
-            </Card>
-
             <Card className="p-5 sm:p-8 border-white/5 shadow-lg space-y-6">
               <div className="flex items-center gap-3 text-primary">
                 <Lock size={24} />
@@ -471,6 +506,41 @@ export const SettingsView = ({
                   Abrir chamado por e-mail
                   <ExternalLink size={16} />
                 </a>
+              </div>
+
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h4 className="font-black text-foreground">Cancelamento e reembolso</h4>
+                    <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
+                      Teste sem risco por 7 dias. Se a janela ainda estiver aberta, o pedido será registrado como solicitação de cancelamento com reembolso.
+                    </p>
+                    <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300">
+                      {refundEligible
+                        ? `Reembolso elegível${refundWindowEnd ? ` até ${refundWindowEnd}` : ''}`
+                        : 'Janela de reembolso encerrada ou indisponível'}
+                    </p>
+                  </div>
+                  <Badge variant={refundEligible ? 'success' : 'warning'} className="self-start">
+                    {refundEligible ? 'Dentro dos 7 dias' : 'Fora da janela'}
+                  </Badge>
+                </div>
+
+                <textarea
+                  value={cancellationReason}
+                  onChange={(event) => setCancellationReason(event.target.value)}
+                  placeholder="Conte brevemente o motivo do cancelamento, se quiser."
+                  className="mt-4 min-h-28 w-full rounded-2xl border border-border bg-background p-4 text-sm font-medium outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+                />
+
+                <Button
+                  onClick={handleCancellationRequest}
+                  disabled={isRequestingCancellation}
+                  variant="outline"
+                  className="mt-4 h-12 w-full rounded-2xl border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
+                >
+                  {isRequestingCancellation ? 'Enviando...' : refundEligible ? 'Solicitar cancelamento e reembolso' : 'Solicitar cancelamento'}
+                </Button>
               </div>
             </Card>
           </div>

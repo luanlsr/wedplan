@@ -65,6 +65,25 @@ export interface Task {
   ordem: number;
 }
 
+export interface TimelineItem {
+  id: string;
+  categoryId: string;
+  titulo: string;
+  descricao?: string;
+  data: string;
+  status: "pendente" | "em_progresso" | "concluido";
+  ordem: number;
+}
+
+export interface TimelineCategory {
+  id: string;
+  wedding_id?: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+  itens: TimelineItem[];
+}
+
 export interface WeddingData {
   id?: string;
   account_id?: string | null;
@@ -76,7 +95,14 @@ export interface WeddingData {
   plan_id?: string | null;
   plan_status?: "incomplete" | "trialing" | "active" | "past_due" | "canceled" | "expired" | "pending_payment" | null;
   billing_interval?: "monthly" | "yearly" | null;
+  plan_current_period_start?: string | null;
   plan_current_period_end?: string | null;
+  plan_access_expires_at?: string | null;
+  plan_access_checked_at?: string | null;
+  plan_access_source?: string | null;
+  refund_window_started_at?: string | null;
+  refund_window_ends_at?: string | null;
+  refund_window_status?: "not_started" | "eligible" | "expired" | "requested" | "refunded" | "denied" | null;
   userName?: string;
   guided_tour_completed_at?: string | null;
   casal: {
@@ -87,6 +113,7 @@ export interface WeddingData {
   fornecedores: Supplier[];
   convidados?: Guest[];
   tarefas?: Task[];
+  cronograma?: TimelineCategory[];
   configuracoes: {
     orcamentoTotal: number;
     tema: "light" | "dark";

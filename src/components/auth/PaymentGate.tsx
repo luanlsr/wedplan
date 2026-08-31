@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { CreditCard, ShieldCheck, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { getClientEvidence } from '../../utils/clientEvidence';
+import { getAccountAccessMessage, type AccountAccessStatus } from '../../services/subscriptionAccess';
 
 interface PaymentGateProps {
   email?: string;
+  accountStatus?: AccountAccessStatus;
+  currentPeriodEnd?: string | null;
 }
 
 const paymentFallbackError = 'Não conseguimos iniciar o pagamento agora. Tente novamente em alguns minutos ou fale com o suporte.';
@@ -27,13 +30,15 @@ const getPaymentErrorMessage = (result: unknown) => {
   return message;
 };
 
-export function PaymentGate({ email }: PaymentGateProps) {
+export function PaymentGate({ email, accountStatus = 'pending_payment', currentPeriodEnd }: PaymentGateProps) {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentValue, setPaymentValue] = useState<number>(39.9);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const accessMessage = getAccountAccessMessage(accountStatus, currentPeriodEnd);
+  const isRenewal = accountStatus === 'past_due' || accountStatus === 'canceled' || accountStatus === 'expired';
 
   const initPayment = async () => {
     setLoading(true);
@@ -88,10 +93,10 @@ export function PaymentGate({ email }: PaymentGateProps) {
           <div className="p-8 space-y-6 bg-secondary/20">
             <div className="space-y-2">
               <h2 className="text-3xl font-black uppercase tracking-tighter italic leading-none">
-                Sua jornada <br/><span className="text-primary not-italic">começa aqui.</span>
+                {isRenewal ? 'Renove seu' : 'Sua jornada'} <br/><span className="text-primary not-italic">{isRenewal ? 'WedPlan.' : 'começa aqui.'}</span>
               </h2>
               <p className="text-sm text-muted-foreground font-medium">
-                Sua conta está aguardando o pagamento para liberar o acesso total ao WedPlan.
+                {accessMessage}
               </p>
             </div>
 
@@ -113,10 +118,10 @@ export function PaymentGate({ email }: PaymentGateProps) {
             <div className="p-4 bg-background/50 rounded-2xl border border-white/5 space-y-2">
               <div className="flex items-center gap-2 text-primary">
                 <ShieldCheck size={16} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Garantia de Satisfação</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Teste sem risco por 7 dias</span>
               </div>
               <p className="text-[10px] text-muted-foreground font-bold leading-relaxed">
-                Pagamento processado de forma segura via Asaas. Acesso liberado instantaneamente após a confirmação.
+                Assine agora e use todos os recursos. Se dentro de 7 dias você decidir que o WedPlan não é para você, basta solicitar o cancelamento e o reembolso.
               </p>
             </div>
           </div>
@@ -169,7 +174,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
                   disabled={!acceptedTerms || !acceptedPrivacy}
                   className="w-full h-16 rounded-2xl"
                 >
-                  Gerar Checkout da Assinatura
+                  {isRenewal ? 'Renovar assinatura' : 'Gerar Checkout da Assinatura'}
                 </Button>
               )}
 

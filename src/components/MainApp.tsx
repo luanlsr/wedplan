@@ -15,6 +15,7 @@ import { FinancialView } from './suppliers/FinancialView';
 import { PlanningView } from './suppliers/PlanningView';
 import { GuestsList } from './guests/GuestsList';
 import { TasksList } from './tasks/TasksList';
+import { TimelineView } from './timeline/TimelineView';
 import { CheckInView } from './guests/CheckInView';
 import { SettingsView } from './SettingsView';
 import { AdminDashboard } from './admin/AdminDashboard';
@@ -34,6 +35,7 @@ import { useAppModals } from '../hooks/useAppModals';
 import { calculateStats, formatDate } from '../utils/calculations';
 import { cn } from '../lib/utils';
 import { logError, logEvent, setObservabilityContext } from '../utils/observability';
+import { getAccountAccessTitle, isAccountAccessBlocked } from '../services/subscriptionAccess';
 import type { Installment } from '../types';
 
 export function MainApp() {
@@ -47,6 +49,8 @@ export function MainApp() {
     addSupplier, updateSupplier, deleteSupplier, updateInstallment,
     addGuest, updateGuest, deleteGuest,
     addTask, updateTask, deleteTask,
+    addTimelineCategory, updateTimelineCategory, deleteTimelineCategory,
+    addTimelineItem, updateTimelineItem, deleteTimelineItem,
     updateConfig, updateWeddingInfo, reorderSuppliers,
     refreshData, markGuidedTourCompleted
   } = useWeddingData();
@@ -221,6 +225,7 @@ export function MainApp() {
     if (path === "/fornecedores") return "Lista de Fornecedores";
     if (path === "/convidados") return "Lista de Convidados";
     if (path === "/tarefas") return "Minhas Tarefas";
+    if (path === "/cronograma") return "Cronograma";
     if (path === "/financeiro") return "Fluxo de Caixa";
     if (path === "/planejamento") return "Planejamento Financeiro";
     if (path === "/site") return "Site do Casal";
@@ -235,6 +240,7 @@ export function MainApp() {
     const params = new URLSearchParams(window.location.search);
     return !!params.get('token') && !user;
   }, [user]);
+  const accessBlocked = !isPublicMode && data.role !== 'master' && isAccountAccessBlocked(data.account_status);
 
   if (loading) {
     return (
@@ -248,7 +254,7 @@ export function MainApp() {
     );
   }
 
-  if (data.account_status === 'pending_payment' && data.role !== 'master') {
+  if (accessBlocked) {
     return (
       <AppLayout
         isDark={isDark}
@@ -259,9 +265,13 @@ export function MainApp() {
         weddingId={data.id}
         isNewWedding={false}
         onOnboardingComplete={handleOnboardingComplete}
-        pageTitle="Ativação de Conta"
+        pageTitle={getAccountAccessTitle(data.account_status)}
       >
-        <PaymentGate email={user?.email} />
+        <PaymentGate
+          email={user?.email}
+          accountStatus={data.account_status}
+          currentPeriodEnd={data.plan_current_period_end}
+        />
       </AppLayout>
     );
   }
@@ -310,7 +320,7 @@ export function MainApp() {
                   ))}
                 </div>
               )}
-              <Dashboard stats={stats} onAction={handleDashboardAction} />
+              <Dashboard stats={stats} weddingDate={data.casal.data} onAction={handleDashboardAction} />
             </div>
           )
         } />
@@ -365,6 +375,19 @@ export function MainApp() {
             onEdit={handleEditTask}
             onUpdate={updateTask}
             onDelete={deleteTask}
+          />
+        } />
+
+        <Route path="cronograma" element={
+          <TimelineView
+            categories={data.cronograma || []}
+            weddingDate={data.casal.data}
+            onAddCategory={addTimelineCategory}
+            onUpdateCategory={updateTimelineCategory}
+            onDeleteCategory={deleteTimelineCategory}
+            onAddItem={addTimelineItem}
+            onUpdateItem={updateTimelineItem}
+            onDeleteItem={deleteTimelineItem}
           />
         } />
 
@@ -426,7 +449,7 @@ export function MainApp() {
           !isPublicMode &&
           data.role !== 'master' &&
           data.role !== 'staff' &&
-          data.account_status !== 'pending_payment' &&
+          !isAccountAccessBlocked(data.account_status) &&
           !isNewWedding &&
           !data.guided_tour_completed_at
         }

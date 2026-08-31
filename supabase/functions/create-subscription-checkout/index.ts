@@ -341,6 +341,8 @@ serve(async (req) => {
           billingInterval,
           weddingDraft,
           paymentMethod,
+          refundGuaranteeDays: 7,
+          refundGuaranteeLabel: 'Teste sem risco por 7 dias',
         },
       })
       .select('id')
@@ -404,6 +406,7 @@ serve(async (req) => {
         billingInterval,
         paymentMethod,
         legalDocumentVersion: LEGAL_DOCUMENT_VERSION,
+        refundGuaranteeDays: 7,
         hasPaymentUrl: Boolean(paymentUrl),
         value,
         asaasCustomerId: customer.id,

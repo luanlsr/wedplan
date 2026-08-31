@@ -8,15 +8,17 @@ import {
 } from "recharts";
 import { TrendingUp, CheckCircle, Clock, AlertTriangle, Briefcase, DollarSign, Settings, ArrowDown, ArrowUp } from "lucide-react";
 import { parseISO, differenceInDays } from "date-fns";
+import { WeddingCountdown } from "../timeline/WeddingCountdown";
 
 interface DashboardProps {
   stats: FinancialStats;
+  weddingDate?: string;
   onAction: (action: 'new_supplier' | 'financial' | 'settings') => void;
 }
 
 import { cn } from "../../lib/utils";
 
-export const Dashboard = ({ stats, onAction }: DashboardProps) => {
+export const Dashboard = ({ stats, weddingDate, onAction }: DashboardProps) => {
   const [pieSortDirection, setPieSortDirection] = useState<'asc' | 'desc'>('asc');
   const pieData = Object.entries(stats.porCategoria).map(([name, value]) => ({ name, value }));
   const sortedPieData = [...pieData].sort((a, b) => {
@@ -35,6 +37,8 @@ export const Dashboard = ({ stats, onAction }: DashboardProps) => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <WeddingCountdown weddingDate={weddingDate} compact />
+
       {/* Summary Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {summaryCards.map((card, i) => (

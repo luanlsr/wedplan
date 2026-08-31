@@ -20,6 +20,28 @@ export type CurrentSubscription = {
   plan: CurrentPlan | null;
 };
 
+type ProfilePlanRow = {
+  plan_id?: string | null;
+  plan_status?: CurrentSubscription['status'] | 'pending_payment' | null;
+  billing_interval?: CurrentSubscription['billing_interval'] | null;
+  plan_current_period_end?: string | null;
+  account_id?: string | null;
+};
+
+type PlanFeatureRow = {
+  feature_key: string;
+  feature_value: unknown;
+};
+
+type SubscriptionRow = {
+  id: string;
+  status: CurrentSubscription['status'];
+  billing_interval: CurrentSubscription['billing_interval'];
+  current_period_end?: string | null;
+  plan_id: string;
+  plans: CurrentPlan | CurrentPlan[] | null;
+};
+
 export const usePlanFeatures = () => {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<CurrentSubscription | null>(null);
@@ -45,9 +67,10 @@ export const usePlanFeatures = () => {
 
       if (profileError) throw profileError;
 
-      const directPlanId = (profile as any)?.plan_id;
-      const directPlanStatus = (profile as any)?.plan_status || 'active';
-      const directPlanIsEnabled = ['active', 'trialing', 'past_due'].includes(directPlanStatus);
+      const profileRow = profile as ProfilePlanRow | null;
+      const directPlanId = profileRow?.plan_id;
+      const directPlanStatus = profileRow?.plan_status || 'active';
+      const directPlanIsEnabled = ['active', 'trialing'].includes(directPlanStatus);
 
       if (directPlanId && directPlanIsEnabled) {
         const { data: directPlan, error: directPlanError } = await supabase
@@ -68,14 +91,14 @@ export const usePlanFeatures = () => {
 
           setSubscription({
             id: `profile:${user.id}`,
-            status: directPlanStatus,
-            billing_interval: (profile as any)?.billing_interval || 'monthly',
-            current_period_end: (profile as any)?.plan_current_period_end,
+            status: directPlanStatus as CurrentSubscription['status'],
+            billing_interval: profileRow?.billing_interval || 'monthly',
+            current_period_end: profileRow?.plan_current_period_end,
             plan: directPlan as CurrentPlan,
           });
 
           setFeatures(
-            (featureRows || []).reduce((acc, item: any) => ({
+            ((featureRows || []) as PlanFeatureRow[]).reduce((acc, item) => ({
               ...acc,
               [item.feature_key]: item.feature_value,
             }), {} as PlanFeatureMap)
@@ -84,7 +107,7 @@ export const usePlanFeatures = () => {
         }
       }
 
-      const accountId = (profile as any)?.account_id || user.id;
+      const accountId = profileRow?.account_id || user.id;
 
       const { data: sub, error: subError } = await supabase
         .from('subscriptions')
@@ -103,16 +126,17 @@ export const usePlanFeatures = () => {
           )
         `)
         .eq('account_id', accountId)
-        .in('status', ['active', 'trialing', 'past_due'])
+        .in('status', ['active', 'trialing'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (subError) throw subError;
 
-      const plan = Array.isArray((sub as any)?.plans) ? (sub as any).plans[0] : (sub as any)?.plans;
+      const subscriptionRow = sub as SubscriptionRow | null;
+      const plan = Array.isArray(subscriptionRow?.plans) ? subscriptionRow.plans[0] : subscriptionRow?.plans;
 
-      if (!sub || !plan) {
+      if (!subscriptionRow || !plan) {
         setSubscription(null);
         setFeatures({});
         return;
@@ -121,20 +145,20 @@ export const usePlanFeatures = () => {
       const { data: featureRows, error: featuresError } = await supabase
         .from('plan_features')
         .select('feature_key, feature_value')
-        .eq('plan_id', (sub as any).plan_id);
+        .eq('plan_id', subscriptionRow.plan_id);
 
       if (featuresError) throw featuresError;
 
       setSubscription({
-        id: (sub as any).id,
-        status: (sub as any).status,
-        billing_interval: (sub as any).billing_interval,
-        current_period_end: (sub as any).current_period_end,
+        id: subscriptionRow.id,
+        status: subscriptionRow.status,
+        billing_interval: subscriptionRow.billing_interval,
+        current_period_end: subscriptionRow.current_period_end,
         plan,
       });
 
       setFeatures(
-        (featureRows || []).reduce((acc, item: any) => ({
+        ((featureRows || []) as PlanFeatureRow[]).reduce((acc, item) => ({
           ...acc,
           [item.feature_key]: item.feature_value,
         }), {} as PlanFeatureMap)
@@ -149,7 +173,8 @@ export const usePlanFeatures = () => {
   }, [user]);
 
   useEffect(() => {
-    loadPlanFeatures();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadPlanFeatures();
   }, [loadPlanFeatures]);
 
   const hasFeature = useCallback((featureKey: string) => {

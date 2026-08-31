@@ -44,7 +44,7 @@ const getMonthKey = (date: string) => {
 };
 
 const isActiveSubscriber = (data: WeddingData) =>
-  ['active', 'trialing', 'past_due'].includes(String(data.plan_status || data.account_status || ''));
+  ['active', 'trialing'].includes(String(data.plan_status || data.account_status || ''));
 
 const getExpectedPeople = (data: WeddingData) =>
   (data.convidados || []).reduce((total, guest) => total + Number(guest.adultos || 0) + Number(guest.criancas || 0), 0);

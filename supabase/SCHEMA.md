@@ -23,6 +23,10 @@ Perfil de cada usuário autenticado (1:1 com `auth.users`).
 | `wedding_id` | uuid | **Legado.** Coluna que várias policies de negócio atuais (`Acesso ao casamento vinculado`, `Noivo gere convidados/fornecedores/parcelas/tarefas`) realmente usam para escopar acesso — não `wedding_members`. |
 | `account_id` | uuid (FK → `accounts.id`) | |
 | `asaas_customer_id` | text | |
+| `plan_id`, `plan_status`, `billing_interval` | uuid/text/text | Plano comercial atual sincronizado com `subscriptions` e Asaas. |
+| `plan_current_period_start`, `plan_current_period_end`, `plan_access_expires_at` | date/date/timestamptz | Ciclo de acesso vigente. Se expirar, o app bloqueia e pede renovação. |
+| `plan_access_checked_at`, `plan_access_source` | timestamptz/text | Última checagem de acesso e origem (`asaas_login_sync`, `asaas_webhook`, etc.). |
+| `refund_window_started_at`, `refund_window_ends_at`, `refund_window_status` | timestamptz/timestamptz/text | Janela de reembolso de 7 dias e status (`eligible`/`expired`/`requested`/etc.). |
 | `created_at`, `updated_at` | timestamptz | |
 
 ### `roles`
@@ -33,6 +37,15 @@ Planos disponíveis. Colunas: `id`, `name`, `price numeric(10,2)`, `features jso
 
 ### `accounts`
 Conta/tenant (uma por usuário pagante). Colunas: `id` (= `auth.users.id` para novos signups), `account_type_id` (FK), `status` (`pending_payment`/`active`/`past_due`/`canceled`), `asaas_customer_id`, `asaas_subscription_id`, `created_at`, `updated_at`. **RLS ligado, zero policies.**
+
+### `subscriptions`
+Assinaturas comerciais processadas pelo Asaas. Colunas principais: `id`, `account_id`, `plan_id`, `status` (`incomplete`/`trialing`/`active`/`past_due`/`canceled`/`expired`), `billing_interval`, `asaas_customer_id`, `asaas_subscription_id`, `current_period_start`, `current_period_end`, `access_expires_at`, `last_payment_id`, `last_payment_status`, `last_payment_at`, `last_status_checked_at`, `last_status_source`, `refund_window_days`, `refund_window_started_at`, `refund_window_ends_at`, `refund_window_status`, `refund_window_checked_at`, `metadata`, `created_at`, `updated_at`. O webhook do Asaas e a Edge Function `sync-subscription-access` mantêm essa tabela sincronizada.
+
+### `subscription_cancellation_requests`
+Pedidos de cancelamento e reembolso abertos pelo usuário dentro do sistema. Colunas principais: `id`, `account_id`, `subscription_id`, `requested_by`, `requested_refund`, `refund_window_status_at_request`, `reason`, `status`, `requested_at`, `resolved_at`, `metadata`, `created_at`, `updated_at`. Usuário autenticado insere e vê os próprios pedidos; master gerencia.
+
+### `subscription_events`
+Eventos brutos recebidos do provedor de cobrança. Colunas principais: `id`, `subscription_id`, `account_id`, `provider`, `event_type`, `provider_event_id`, `payload`, `received_at`.
 
 ### `legal_documents`
 Controle de versões publicadas de documentos legais. Colunas principais: `id`, `document_type` (`terms`/`privacy`/`cookies`/`refund`), `version`, `title`, `public_url`, `content_hash`, `is_active`, `published_at`, `created_at`. Documentos ativos e publicados são públicos; master gerencia.

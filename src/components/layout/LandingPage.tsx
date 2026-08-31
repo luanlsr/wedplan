@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
+  AtSign,
   BadgeCheck,
   Calculator,
   CalendarCheck2,
@@ -14,6 +15,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   LockKeyhole,
+  Mail,
   MessageCircleHeart,
   PieChart,
   ShieldCheck,
@@ -28,6 +30,7 @@ import { cn } from "../../lib/utils";
 import { BrandLogo } from "./BrandLogo";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { setDefaultPageMetadata } from "../../utils/meta";
+import { SUPPORT_EMAIL } from "../../config/support";
 
 type LandingPageProps = {
   onLogin: () => void;
@@ -247,7 +250,7 @@ const faqs = [
   {
     question: "Posso cancelar quando quiser?",
     answer:
-      "Sim. A assinatura é mensal para vocês manterem o WedPlan pelo período em que precisarem.",
+      "Sim. Você pode solicitar o cancelamento quando quiser. Nos primeiros 7 dias, se decidir que o WedPlan não é para você, basta solicitar o cancelamento e o reembolso.",
   },
   {
     question: "Funciona pelo celular?",
@@ -279,6 +282,8 @@ const finalValue = [
   "Ver o que fazer agora",
   "Acompanhar o progresso juntos",
 ];
+
+const instagramUrl = "https://www.instagram.com/wedplan.oficial";
 
 export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
   useEffect(() => {
@@ -673,7 +678,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
 
               <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm font-black text-emerald-100">
                 <ShieldCheck className="mb-2" size={20} />
-                Pagamento seguro. A conta é liberada depois da confirmação.
+                Teste sem risco por 7 dias. Assine agora e use todos os recursos.
               </div>
             </div>
 
@@ -730,6 +735,21 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
             </div>
 
             <div className="mt-6 rounded-lg border border-white/10 bg-white/10 p-5">
+              <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-emerald-200">Teste sem risco por 7 dias</p>
+                  <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-300">
+                    Assine agora e use todos os recursos. Se dentro de 7 dias você decidir que o WedPlan não é para você, basta solicitar o cancelamento e o reembolso.
+                  </p>
+                </div>
+                <Button onClick={() => onGetStarted()} className="h-12 rounded-lg px-5 text-sm font-extrabold">
+                  Começar teste
+                  <ArrowRight size={17} />
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/10 p-5">
               <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div>
                   <p className="text-sm font-black uppercase tracking-[0.14em] text-white">Extra Pro: domínio personalizado</p>
@@ -821,17 +841,36 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
               Criar meu WedPlan
               <ArrowRight size={18} />
             </Button>
-            <p className="mt-4 text-sm font-bold text-slate-400">Comece em poucos minutos. Cancele quando quiser.</p>
+            <p className="mt-4 text-sm font-bold text-slate-400">Teste sem risco por 7 dias. Cancele e solicite reembolso dentro desse período.</p>
           </Reveal>
         </section>
       </main>
 
-      <footer className="bg-[#fbfaf8] px-4 py-8 text-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <span>WedPlan 2026. Planejamento do casamento, sem caos.</span>
-          <span className="hidden text-slate-300 sm:inline">|</span>
-          <a href="/termos-de-uso" className="hover:text-primary">Termos</a>
-          <a href="/politica-de-privacidade" className="hover:text-primary">Privacidade</a>
+      <footer className="border-t border-slate-200 bg-[#fbfaf8] px-4 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 text-slate-500 md:flex-row md:items-center md:justify-between">
+          <div className="text-center md:text-left">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">WedPlan 2026</p>
+            <p className="mt-2 text-sm font-bold text-slate-600">Planejamento do casamento, sem caos.</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-3 text-xs font-black uppercase tracking-[0.14em] md:items-end">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary">
+                <Mail size={15} />
+                Contato
+              </a>
+              <a href={instagramUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary">
+                <AtSign size={15} />
+                @wedplan.oficial
+              </a>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 text-slate-400">
+              <a href="/termos-de-uso" className="hover:text-primary">Termos</a>
+              <span className="text-slate-300">|</span>
+              <a href="/politica-de-privacidade" className="hover:text-primary">Privacidade</a>
+            </div>
+          </div>
         </div>
       </footer>
 
