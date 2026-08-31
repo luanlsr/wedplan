@@ -4,7 +4,7 @@ import { Cookie, ShieldCheck, X } from 'lucide-react';
 import { Button } from '../ui';
 import { supabase } from '../../lib/supabase';
 
-const POLICY_VERSION = '2026-08-27';
+const POLICY_VERSION = '2026-08-31';
 const STORAGE_KEY = `wedplan_cookie_consent_${POLICY_VERSION}`;
 const ANON_KEY = 'wedplan_anonymous_id';
 const CONSENT_DAYS = 365;

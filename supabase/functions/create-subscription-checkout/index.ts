@@ -10,10 +10,12 @@ const corsHeaders = {
 }
 
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3'
+const LEGAL_DOCUMENT_VERSION = '2026-08-31'
 
 const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase()
 const onlyDigits = (value?: string) => String(value || '').replace(/\D/g, '')
 const genericPaymentMessage = 'Não conseguimos iniciar o pagamento agora. Tente novamente em alguns minutos ou fale com o suporte.'
+const unavailableLegalMessage = 'Não conseguimos validar os documentos legais agora. Tente novamente em alguns minutos.'
 
 class PublicCheckoutError extends Error {
   constructor(message: string, status = 400, code = 'VALIDATION_ERROR') {
@@ -40,6 +42,115 @@ const safeJson = async (res: Response) => {
     return {}
   }
 }
+
+const getClientIp = (req: Request) => {
+  const normalizeIp = (value?: string | null) => {
+    let ip = String(value || '').trim().replace(/^"|"$/g, '')
+    if (!ip || ip.toLowerCase() === 'unknown') return null
+
+    const bracketedIpv6 = ip.match(/^\[([^\]]+)\](?::\d+)?$/)
+    if (bracketedIpv6?.[1]) return bracketedIpv6[1]
+
+    if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) {
+      return ip.split(':')[0]
+    }
+
+    return ip
+  }
+
+  const headers = [
+    req.headers.get('cf-connecting-ip'),
+    req.headers.get('x-real-ip'),
+    req.headers.get('x-client-ip'),
+    req.headers.get('x-forwarded-for')?.split(',')[0],
+    req.headers.get('forwarded')?.match(/for="?([^;,"]+)/i)?.[1],
+  ]
+
+  return normalizeIp(headers.find((value) => value && value.trim()))
+}
+
+const pickText = (value: any, maxLength = 255) => {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return trimmed.slice(0, maxLength)
+}
+
+const getClientEvidence = (body: any) => {
+  const raw = typeof body.clientEvidence === 'object' && body.clientEvidence ? body.clientEvidence : {}
+
+  return {
+    locale: pickText(raw.locale, 40),
+    timezone: pickText(raw.timezone, 80),
+    screenResolution: pickText(raw.screenResolution, 40),
+    referrer: pickText(raw.referrer, 500),
+    deviceType: pickText(raw.deviceType, 40),
+    browserName: pickText(raw.browserName, 80),
+    operatingSystem: pickText(raw.operatingSystem, 80),
+  }
+}
+
+const getRequiredLegalDocuments = async (client: any) => {
+  const { data, error } = await client
+    .from('legal_documents')
+    .select('id, document_type, version, title, public_url, content_hash')
+    .in('document_type', ['terms', 'privacy'])
+    .eq('version', LEGAL_DOCUMENT_VERSION)
+    .eq('is_active', true)
+
+  if (error) throw new InternalCheckoutError('LEGAL_DOCUMENT_LOOKUP_ERROR', unavailableLegalMessage)
+
+  const terms = data?.find((document: any) => document.document_type === 'terms')
+  const privacy = data?.find((document: any) => document.document_type === 'privacy')
+  if (!terms || !privacy) {
+    throw new InternalCheckoutError('LEGAL_DOCUMENT_NOT_FOUND', unavailableLegalMessage)
+  }
+
+  return { terms, privacy }
+}
+
+const buildAcceptanceRecord = ({
+  document,
+  checkoutId,
+  fullName,
+  email,
+  ipAddress,
+  userAgent,
+  source,
+  clientEvidence,
+  acceptedAt,
+  plan,
+  billingInterval,
+  paymentMethod,
+}: any) => ({
+  legal_document_id: document.id,
+  checkout_session_id: checkoutId,
+  email,
+  ip_address: ipAddress,
+  user_agent: userAgent,
+  accepted_at: acceptedAt,
+  document_type: document.document_type,
+  document_version: document.version,
+  document_title: document.title,
+  public_url: document.public_url,
+  content_hash: document.content_hash,
+  acceptance_source: source,
+  locale: clientEvidence.locale,
+  timezone: clientEvidence.timezone,
+  screen_resolution: clientEvidence.screenResolution,
+  referrer: clientEvidence.referrer,
+  device_type: clientEvidence.deviceType,
+  browser_name: clientEvidence.browserName,
+  operating_system: clientEvidence.operatingSystem,
+  metadata: {
+    fullName,
+    planCode: plan.code,
+    planName: plan.name,
+    billingInterval,
+    paymentMethod,
+    acceptanceAction: 'checkout_submit',
+  },
+})
 
 const recordEvent = async (client: any, event: any) => {
   try {
@@ -91,6 +202,10 @@ serve(async (req) => {
     const acceptedPrivacy = Boolean(body.acceptedPrivacy)
     const weddingDraft = typeof body.weddingDraft === 'object' && body.weddingDraft ? body.weddingDraft : null
     const paymentMethod = String(body.paymentMethod || 'asaas_checkout')
+    const source = String(body.source || 'landing')
+    const userAgent = req.headers.get('user-agent')
+    const ipAddress = getClientIp(req)
+    const clientEvidence = getClientEvidence(body)
 
     await recordEvent(supabaseClient, {
       level: 'info',
@@ -100,10 +215,10 @@ serve(async (req) => {
         planCode,
         billingInterval,
         paymentMethod,
-        source: body.source || 'landing',
+        source,
         hasWeddingDraft: Boolean(weddingDraft),
       },
-      user_agent: req.headers.get('user-agent'),
+      user_agent: userAgent,
     })
 
     if (!fullName) throw new PublicCheckoutError('Informe o nome completo')
@@ -125,6 +240,8 @@ serve(async (req) => {
 
     const value = Number(billingInterval === 'yearly' ? (plan.price_yearly || plan.price_monthly * 12) : plan.price_monthly)
     if (!value || value <= 0) throw new PublicCheckoutError('Valor do plano inválido')
+
+    const legalDocuments = await getRequiredLegalDocuments(supabaseClient)
 
     const customerRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
       method: 'POST',
@@ -214,8 +331,9 @@ serve(async (req) => {
         accepted_terms_at: new Date().toISOString(),
         accepted_privacy_at: new Date().toISOString(),
         marketing_consent: false,
-        source: body.source || 'landing',
-        user_agent: req.headers.get('user-agent'),
+        source,
+        ip_address: ipAddress,
+        user_agent: userAgent,
         metadata: {
           planCode: plan.code,
           planName: plan.name,
@@ -233,6 +351,47 @@ serve(async (req) => {
       throw new InternalCheckoutError('CHECKOUT_PERSISTENCE_ERROR')
     }
 
+    const acceptedAt = new Date().toISOString()
+    const acceptanceRecords = [
+      buildAcceptanceRecord({
+        document: legalDocuments.terms,
+        checkoutId: checkout.id,
+        fullName,
+        email,
+        ipAddress,
+        userAgent,
+        source,
+        clientEvidence,
+        acceptedAt,
+        plan,
+        billingInterval,
+        paymentMethod,
+      }),
+      buildAcceptanceRecord({
+        document: legalDocuments.privacy,
+        checkoutId: checkout.id,
+        fullName,
+        email,
+        ipAddress,
+        userAgent,
+        source,
+        clientEvidence,
+        acceptedAt,
+        plan,
+        billingInterval,
+        paymentMethod,
+      }),
+    ]
+
+    const { error: acceptanceError } = await supabaseClient
+      .from('legal_acceptances')
+      .insert(acceptanceRecords)
+
+    if (acceptanceError) {
+      console.error('[create-subscription-checkout] Erro ao salvar aceite legal:', acceptanceError)
+      throw new InternalCheckoutError('LEGAL_ACCEPTANCE_PERSISTENCE_ERROR')
+    }
+
     await recordEvent(supabaseClient, {
       level: 'info',
       event_name: 'edge.checkout.created',
@@ -244,12 +403,13 @@ serve(async (req) => {
         planCode: plan.code,
         billingInterval,
         paymentMethod,
+        legalDocumentVersion: LEGAL_DOCUMENT_VERSION,
         hasPaymentUrl: Boolean(paymentUrl),
         value,
         asaasCustomerId: customer.id,
         asaasSubscriptionId: subscription.id,
       },
-      user_agent: req.headers.get('user-agent'),
+      user_agent: userAgent,
     })
 
     return new Response(JSON.stringify({

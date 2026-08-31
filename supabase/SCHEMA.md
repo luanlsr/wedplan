@@ -34,6 +34,12 @@ Planos disponíveis. Colunas: `id`, `name`, `price numeric(10,2)`, `features jso
 ### `accounts`
 Conta/tenant (uma por usuário pagante). Colunas: `id` (= `auth.users.id` para novos signups), `account_type_id` (FK), `status` (`pending_payment`/`active`/`past_due`/`canceled`), `asaas_customer_id`, `asaas_subscription_id`, `created_at`, `updated_at`. **RLS ligado, zero policies.**
 
+### `legal_documents`
+Controle de versões publicadas de documentos legais. Colunas principais: `id`, `document_type` (`terms`/`privacy`/`cookies`/`refund`), `version`, `title`, `public_url`, `content_hash`, `is_active`, `published_at`, `created_at`. Documentos ativos e publicados são públicos; master gerencia.
+
+### `legal_acceptances`
+Evidências de aceite dos documentos legais. Colunas principais: `id`, `legal_document_id`, `document_type`, `document_version`, `document_title`, `public_url`, `content_hash`, `account_id`, `user_id`, `checkout_session_id`, `email`, `ip_address`, `user_agent`, `accepted_at`, `acceptance_source`, `locale`, `timezone`, `screen_resolution`, `referrer`, `device_type`, `browser_name`, `operating_system`, `metadata`. Usada para comprovar aceite de Termos/Privacidade no checkout e vinculada ao usuário após confirmação de pagamento.
+
 ### `weddings`
 Um casamento (unidade central de dados). Colunas principais: `id`, `owner_id` (FK `auth.users`, **UNIQUE** — um usuário só pode ser owner de 1 wedding), `couple_name1`, `couple_name2`, `wedding_date`, `total_budget`, `theme`, `public_checkin_token`, `account_id` (FK `accounts`), `created_at`, `updated_at`.
 **Policies:** dono (`owner_id = auth.uid()`) lê/edita; master (`is_master()`) lê/edita tudo; **policy `Leitura pública do casamento via token` usa `USING (true)` sem checar o token de fato — ver `KNOWN_ISSUES.md`.**

@@ -6,75 +6,107 @@ type LegalPageProps = {
   type: 'terms' | 'privacy';
 };
 
-const updatedAt = '27 de agosto de 2026';
+const updatedAt = '31 de agosto de 2026';
 
 const termsSections = [
   {
-    title: '1. Aceite dos termos',
-    body: 'Ao contratar ou utilizar o WedPlan, você declara que leu e aceitou estes Termos de Uso. Caso não concorde, não utilize a plataforma.',
+    title: '1. Aceite e comprovação',
+    body: 'Ao marcar o aceite e prosseguir com a contratação ou uso do WedPlan, você declara que leu, compreendeu e aceitou estes Termos de Uso e a Política de Privacidade vigente. Para segurança, auditoria e exercício regular de direitos, registramos data e hora do aceite, e-mail informado, IP, navegador, sistema operacional, tipo de dispositivo, origem do acesso e versão dos documentos aceitos.',
   },
   {
-    title: '2. Sobre o WedPlan',
-    body: 'O WedPlan é uma plataforma de organização de casamento com recursos para convidados, fornecedores, tarefas, financeiro, site do casal, RSVP, mensagens e lista de presentes, conforme o plano contratado.',
+    title: '2. Objeto do serviço',
+    body: 'O WedPlan é uma plataforma SaaS para organização de casamento, com recursos para convidados, fornecedores, tarefas, financeiro, site do casal, RSVP, mensagens, lista de presentes e ferramentas relacionadas, conforme disponibilidade técnica e plano contratado.',
   },
   {
-    title: '3. Conta e acesso',
-    body: 'A conta é liberada após a confirmação do pagamento. O usuário é responsável por manter seus dados atualizados, proteger suas credenciais e comunicar qualquer uso indevido.',
+    title: '3. Cadastro, conta e acesso',
+    body: 'O usuário deve fornecer informações verdadeiras, completas e atualizadas. A conta pode depender de confirmação de pagamento e validações antifraude. O usuário é responsável por proteger suas credenciais, manter seus contatos atualizados e comunicar imediatamente qualquer suspeita de acesso indevido.',
   },
   {
-    title: '4. Assinatura e pagamento',
-    body: 'Os pagamentos são processados por parceiro financeiro externo. O WedPlan não armazena dados completos de cartão, senha bancária ou credenciais financeiras do usuário.',
+    title: '4. Assinatura, cobrança e terceiros',
+    body: 'Os pagamentos são processados por parceiro financeiro externo, atualmente Asaas. O WedPlan não armazena número completo de cartão, CVV, senha bancária ou credenciais financeiras. O acesso a funcionalidades pagas pode ser liberado, suspenso ou encerrado conforme status da assinatura, inadimplência, cancelamento, fraude ou descumprimento destes Termos.',
   },
   {
-    title: '5. Uso adequado',
-    body: 'É proibido usar o WedPlan para atividades ilegais, envio de conteúdo ofensivo, tentativa de acesso indevido, engenharia reversa, sobrecarga dos serviços ou violação de direitos de terceiros.',
+    title: '5. Cancelamento e arrependimento',
+    body: 'O usuário pode solicitar cancelamento pelos canais de atendimento disponíveis. Quando aplicável às relações de consumo contratadas pela internet, será respeitado o direito de arrependimento de 7 dias e demais direitos previstos no Código de Defesa do Consumidor e nas normas brasileiras de comércio eletrônico.',
   },
   {
-    title: '6. Disponibilidade',
-    body: 'Trabalhamos para manter a plataforma disponível e segura, mas podem ocorrer interrupções por manutenção, atualizações, provedores externos ou eventos fora do nosso controle.',
+    title: '6. Uso permitido',
+    body: 'É proibido usar o WedPlan para atividade ilegal, violação de direitos de terceiros, conteúdo ofensivo ou discriminatório, spam, fraude, tentativa de acesso indevido, engenharia reversa, exploração de vulnerabilidades, sobrecarga dos serviços ou qualquer uso que comprometa a segurança, estabilidade ou reputação da plataforma.',
   },
   {
-    title: '7. Cancelamento',
-    body: 'O usuário pode solicitar cancelamento conforme os canais de atendimento disponíveis. O acesso a funcionalidades pagas pode ser limitado ou encerrado ao fim do ciclo contratado.',
+    title: '7. Conteúdo inserido pelo usuário',
+    body: 'O usuário permanece responsável pelos dados, imagens, mensagens, listas de convidados, informações de fornecedores e demais conteúdos que inserir no WedPlan. Ao usar a plataforma, autoriza o tratamento desses conteúdos apenas na medida necessária para operação do serviço, suporte, segurança, cumprimento legal e funcionalidades contratadas.',
   },
   {
-    title: '8. Alteracoes',
-    body: 'Estes termos podem ser atualizados para refletir melhorias do produto, mudanças operacionais, requisitos legais ou novas funcionalidades.',
+    title: '8. Disponibilidade e suporte',
+    body: 'Trabalhamos para manter a plataforma disponível e segura, mas podem ocorrer interrupções por manutenção, atualizações, incidentes, provedores externos ou eventos fora do controle razoável do WedPlan. Demandas de suporte serão tratadas pelos canais informados na plataforma.',
+  },
+  {
+    title: '9. Propriedade intelectual',
+    body: 'Marcas, layout, código, textos, fluxos, identidade visual e demais elementos do WedPlan pertencem aos seus respectivos titulares. O uso da plataforma não transfere propriedade intelectual ao usuário, exceto quanto aos conteúdos que ele próprio inserir.',
+  },
+  {
+    title: '10. Proteção de dados',
+    body: 'O tratamento de dados pessoais observa a Política de Privacidade do WedPlan, a Lei Geral de Proteção de Dados Pessoais, o Marco Civil da Internet e demais normas brasileiras aplicáveis. Dados técnicos e registros de acesso podem ser mantidos para segurança, auditoria, prevenção a fraude, cumprimento legal e exercício regular de direitos.',
+  },
+  {
+    title: '11. Responsabilidade',
+    body: 'O WedPlan responde nos limites da legislação aplicável. O serviço não substitui assessoria jurídica, contábil, financeira, cerimonial ou profissional especializada. O usuário é responsável por validar informações, contratos, pagamentos, orçamentos e decisões tomadas com base nos dados organizados na plataforma.',
+  },
+  {
+    title: '12. Atualizações dos termos',
+    body: 'Estes Termos podem ser atualizados para refletir mudanças legais, operacionais, comerciais, técnicas ou novas funcionalidades. Alterações relevantes serão comunicadas por meio razoável, e a continuidade de uso ou novo aceite poderá ser exigido quando necessário.',
   },
 ];
 
 const privacySections = [
   {
-    title: '1. Dados coletados',
-    body: 'Podemos coletar nome, e-mail, telefone, CPF/CNPJ para cobrança, dados do casamento, convidados, fornecedores, tarefas, preferências de cookies e informações técnicas de acesso.',
+    title: '1. Controlador e contato',
+    body: 'Esta Política explica como o WedPlan trata dados pessoais no contexto da plataforma. Solicitações de privacidade, dúvidas ou exercício de direitos podem ser encaminhados pelos canais de atendimento informados no site, checkout ou dentro da plataforma.',
   },
   {
-    title: '2. Finalidades',
-    body: 'Usamos os dados para criar e manter sua conta, processar assinaturas, operar funcionalidades do sistema, prestar suporte, melhorar a experiência, cumprir obrigações legais e proteger a plataforma.',
+    title: '2. Dados coletados',
+    body: 'Podemos coletar nome, e-mail, telefone, CPF/CNPJ para cobrança, dados do casamento, dados de convidados, fornecedores, tarefas, orçamento, mensagens, preferências de cookies, registros de suporte e informações técnicas como IP, user-agent, navegador, sistema operacional, tipo de dispositivo, idioma, fuso horário, páginas acessadas e identificadores de sessão.',
   },
   {
-    title: '3. Dados de pagamento',
-    body: 'O pagamento é realizado em ambiente de parceiro externo. O WedPlan não solicita nem armazena senha bancária, dados completos de cartão ou credenciais de pagamento.',
+    title: '3. Finalidades do tratamento',
+    body: 'Tratamos dados para criar e manter conta, processar assinaturas, operar funcionalidades contratadas, salvar planejamentos, disponibilizar site do casal, prestar suporte, emitir comunicações transacionais, prevenir fraude, manter segurança, registrar aceite legal, cumprir obrigações legais e exercer direitos em processos administrativos, judiciais ou arbitrais.',
   },
   {
-    title: '4. Compartilhamento',
-    body: 'Podemos compartilhar dados com fornecedores essenciais para operação, como hospedagem, banco de dados, autenticação, envio de e-mails, pagamentos e ferramentas de segurança, sempre limitado ao necessário.',
+    title: '4. Bases legais',
+    body: 'As bases legais podem incluir execução de contrato e procedimentos preliminares, cumprimento de obrigação legal ou regulatória, exercício regular de direitos, legítimo interesse para segurança e melhoria do serviço, proteção contra fraude e consentimento quando exigido, como em cookies não necessários e comunicações de marketing.',
   },
   {
-    title: '5. Cookies',
-    body: 'Usamos cookies necessários para funcionamento da plataforma. Cookies de análise, preferências e marketing dependem do consentimento do usuário quando aplicável.',
+    title: '5. Aceite legal e registros técnicos',
+    body: 'Quando o usuário aceita os Termos e a Política, registramos a versão do documento, data e hora, e-mail, IP, dispositivo, navegador, sistema operacional, idioma, fuso horário, origem do acesso e metadados mínimos do checkout. Esses dados são usados para segurança, auditoria, comprovação do aceite e defesa de direitos.',
   },
   {
-    title: '6. Direitos do titular',
-    body: 'O usuário pode solicitar acesso, correção, exclusão, portabilidade, informações sobre compartilhamento e revisão de consentimentos, conforme a legislação aplicável.',
+    title: '6. Pagamentos',
+    body: 'Pagamentos são processados por parceiro externo. O WedPlan pode receber identificadores de cliente, assinatura, cobrança, status de pagamento e dados necessários para conciliação, liberação de acesso, suporte, prevenção a fraude e cumprimento de obrigações legais. O WedPlan não armazena senha bancária, CVV ou número completo de cartão.',
   },
   {
-    title: '7. Seguranca',
-    body: 'Adotamos medidas técnicas e organizacionais para proteger dados pessoais, como controle de acesso, políticas no banco, segregação por conta e monitoramento de eventos relevantes.',
+    title: '7. Compartilhamento',
+    body: 'Podemos compartilhar dados com fornecedores essenciais para operação, como hospedagem, banco de dados, autenticação, envio de e-mails, pagamentos, observabilidade, suporte e segurança. O compartilhamento é limitado ao necessário para as finalidades informadas, obrigações legais ou exercício regular de direitos.',
   },
   {
-    title: '8. Retencao',
-    body: 'Mantemos os dados pelo período necessário para execução do serviço, cumprimento de obrigações legais, prevenção a fraudes, exercício de direitos e resolução de disputas.',
+    title: '8. Cookies e preferências',
+    body: 'Usamos cookies necessários para funcionamento da plataforma. Cookies de análise, preferências e marketing dependem do consentimento quando aplicável. O usuário pode recusar cookies não necessários ou alterar preferências a qualquer momento pelo gerenciador de cookies.',
+  },
+  {
+    title: '9. Direitos do titular',
+    body: 'O titular pode solicitar confirmação de tratamento, acesso, correção, anonimização, bloqueio ou eliminação de dados desnecessários, portabilidade, informações sobre compartilhamento, revisão de consentimentos e revogação de consentimento, observadas as hipóteses legais de retenção.',
+  },
+  {
+    title: '10. Segurança',
+    body: 'Adotamos medidas técnicas e organizacionais razoáveis para proteger dados pessoais, como controle de acesso, políticas no banco, segregação por conta, registros de auditoria, monitoramento de eventos relevantes e limitação de acesso por necessidade operacional.',
+  },
+  {
+    title: '11. Retenção e eliminação',
+    body: 'Mantemos dados pelo período necessário para execução do serviço, cumprimento de obrigações legais, prevenção a fraude, segurança, exercício regular de direitos, resolução de disputas e preservação de registros exigidos por normas brasileiras. Quando possível e aplicável, dados podem ser eliminados ou anonimizados após o término das finalidades.',
+  },
+  {
+    title: '12. Alterações desta política',
+    body: 'Esta Política pode ser atualizada para refletir mudanças legais, técnicas, operacionais ou comerciais. Alterações relevantes serão comunicadas por meio razoável, e novos consentimentos poderão ser solicitados quando necessário.',
   },
 ];
 

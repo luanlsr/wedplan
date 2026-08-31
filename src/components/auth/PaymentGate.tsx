@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { CreditCard, ShieldCheck, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { Card, Button } from '../ui';
+import { getClientEvidence } from '../../utils/clientEvidence';
 
 interface PaymentGateProps {
   email?: string;
@@ -8,8 +10,14 @@ interface PaymentGateProps {
 
 const paymentFallbackError = 'Não conseguimos iniciar o pagamento agora. Tente novamente em alguns minutos ou fale com o suporte.';
 
-const getPaymentErrorMessage = (result: any) => {
-  const message = String(result?.userMessage || result?.error || paymentFallbackError);
+const getResultMessage = (result: unknown) => {
+  if (!result || typeof result !== 'object') return paymentFallbackError;
+  const payload = result as { userMessage?: unknown; error?: unknown };
+  return String(payload.userMessage || payload.error || paymentFallbackError);
+};
+
+const getPaymentErrorMessage = (result: unknown) => {
+  const message = getResultMessage(result);
   const technicalPatterns = ['api', 'asaas', 'supabase', 'service_role', 'invalid key', 'chave api', 'not configured', 'jwt', 'authorization'];
 
   if (technicalPatterns.some((pattern) => message.toLowerCase().includes(pattern))) {
@@ -22,18 +30,20 @@ const getPaymentErrorMessage = (result: any) => {
 export function PaymentGate({ email }: PaymentGateProps) {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentValue, setPaymentValue] = useState<number>(39.9);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    initPayment();
-  }, []);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   const initPayment = async () => {
     setLoading(true);
     setError(null);
     try {
       if (!email) throw new Error('E-mail da conta não encontrado');
+      if (!acceptedTerms || !acceptedPrivacy) {
+        throw new Error('Aceite os Termos de Uso e a Política de Privacidade para continuar.');
+      }
+
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       const res = await fetch(
@@ -51,6 +61,7 @@ export function PaymentGate({ email }: PaymentGateProps) {
             billingInterval: 'monthly',
             acceptedTerms: true,
             acceptedPrivacy: true,
+            clientEvidence: getClientEvidence(),
             source: 'payment_gate',
           }),
         }
@@ -59,9 +70,9 @@ export function PaymentGate({ email }: PaymentGateProps) {
       if (!res.ok) throw new Error(getPaymentErrorMessage(result));
       if (result.paymentUrl) setPaymentUrl(result.paymentUrl);
       if (result.paymentValue) setPaymentValue(Number(result.paymentValue));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('PaymentGate error:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : paymentFallbackError);
     } finally {
       setLoading(false);
     }
@@ -122,6 +133,15 @@ export function PaymentGate({ email }: PaymentGateProps) {
             </div>
 
             <div className="w-full space-y-4">
+              <div className="space-y-2 text-left">
+                <ConsentCheckbox checked={acceptedTerms} onChange={setAcceptedTerms}>
+                  Li e aceito os <LegalLink to="/termos-de-uso">Termos de Uso</LegalLink>.
+                </ConsentCheckbox>
+                <ConsentCheckbox checked={acceptedPrivacy} onChange={setAcceptedPrivacy}>
+                  Li e aceito a <LegalLink to="/politica-de-privacidade">Política de Privacidade</LegalLink> e estou ciente do registro técnico do aceite.
+                </ConsentCheckbox>
+              </div>
+
               {loading ? (
                 <div className="flex flex-col items-center gap-3 py-4">
                   <Loader2 className="animate-spin text-primary" size={28} />
@@ -144,13 +164,17 @@ export function PaymentGate({ email }: PaymentGateProps) {
                   Ativar Minha Conta <ArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
                 </a>
               ) : (
-                <Button onClick={initPayment} className="w-full h-16 rounded-2xl">
+                <Button
+                  onClick={initPayment}
+                  disabled={!acceptedTerms || !acceptedPrivacy}
+                  className="w-full h-16 rounded-2xl"
+                >
                   Gerar Checkout da Assinatura
                 </Button>
               )}
 
               <p className="text-[10px] text-muted-foreground font-medium">
-                Ao clicar, você será redirecionado para o ambiente seguro de pagamento do Asaas.
+                Ao clicar, registraremos data e hora, IP, dispositivo, navegador e versão dos documentos aceitos, e você será redirecionado para o ambiente seguro do Asaas.
               </p>
             </div>
 
@@ -171,3 +195,35 @@ export function PaymentGate({ email }: PaymentGateProps) {
     </div>
   );
 }
+
+const ConsentCheckbox = ({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: ReactNode;
+}) => (
+  <label className="flex items-start gap-3 rounded-2xl border border-border bg-background/70 p-3 text-xs font-bold leading-5 text-muted-foreground">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+    />
+    <span>{children}</span>
+  </label>
+);
+
+const LegalLink = ({ to, children }: { to: string; children: ReactNode }) => (
+  <Link
+    to={to}
+    target="_blank"
+    rel="noopener noreferrer"
+    onClick={(event) => event.stopPropagation()}
+    className="text-primary underline underline-offset-4 hover:text-primary/80"
+  >
+    {children}
+  </Link>
+);

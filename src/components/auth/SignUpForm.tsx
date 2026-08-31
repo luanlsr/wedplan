@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ElementType, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ElementType, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import {
@@ -27,6 +27,7 @@ import { BrandLogo } from '../layout/BrandLogo';
 import { Button, Input } from '../ui';
 import { cn } from '../../lib/utils';
 import { maskPhone } from '../../utils/masks';
+import { getClientEvidence } from '../../utils/clientEvidence';
 import { logError, logEvent } from '../../utils/observability';
 
 interface SignUpFormProps {
@@ -186,12 +187,31 @@ const loadStoredState = (): CheckoutState => {
   }
 };
 
+const loadInitialCheckoutState = (): CheckoutState => {
+  const stored = loadStoredState();
+  const params = new URLSearchParams(window.location.search);
+  const plan = normalizePlanCode(params.get('plan'));
+  const billing = normalizeBilling(params.get('billing'));
+
+  return {
+    ...stored,
+    ...(plan && plan !== 'yearly' ? { planCode: plan } : {}),
+    ...(billing ? { billingInterval: billing } : {}),
+  };
+};
+
 const getFirstName = (fullName: string) => fullName.trim().split(/\s+/)[0] || '';
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
 const checkoutFallbackError = 'Não conseguimos iniciar o pagamento agora. Tente novamente em alguns minutos ou fale com o suporte.';
 
-const getCheckoutErrorMessage = (result: any, fallback = checkoutFallbackError) => {
-  const message = String(result?.userMessage || result?.error || fallback);
+const getResultMessage = (result: unknown, fallback = checkoutFallbackError) => {
+  if (!result || typeof result !== 'object') return fallback;
+  const payload = result as { userMessage?: unknown; error?: unknown };
+  return String(payload.userMessage || payload.error || fallback);
+};
+
+const getCheckoutErrorMessage = (result: unknown, fallback = checkoutFallbackError) => {
+  const message = getResultMessage(result, fallback);
   const technicalPatterns = [
     'api',
     'asaas',
@@ -216,7 +236,7 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
   const location = useLocation();
   const params = useParams();
   const routeStep = (params.step || 'dados-pessoais') as CheckoutStepId;
-  const [checkout, setCheckout] = useState<CheckoutState>(() => loadStoredState());
+  const [checkout, setCheckout] = useState<CheckoutState>(() => loadInitialCheckoutState());
   const [plans, setPlans] = useState<Plan[]>(fallbackPlans);
   const [plansLoading, setPlansLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -226,17 +246,16 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
   const currentStepIndex = Math.max(checkoutSteps.findIndex((step) => step.id === routeStep), 0);
   const progress = ((currentStepIndex + 1) / checkoutSteps.length) * 100;
 
+  const updateCheckout = useCallback((patch: Partial<CheckoutState>) => {
+    setCheckout((current) => ({ ...current, ...patch }));
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const plan = normalizePlanCode(params.get('plan'));
     const billing = normalizeBilling(params.get('billing'));
 
     if (plan || billing) {
-      setCheckout((current) => ({
-        ...current,
-        ...(plan && plan !== 'yearly' ? { planCode: plan } : {}),
-        ...(billing ? { billingInterval: billing } : {}),
-      }));
       navigate('/checkout/dados-pessoais', { replace: true });
     }
   }, [location.search, navigate]);
@@ -263,18 +282,6 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
 
     loadPlans();
   }, []);
-
-  useEffect(() => {
-    if (!checkout.partnerName && checkout.fullName && routeStep === 'casamento') {
-      updateCheckout({ partnerName: getFirstName(checkout.fullName) });
-    }
-  }, [checkout.fullName, checkout.partnerName, routeStep]);
-
-  useEffect(() => {
-    if (!checkout.weddingName && checkout.partnerName) {
-      updateCheckout({ weddingName: buildWeddingName(checkout.partnerName, '') });
-    }
-  }, [checkout.partnerName, checkout.weddingName]);
 
   useEffect(() => {
     if (routeStep === 'sucesso' && checkout.paymentUrl) {
@@ -348,10 +355,6 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
     }
   }, [firstIncompleteStep, navigate, routeStep]);
 
-  const updateCheckout = (patch: Partial<CheckoutState>) => {
-    setCheckout((current) => ({ ...current, ...patch }));
-  };
-
   const goToStep = (step: CheckoutStepId) => {
     navigate(`/checkout/${step}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -363,6 +366,11 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
     if (routeStep === 'dados-pessoais') {
       const validation = validatePersonal(checkout);
       if (validation) return setError(validation);
+      const partnerName = checkout.partnerName || getFirstName(checkout.fullName);
+      const patch: Partial<CheckoutState> = {};
+      if (!checkout.partnerName && partnerName) patch.partnerName = partnerName;
+      if (!checkout.weddingName && partnerName) patch.weddingName = buildWeddingName(partnerName, '');
+      if (Object.keys(patch).length) updateCheckout(patch);
       return goToStep('casamento');
     }
 
@@ -423,6 +431,7 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
           billingInterval: checkout.billingInterval,
           acceptedTerms: checkout.acceptedTerms,
           acceptedPrivacy: checkout.acceptedPrivacy,
+          clientEvidence: getClientEvidence(),
           source: 'checkout_multistep',
           weddingDraft: {
             partnerName: checkout.partnerName,
@@ -457,14 +466,15 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
         successValue: Number(result.paymentValue || selectedValue),
       });
       goToStep('sucesso');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Não foi possível iniciar o checkout';
       logError('checkout.subscription.error', err, {
         planCode: checkout.planCode,
         billingInterval: checkout.billingInterval,
         paymentMethod: checkout.paymentMethod,
         durationMs: performance.now() - startedAt,
       });
-      setError(err.message || 'Não foi possível iniciar o checkout');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -957,12 +967,12 @@ const PaymentStep = ({
         Li e aceito os <LegalLink to="/termos-de-uso">Termos de Uso</LegalLink> do WedPlan.
       </Checkbox>
       <Checkbox checked={checkout.acceptedPrivacy} onChange={(acceptedPrivacy) => updateCheckout({ acceptedPrivacy })}>
-        Li e aceito a <LegalLink to="/politica-de-privacidade">Política de Privacidade</LegalLink> e autorizo o tratamento dos dados para criação da assinatura.
+        Li e aceito a <LegalLink to="/politica-de-privacidade">Política de Privacidade</LegalLink> e estou ciente do tratamento de dados necessário para cadastro, assinatura, segurança e comprovação do aceite.
       </Checkbox>
     </div>
 
-    <p className="mt-3 text-center text-xs font-bold text-muted-foreground">
-      Você pode cancelar sua assinatura quando quiser.
+    <p className="mt-3 text-center text-xs font-bold leading-5 text-muted-foreground">
+      Ao continuar, registraremos data e hora, IP, dispositivo, navegador e versão dos documentos aceitos para fins de segurança, auditoria e exercício regular de direitos. Você pode cancelar sua assinatura quando quiser.
     </p>
   </StepShell>
 );

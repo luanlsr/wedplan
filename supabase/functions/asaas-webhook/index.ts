@@ -193,7 +193,7 @@ const updateAccountAndSubscription = async (adminClient: any, checkout: any, use
 
   await adminClient
     .from('legal_acceptances')
-    .update({ account_id: userId })
+    .update({ account_id: userId, user_id: userId })
     .eq('checkout_session_id', checkout.id)
 
   return subscription?.id || null
