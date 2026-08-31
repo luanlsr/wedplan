@@ -4,6 +4,7 @@ import { getSiteUrl } from '../../utils/url';
 import { AuthLayout } from './AuthLayout';
 import { Button, Input } from '../ui';
 import { Mail, Loader2, ArrowRight } from 'lucide-react';
+import { TRANSACTIONAL_FROM_EMAIL } from '../../config/support';
 
 interface ForgotPasswordProps {
   onNavigateToLogin: () => void;
@@ -37,7 +38,7 @@ export const ForgotPassword = ({ onNavigateToLogin }: ForgotPasswordProps) => {
     return (
       <AuthLayout 
         title="Verifique seu e-mail" 
-        subtitle="Se houver uma conta associada a este endereço, você receberá um link de recuperação."
+        subtitle={`Se houver uma conta associada a este endereço, você receberá um link de recuperação enviado por ${TRANSACTIONAL_FROM_EMAIL}.`}
       >
         <div className="flex flex-col items-center justify-center py-10 text-center space-y-6">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary">

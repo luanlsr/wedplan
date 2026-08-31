@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
@@ -11,8 +11,11 @@ import {
   DollarSign,
   Hotel,
   LockKeyhole,
+  Plus,
   TrendingUp,
+  Trash2,
   Users,
+  Utensils,
   Wine,
 } from 'lucide-react';
 import { differenceInDays, format, parseISO } from 'date-fns';
@@ -46,12 +49,31 @@ const isActiveSubscriber = (data: WeddingData) =>
 const getExpectedPeople = (data: WeddingData) =>
   (data.convidados || []).reduce((total, guest) => total + Number(guest.adultos || 0) + Number(guest.criancas || 0), 0);
 
+const routeToToolId = (toolId?: string) => {
+  const map: Record<string, string> = {
+    'custo-casamento': 'quick_budget',
+    checklist: 'quick_checklist',
+    bebidas: 'quick_drinks',
+    buffet: 'quick_buffet',
+    convidados: 'quick_guests',
+    'doces-bolo': 'quick_sweets',
+    'lua-de-mel': 'quick_honeymoon',
+    orcamento: 'budget',
+    pagamentos: 'cashflow',
+    'raio-x-convidados': 'guests',
+    'plano-acao': 'timeline',
+  };
+
+  return toolId ? map[toolId] || 'quick_budget' : 'quick_budget';
+};
+
 export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toolId } = useParams();
   const { subscription, hasFeature } = usePlanFeatures();
-  const initialTool = toolId === 'bebidas' ? 'quick_drinks' : toolId === 'buffet' ? 'quick_buffet' : toolId === 'doces-bolo' ? 'quick_sweets' : toolId === 'lua-de-mel' ? 'quick_honeymoon' : toolId === 'custo-casamento' ? 'quick_budget' : 'budget';
-  const [activeTool, setActiveTool] = useState(initialTool);
+  const pathToolId = location.pathname.split('/ferramentas/')[1]?.split('/')[0];
+  const activeTool = routeToToolId(toolId || pathToolId);
   const subscriber = isActiveSubscriber(data) || Boolean(subscription);
   const premiumEnabled = subscriber && (hasFeature('premium_tools') || Boolean(subscription));
   const advancedEnabled = subscriber && (hasFeature('advanced_tools') || subscription?.plan?.code !== 'essential');
@@ -59,6 +81,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
   const tools = [
     {
       id: 'quick_budget',
+      routeId: 'custo-casamento',
       title: 'Calculadora de custo',
       subtitle: 'Estimativa rápida por convidados.',
       icon: Calculator,
@@ -66,7 +89,17 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
       enabled: true,
     },
     {
+      id: 'quick_checklist',
+      routeId: 'checklist',
+      title: 'Checklist por data',
+      subtitle: 'Cronograma automático até o grande dia.',
+      icon: CalendarCheck2,
+      premium: false,
+      enabled: true,
+    },
+    {
       id: 'quick_drinks',
+      routeId: 'bebidas',
       title: 'Calculadora de bebidas',
       subtitle: 'Quantidade por duração da festa.',
       icon: Wine,
@@ -75,14 +108,25 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
     },
     {
       id: 'quick_buffet',
+      routeId: 'buffet',
       title: 'Calculadora de buffet',
       subtitle: 'Estimativa simples de comida.',
+      icon: Utensils,
+      premium: false,
+      enabled: true,
+    },
+    {
+      id: 'quick_guests',
+      routeId: 'convidados',
+      title: 'Lista de convidados',
+      subtitle: 'Rascunho rápido antes do RSVP.',
       icon: Users,
       premium: false,
       enabled: true,
     },
     {
       id: 'quick_sweets',
+      routeId: 'doces-bolo',
       title: 'Doces, bolo e bem-casados',
       subtitle: 'Quantidades rápidas para a festa.',
       icon: CakeSlice,
@@ -91,6 +135,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
     },
     {
       id: 'quick_honeymoon',
+      routeId: 'lua-de-mel',
       title: 'Lua de mel',
       subtitle: 'Estimativa simples da viagem.',
       icon: Hotel,
@@ -99,6 +144,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
     },
     {
       id: 'budget',
+      routeId: 'orcamento',
       title: 'Saúde do orçamento',
       subtitle: 'Contratado, pago e saldo.',
       icon: DollarSign,
@@ -107,6 +153,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
     },
     {
       id: 'cashflow',
+      routeId: 'pagamentos',
       title: 'Fluxo de pagamentos',
       subtitle: 'Próximos vencimentos por mês.',
       icon: TrendingUp,
@@ -115,6 +162,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
     },
     {
       id: 'guests',
+      routeId: 'raio-x-convidados',
       title: 'Raio-x de convidados',
       subtitle: 'Confirmados, pendentes e meia.',
       icon: Users,
@@ -123,6 +171,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
     },
     {
       id: 'timeline',
+      routeId: 'plano-acao',
       title: 'Plano de ação',
       subtitle: 'Prioridades até o casamento.',
       icon: CalendarCheck2,
@@ -134,17 +183,17 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
   const selectedTool = tools.find((tool) => tool.id === activeTool) || tools[0];
   const SelectedIcon = selectedTool.icon;
 
-  const selectTool = (toolId: string) => {
-    setActiveTool(toolId);
+  const selectTool = (nextToolId: string, routeId: string) => {
+    navigate(`/ferramentas/${routeId}`);
     void logEvent({
       eventName: 'tools.logged_tool_selected',
-      metadata: { toolId, weddingId: data.id },
+      metadata: { toolId: nextToolId, weddingId: data.id },
     });
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
         <div>
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-primary">
             <Calculator size={14} />
@@ -155,16 +204,12 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
             Use os dados já cadastrados para tomar decisões melhores sobre orçamento, convidados, pagamentos e próximos passos.
           </p>
         </div>
-        <Button onClick={() => navigate('/configuracoes')} variant="outline" className="h-11 rounded-xl text-xs font-black uppercase tracking-widest">
-          Ver planos
-          <ArrowRight size={16} />
-        </Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <aside className="h-fit rounded-2xl border border-border bg-card p-3 shadow-sm">
-          <p className="px-2 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Ferramentas premium</p>
-          <div className="grid gap-2">
+        <aside className="h-fit rounded-2xl border border-border bg-card p-3 shadow-sm lg:sticky lg:top-6 lg:max-h-[calc(100dvh-12rem)] lg:overflow-hidden">
+          <p className="px-2 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Ferramentas</p>
+          <div className="grid max-h-[60vh] gap-2 overflow-y-auto pr-1 custom-scrollbar lg:max-h-[calc(100dvh-18rem)]">
             {tools.map((tool) => {
               const Icon = tool.icon;
               const active = tool.id === selectedTool.id;
@@ -173,7 +218,7 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
                 <button
                   key={tool.id}
                   type="button"
-                  onClick={() => selectTool(tool.id)}
+                  onClick={() => selectTool(tool.id, tool.routeId)}
                   className={cn(
                     'flex items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-accent',
                     active && 'bg-primary text-white hover:bg-primary'
@@ -199,8 +244,8 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
         </aside>
 
         <section className="min-w-0">
-          <Card className="overflow-hidden border-border bg-card">
-            <div className="border-b border-border bg-secondary/30 p-5">
+          <Card className="flex max-h-[72vh] flex-col overflow-hidden border-border bg-card lg:max-h-[calc(100dvh-12rem)]">
+            <div className="shrink-0 border-b border-border bg-secondary/30 p-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -217,15 +262,19 @@ export const LoggedWeddingTools = ({ data }: LoggedWeddingToolsProps) => {
               </div>
             </div>
 
-            <div className="p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5 custom-scrollbar">
               {!selectedTool.enabled ? (
                 <LockedTool planCode={subscription?.plan?.code} />
               ) : activeTool === 'quick_budget' ? (
                 <QuickBudgetTool data={data} />
+              ) : activeTool === 'quick_checklist' ? (
+                <QuickChecklistTool data={data} />
               ) : activeTool === 'quick_drinks' ? (
                 <QuickDrinksTool data={data} />
               ) : activeTool === 'quick_buffet' ? (
                 <QuickBuffetTool data={data} />
+              ) : activeTool === 'quick_guests' ? (
+                <QuickGuestListTool />
               ) : activeTool === 'quick_sweets' ? (
                 <QuickSweetsTool data={data} />
               ) : activeTool === 'quick_honeymoon' ? (
@@ -275,6 +324,47 @@ const QuickBudgetTool = ({ data }: { data: WeddingData }) => {
   );
 };
 
+const QuickChecklistTool = ({ data }: { data: WeddingData }) => {
+  const initialDate = data.casal.data || '2027-11-07';
+  const [date, setDate] = useState(initialDate);
+  const monthsLeft = useMemo(() => {
+    const target = new Date(`${date}T12:00:00`);
+    const now = new Date();
+    return Math.max(0, Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+  }, [date]);
+  const items = [
+    { when: '12+ meses', task: 'Definir orçamento, estilo do casamento e lista inicial de convidados.' },
+    { when: '10 meses', task: 'Reservar espaço, cerimônia, buffet e fotografia.' },
+    { when: '8 meses', task: 'Escolher vestido ou traje, identidade visual e fornecedores principais.' },
+    { when: '6 meses', task: 'Enviar save the date, montar site do casal e iniciar lista de presentes.' },
+    { when: '4 meses', task: 'Fechar decoração, música, doces, bolo e bebidas.' },
+    { when: '2 meses', task: 'Confirmar presenças, revisar contratos e ajustar layout de mesas.' },
+    { when: '30 dias', task: 'Conferir pagamentos, roteiro do dia e detalhes finais.' },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <Card className="grid gap-4 border-border bg-secondary/20 p-5 md:grid-cols-[1fr_auto] md:items-end">
+        <Field label="Data do casamento">
+          <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="rounded-xl bg-background" />
+        </Field>
+        <Metric label="Tempo restante" value={`${number(monthsLeft)} meses`} />
+      </Card>
+      <div className="grid gap-3">
+        {items.map((item) => (
+          <div key={item.when} className="flex gap-4 rounded-2xl border border-border bg-secondary/20 p-4">
+            <span className="flex h-11 w-24 shrink-0 items-center justify-center rounded-xl bg-background text-xs font-black text-primary">{item.when}</span>
+            <p className="text-sm font-bold leading-6 text-foreground">{item.task}</p>
+          </div>
+        ))}
+      </div>
+      <p className="rounded-2xl border border-border bg-secondary/20 p-4 text-sm font-medium leading-6 text-muted-foreground">
+        No painel completo, transforme esses marcos em tarefas reais com status, categorias e datas de vencimento.
+      </p>
+    </div>
+  );
+};
+
 const QuickDrinksTool = ({ data }: { data: WeddingData }) => {
   const [guests, setGuests] = useState(String(getExpectedPeople(data) || 150));
   const [hours, setHours] = useState('5');
@@ -318,6 +408,68 @@ const QuickBuffetTool = ({ data }: { data: WeddingData }) => {
         <Metric label="Guarnições" value={`${number(guestCount * 0.35)} kg`} />
         <Metric label="Equipe" value={`${number(Math.ceil(guestCount / 25))} pessoas`} />
       </div>
+    </div>
+  );
+};
+
+const QuickGuestListTool = () => {
+  const [name, setName] = useState('');
+  const [type, setType] = useState<'adulto' | 'crianca' | 'staff'>('adulto');
+  const [guests, setGuests] = useState<Array<{ id: string; name: string; type: 'adulto' | 'crianca' | 'staff' }>>([]);
+  const addGuest = () => {
+    if (name.trim().length < 2) return;
+    setGuests((current) => [...current, { id: crypto.randomUUID(), name: name.trim(), type }]);
+    setName('');
+  };
+  const counts = {
+    total: guests.length,
+    adults: guests.filter((guest) => guest.type === 'adulto').length,
+    children: guests.filter((guest) => guest.type === 'crianca').length,
+    staff: guests.filter((guest) => guest.type === 'staff').length,
+  };
+
+  return (
+    <div className="space-y-5">
+      <Card className="grid gap-3 border-border bg-secondary/20 p-5 md:grid-cols-[1fr_170px_auto]">
+        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nome do convidado" className="rounded-xl bg-background" />
+        <select value={type} onChange={(event) => setType(event.target.value as typeof type)} className="h-11 rounded-xl border border-border bg-background px-3 text-sm font-bold outline-none">
+          <option value="adulto">Adulto</option>
+          <option value="crianca">Criança</option>
+          <option value="staff">Staff</option>
+        </select>
+        <Button onClick={addGuest} className="h-11 rounded-xl">
+          <Plus size={16} /> Adicionar
+        </Button>
+      </Card>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Metric label="Total" value={String(counts.total)} />
+        <Metric label="Adultos" value={String(counts.adults)} />
+        <Metric label="Crianças" value={String(counts.children)} />
+        <Metric label="Staff" value={String(counts.staff)} />
+      </div>
+      <Card className="border-border bg-secondary/20 p-4">
+        {guests.length === 0 ? (
+          <EmptyState text="Adicione alguns convidados para começar." />
+        ) : (
+          <div className="grid gap-2">
+            {guests.map((guest) => (
+              <div key={guest.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-foreground">{guest.name}</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{guest.type}</p>
+                </div>
+                <button onClick={() => setGuests((current) => current.filter((item) => item.id !== guest.id))} className="flex h-9 w-9 items-center justify-center rounded-xl text-destructive hover:bg-destructive/10">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      <Link to="/convidados" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black uppercase tracking-widest text-white">
+        Abrir lista completa
+        <ArrowRight size={15} />
+      </Link>
     </div>
   );
 };

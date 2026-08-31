@@ -290,6 +290,8 @@ export function MainApp() {
             />
           ) : data.role === 'master' ? (
             <AdminDashboard />
+          ) : location.pathname.startsWith('/ferramentas') ? (
+            <LoggedWeddingTools data={data} />
           ) : (
             <div className="space-y-6">
               {notifications.length > 0 && (

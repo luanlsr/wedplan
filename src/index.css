@@ -522,6 +522,31 @@
     scrollbar-width: none;
   }
 
+  .custom-scrollbar {
+    scrollbar-color: hsl(var(--primary) / 0.55) hsl(var(--secondary) / 0.7);
+    scrollbar-width: thin;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 0.55rem;
+    height: 0.55rem;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--secondary) / 0.7);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.55);
+    border: 2px solid hsl(var(--secondary) / 0.7);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.75);
+  }
+
   .min-h-screen-mobile {
     min-height: 100dvh;
   }

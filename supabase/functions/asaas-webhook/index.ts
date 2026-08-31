@@ -12,6 +12,8 @@ const corsHeaders = {
 const paidEvents = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'])
 const overdueEvents = new Set(['PAYMENT_OVERDUE'])
 const canceledEvents = new Set(['PAYMENT_DELETED', 'PAYMENT_REFUNDED', 'SUBSCRIPTION_DELETED'])
+const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'suporte@wedplan.com.br'
+const transactionalFromEmail = Deno.env.get('TRANSACTIONAL_FROM_EMAIL') || supportEmail
 
 const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase()
 
@@ -63,6 +65,8 @@ const getOrInviteUser = async (adminClient: any, checkout: any) => {
       full_name: checkout.full_name,
       checkout_session_id: checkout.id,
       plan_id: checkout.plan_id,
+      support_email: supportEmail,
+      transactional_from_email: transactionalFromEmail,
     },
     redirectTo,
   })

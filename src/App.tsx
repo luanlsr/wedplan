@@ -54,8 +54,8 @@ function AppRoutes() {
 
         <Route path="/casamento/:slug" element={<WeddingSitePublic />} />
         <Route path="/casamento/:slug/presentes" element={<WeddingGiftsPublic />} />
-        <Route path="/ferramentas" element={user ? <MainApp /> : <FreeWeddingTools />} />
-        <Route path="/ferramentas/:toolId" element={user ? <MainApp /> : <FreeWeddingTools />} />
+        {!user && <Route path="/ferramentas" element={<FreeWeddingTools />} />}
+        {!user && <Route path="/ferramentas/:toolId" element={<FreeWeddingTools />} />}
         <Route path="/termos-de-uso" element={<LegalPage type="terms" />} />
         <Route path="/politica-de-privacidade" element={<LegalPage type="privacy" />} />
         <Route path="/checkout" element={<Navigate to="/checkout/dados-pessoais" replace />} />

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Input, Badge, cn, useConfirm } from './ui';
-import { Save, UserPlus, Shield, Database, RefreshCw, Copy, Check, Lock, Eye, EyeOff } from 'lucide-react';
+import { Save, UserPlus, Shield, Database, RefreshCw, Copy, Check, Lock, Eye, EyeOff, LifeBuoy, Mail, ExternalLink, ClipboardList } from 'lucide-react';
 import { maskCurrency, unmaskCurrency } from '../utils/masks';
 import { useAuth } from '../hooks/useAuth';
+import { SUPPORT_EMAIL, TRANSACTIONAL_FROM_EMAIL } from '../config/support';
 
 interface SettingsViewProps {
   data: any;
@@ -90,7 +91,22 @@ export const SettingsView = ({
     }
   };
 
-  const [activeTab, setActiveTab] = useState<'geral' | 'equipe' | 'conta' | 'avancado'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'equipe' | 'conta' | 'suporte' | 'avancado'>('geral');
+  const supportSubject = encodeURIComponent(`Suporte WedPlan - ${data.casal.nome1 || 'Casamento'}`);
+  const supportBody = encodeURIComponent([
+    'Olá, equipe WedPlan.',
+    '',
+    'Preciso de ajuda com:',
+    '',
+    'Detalhes para suporte:',
+    `E-mail da conta: ${user?.email || 'não informado'}`,
+    `Casamento: ${data.casal.nome1 || '-'} & ${data.casal.nome2 || '-'}`,
+    `Wedding ID: ${data.id || 'não informado'}`,
+    `Account ID: ${data.account_id || 'não informado'}`,
+    `Status da conta: ${data.account_status || data.plan_status || 'não informado'}`,
+    `Página atual: ${window.location.href}`,
+  ].join('\n'));
+  const supportMailto = `mailto:${SUPPORT_EMAIL}?subject=${supportSubject}&body=${supportBody}`;
 
   const copyCheckinLink = () => {
     const link = `${window.location.origin}/checkin?token=${data.public_checkin_token}`;
@@ -146,6 +162,7 @@ export const SettingsView = ({
     { id: 'geral', label: 'Geral', icon: Database },
     { id: 'equipe', label: 'Equipe', icon: UserPlus },
     { id: 'conta', label: 'Conta & Nuvem', icon: Shield },
+    { id: 'suporte', label: 'Suporte', icon: LifeBuoy },
     { id: 'avancado', label: 'Avançado', icon: RefreshCw },
   ] as const;
 
@@ -308,7 +325,7 @@ export const SettingsView = ({
                   if (!error) {
                     await customAlert({
                       title: "E-mail Enviado!",
-                      description: "Um link para redefinição de senha foi enviado para seu e-mail.",
+                      description: `Um link para redefinição de senha foi enviado para seu e-mail pelo canal oficial ${TRANSACTIONAL_FROM_EMAIL}.`,
                       type: "success"
                     });
                   }
@@ -390,6 +407,72 @@ export const SettingsView = ({
                 </Button>
               </Card>
             )}
+          </div>
+        )}
+
+        {activeTab === 'suporte' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+            <Card className="p-5 sm:p-8 border-white/5 shadow-lg space-y-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+                    <LifeBuoy size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black uppercase italic tracking-tight">Suporte WedPlan</h3>
+                    <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">
+                      Use este canal para dúvidas sobre assinatura, acesso, dados do casamento, domínio personalizado e funcionamento do sistema.
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="self-start">Canal oficial</Badge>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-secondary/20 p-5">
+                  <div className="flex items-center gap-3 text-primary">
+                    <Mail size={20} />
+                    <h4 className="font-black uppercase tracking-widest text-xs">E-mail de suporte</h4>
+                  </div>
+                  <a href={`mailto:${SUPPORT_EMAIL}`} className="mt-3 block break-all text-lg font-black text-foreground hover:text-primary">
+                    {SUPPORT_EMAIL}
+                  </a>
+                  <p className="mt-2 text-xs font-medium leading-5 text-muted-foreground">
+                    As respostas oficiais de atendimento devem partir deste endereço.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-secondary/20 p-5">
+                  <div className="flex items-center gap-3 text-primary">
+                    <Shield size={20} />
+                    <h4 className="font-black uppercase tracking-widest text-xs">E-mails transacionais</h4>
+                  </div>
+                  <p className="mt-3 break-all text-lg font-black text-foreground">{TRANSACTIONAL_FROM_EMAIL}</p>
+                  <p className="mt-2 text-xs font-medium leading-5 text-muted-foreground">
+                    Confirmações, convites e recuperação de senha devem usar este remetente no SMTP/Auth.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-start gap-3">
+                  <ClipboardList className="mt-0.5 shrink-0 text-primary" size={20} />
+                  <div>
+                    <h4 className="font-black text-foreground">Informações incluídas ao abrir chamado</h4>
+                    <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">
+                      O botão abaixo abre uma mensagem já preenchida com e-mail da conta, casamento, identificadores internos e página atual para acelerar o atendimento.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={supportMailto}
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-xs font-black uppercase tracking-widest text-white transition hover:bg-primary/90 sm:w-auto"
+                >
+                  Abrir chamado por e-mail
+                  <ExternalLink size={16} />
+                </a>
+              </div>
+            </Card>
           </div>
         )}
 

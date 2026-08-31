@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, Search, Key, Plus, ShieldAlert, X, Mail, UserPlus } from 'lucide-react';
 import { Card, Button, Input } from '../ui';
+import { TRANSACTIONAL_FROM_EMAIL } from '../../config/support';
 
 interface AdminUser {
   id: string;
@@ -56,7 +57,7 @@ export function AdminUsers() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
-      alert(`E-mail de redefinição enviado com sucesso para ${email}`);
+      alert(`E-mail de redefinição enviado com sucesso para ${email} pelo remetente oficial ${TRANSACTIONAL_FROM_EMAIL}`);
     } catch (err: any) {
       alert(`Erro ao enviar reset: ${err.message}`);
     }
