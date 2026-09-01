@@ -1,5 +1,5 @@
-import { CheckCircle2, Plus, Trash2, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Filter, MoreVertical } from 'lucide-react';
-import { Button, useConfirm } from '../ui';
+import { CheckCircle2, Plus, Trash2, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, Filter, MoreVertical } from 'lucide-react';
+import { Button, PaginationBar, useConfirm } from '../ui';
 import type { ConfirmOptions, ToastOptions } from '../ui';
 import { ChevronDown } from 'lucide-react';
 import type { Task } from '../../types';
@@ -182,73 +182,16 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
         )}
       </div>
 
-      {/* Pagination Bar */}
-      {totalPages > 1 && (
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-5 bg-card rounded-xl border border-border mt-4 mx-4 md:mx-0">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
-            Mostrando <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span>-
-            <span className="text-foreground">{Math.min(currentPage * itemsPerPage, sortedTasks.length)}</span> de 
-            <span className="text-foreground">{sortedTasks.length}</span> tarefas
-          </p>
-          <div className="flex items-center gap-1.5">
-            <Button 
-              variant="outline" 
-              className="h-9 w-9 p-0 rounded-lg border-white/10" 
-              onClick={() => setCurrentPage(1)} 
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft size={16} className="-mr-1.5" /><ChevronLeft size={16} />
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-9 w-9 p-0 rounded-lg border-white/10" 
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft size={16} />
-            </Button>
-            
-            <div className="flex items-center gap-1 mx-2">
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
-                  if (page === 2 || page === totalPages - 1) return <span key={page} className="text-muted-foreground opacity-30">•</span>;
-                  return null;
-                }
-                return (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={cn(
-                      "w-8 h-8 rounded-lg text-xs font-black transition-all",
-                      currentPage === page ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground hover:bg-white/5"
-                    )}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
-            </div>
-
-            <Button 
-              variant="outline" 
-              className="h-9 w-9 p-0 rounded-lg border-white/10" 
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight size={16} />
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-9 w-9 p-0 rounded-lg border-white/10" 
-              onClick={() => setCurrentPage(totalPages)} 
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight size={16} /><ChevronRight size={16} className="-ml-1.5" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedTasks.length}
+        itemsPerPage={itemsPerPage}
+        itemLabel="tarefa"
+        itemLabelPlural="tarefas"
+        onPageChange={setCurrentPage}
+        className="mx-4 mt-4 md:mx-0"
+      />
     </div>
   );
 };

@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
-import { Button } from "../ui";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { Button, PaginationBar } from "../ui";
 import { 
   Search, Plus, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
   DollarSign as DollarIcon, CheckCircle2, 
-  ChevronLeft, X
+  X
 } from "lucide-react";
 import type { Supplier } from "../../types";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
@@ -20,7 +20,15 @@ interface SuppliersListProps {
 
 type SortOption = "manual" | "alphabetical" | "value" | "category" | "status";
 
-const FilterSelect = ({ value, onChange, options, icon, isStatus = false }: any) => (
+type FilterSelectProps = {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  icon: ReactNode;
+  isStatus?: boolean;
+};
+
+const FilterSelect = ({ value, onChange, options, icon, isStatus = false }: FilterSelectProps) => (
   <div className="relative w-full md:w-48 group">
     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none group-focus-within:text-primary transition-colors">
       {icon}
@@ -40,7 +48,15 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus = false }: any)
   </div>
 );
 
-const SortBtn = ({ active, onClick, icon, label, direction }: any) => (
+type SortBtnProps = {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  direction?: "asc" | "desc" | null;
+};
+
+const SortBtn = ({ active, onClick, icon, label, direction }: SortBtnProps) => (
     <button
         onClick={onClick}
         className={cn(
@@ -75,6 +91,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   const statuses = ["Todos", "pago", "pendente", "parcial", "atrasado"];
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [searchTerm, categoryFilter, statusFilter, sortBy, sortDirection]);
 
@@ -88,7 +105,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   };
 
   const sortedSuppliers = useMemo(() => {
-    let result = [...suppliers];
+    const result = [...suppliers];
     const statusOrder = { atrasado: 0, pendente: 1, parcial: 2, pago: 3 };
 
     if (sortBy === "alphabetical") {
@@ -227,35 +244,16 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-8">
-           <Button 
-            variant="outline" 
-            size="icon" 
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
-            className="rounded-xl border-white/5 bg-card/40"
-           >
-             <ChevronLeft size={20} />
-           </Button>
-           
-           <div className="flex items-center gap-1.5 px-6 h-10 rounded-xl bg-card/40 border border-white/5">
-             <span className="text-primary font-black">{currentPage}</span>
-             <span className="text-muted-foreground font-bold">/</span>
-             <span className="text-muted-foreground font-bold">{totalPages}</span>
-           </div>
-
-           <Button 
-            variant="outline" 
-            size="icon" 
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(p => p + 1)}
-            className="rounded-xl border-white/5 bg-card/40 rotate-180"
-           >
-             <ChevronLeft size={20} />
-           </Button>
-        </div>
-      )}
+      <PaginationBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedSuppliers.length}
+        itemsPerPage={itemsPerPage}
+        itemLabel="fornecedor"
+        itemLabelPlural="fornecedores"
+        onPageChange={setCurrentPage}
+        className="mx-4 mt-4 md:mx-0"
+      />
     </div>
   );
 };

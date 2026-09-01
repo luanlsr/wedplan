@@ -173,23 +173,23 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
   const weddingDays = daysFromToday(weddingDate);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-4 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 sm:space-y-6">
       <WeddingCountdown weddingDate={weddingDate} compact />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
-        <Card className="overflow-hidden border-border bg-card p-5 shadow-sm">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+        <Card className="overflow-hidden border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">Visão geral do sistema</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-foreground">
+              <h2 className="mt-1 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
                 {data.casal.nome1 || data.casal.nome2 ? `${data.casal.nome1} & ${data.casal.nome2}` : "Planejamento do casamento"}
               </h2>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-muted-foreground">
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-muted-foreground sm:block">
                 Acompanhe orçamento, pagamentos, convidados, fornecedores, tarefas e próximos eventos.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[520px]">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:min-w-[520px]">
               <Metric label="Fornecedores" value={supplierOverview.total} icon={Briefcase} />
               <Metric label="Convidados" value={guestStats.totalPeople} icon={Users} />
               <Metric label="Tarefas abertas" value={taskOverview.open} icon={ListChecks} />
@@ -198,13 +198,13 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
           </div>
         </Card>
 
-        <Card className="border-border bg-card p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
+        <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">Ações rápidas</p>
               <h3 className="text-lg font-black text-foreground">Continuar planejamento</h3>
             </div>
-            <Button className="h-10 rounded-xl font-black" onClick={() => onAction("new_supplier")}>
+            <Button className="h-10 w-full rounded-xl font-black sm:w-auto" onClick={() => onAction("new_supplier")}>
               <Plus size={16} /> Fornecedor
             </Button>
           </div>
@@ -254,7 +254,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border bg-card p-5 shadow-sm">
+          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Financeiro" title="Próximos vencimentos" actionLabel="Ver financeiro" onAction={() => onAction("financial")} />
             <div className="mt-4 space-y-3">
               {stats.proximosVencimentos.length > 0 ? (
@@ -267,7 +267,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-5 shadow-sm">
+          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Tarefas" title="O que fazer agora" actionLabel="Ver tarefas" onAction={() => onAction("tasks")} />
             <div className="mt-4 space-y-3">
               {taskOverview.nextTasks.length > 0 ? (
@@ -278,7 +278,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-5 shadow-sm">
+          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Cronograma" title="Próximas etapas" actionLabel="Ver cronograma" onAction={() => onAction("timeline")} />
             <div className="mt-4 space-y-3">
               {nextTimelineItems.length > 0 ? (
@@ -289,7 +289,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-5 shadow-sm">
+          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Fornecedores" title="Contratos e status" actionLabel="Ver fornecedores" onAction={() => onAction("suppliers")} />
             <div className="mt-4 space-y-4">
               <ProgressRow label="Contratos anexados" value={supplierOverview.contractRate} helper={`${supplierOverview.withContracts}/${supplierOverview.total || 0}`} />
@@ -306,7 +306,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
         </div>
 
         <aside className="space-y-6">
-          <Card className="border-border bg-card p-5 shadow-sm">
+          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Convidados" title="Status da lista" actionLabel="Ver lista" onAction={() => onAction("guests")} />
             <div className="mt-4 space-y-4">
               <ProgressRow label="Convites enviados" value={guestStats.inviteRate} helper={`${guestStats.invited}/${guestStats.totalGuests}`} />
@@ -319,7 +319,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-5 shadow-sm">
+          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Orçamento" title="Maiores categorias" actionLabel="Contratos" onAction={() => onAction("contracts")} />
             <div className="mt-4 space-y-3">
               {categorySpend.length > 0 ? (
@@ -347,12 +347,12 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
 };
 
 const Metric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ElementType }) => (
-  <div className="rounded-xl border border-border bg-secondary/20 p-3">
+  <div className="min-w-0 rounded-xl border border-border bg-secondary/20 p-3">
     <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
       <Icon size={16} />
     </div>
-    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
-    <p className="mt-1 text-xl font-black text-foreground">{value}</p>
+    <p className="truncate text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
+    <p className="mt-1 truncate text-lg font-black text-foreground sm:text-xl">{value}</p>
   </div>
 );
 
@@ -395,12 +395,12 @@ const InsightCard = ({
   <button
     type="button"
     onClick={onClick}
-    className="rounded-xl border border-border bg-card p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+    className="rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg sm:p-5"
   >
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
-        <p className="mt-2 truncate text-2xl font-black text-foreground">{value}</p>
+        <p className="mt-2 truncate text-xl font-black text-foreground sm:text-2xl">{value}</p>
       </div>
       <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", toneStyles[tone])}>
         <Icon size={21} />
@@ -421,7 +421,7 @@ const SectionHeader = ({
   actionLabel: string;
   onAction: () => void;
 }) => (
-  <div className="flex items-start justify-between gap-3">
+  <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
     <div className="min-w-0">
       <p className="text-[10px] font-black uppercase tracking-widest text-primary">{eyebrow}</p>
       <h3 className="mt-1 text-lg font-black text-foreground">{title}</h3>
@@ -429,7 +429,7 @@ const SectionHeader = ({
     <button
       type="button"
       onClick={onAction}
-      className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border border-border bg-secondary/20 px-3 text-[10px] font-black uppercase tracking-wide text-muted-foreground transition hover:border-primary/30 hover:text-primary"
+      className="inline-flex h-9 w-full shrink-0 items-center justify-between gap-1 rounded-xl border border-border bg-secondary/20 px-3 text-[10px] font-black uppercase tracking-wide text-muted-foreground transition hover:border-primary/30 hover:text-primary sm:w-auto sm:justify-center"
     >
       {actionLabel}
       <ArrowRight size={13} />
@@ -442,7 +442,7 @@ const PaymentItem = ({ item }: { item: FinancialStats["proximosVencimentos"][num
   const isLate = days !== null && days < 0;
 
   return (
-    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl font-black", isLate ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500")}>
         {parseDate(item.data)?.getDate() || "-"}
       </div>
@@ -452,7 +452,7 @@ const PaymentItem = ({ item }: { item: FinancialStats["proximosVencimentos"][num
           Parcela {item.parcela}/{item.totalParcelas} · {formatDate(item.data)}
         </p>
       </div>
-      <div className="text-right">
+      <div className="col-span-2 text-left sm:col-span-1 sm:text-right">
         <p className="text-sm font-black text-foreground">{formatCurrency(item.valor)}</p>
         <p className={cn("text-[10px] font-black uppercase tracking-wide", isLate ? "text-red-500" : "text-amber-500")}>
           {isLate ? `${Math.abs(days || 0)}d atraso` : days === 0 ? "Hoje" : `${days}d`}
@@ -473,7 +473,7 @@ const TaskItem = ({ task }: { task: Task }) => {
           <p className="truncate text-sm font-black text-foreground">{task.titulo}</p>
           <p className="mt-1 text-xs font-semibold text-muted-foreground">{task.categoria} · {formatDate(task.dataLimite)}</p>
         </div>
-        <Badge variant={isLate ? "error" : task.status === "em_progresso" ? "warning" : "outline"}>
+        <Badge className="max-w-full" variant={isLate ? "error" : task.status === "em_progresso" ? "warning" : "outline"}>
           {taskStatusLabel[task.status]}
         </Badge>
       </div>
@@ -485,13 +485,13 @@ const TimelineDashboardItem = ({ item }: { item: TimelineEntry }) => {
   const days = daysFromToday(item.data);
 
   return (
-    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.category.cor }} />
       <div className="min-w-0">
         <p className="truncate text-sm font-black text-foreground">{item.titulo}</p>
         <p className="text-xs font-semibold text-muted-foreground">{item.category.nome} · {formatDate(item.data)}</p>
       </div>
-      <span className="shrink-0 rounded-lg bg-background px-2 py-1 text-[10px] font-black uppercase text-muted-foreground">
+      <span className="col-span-2 w-fit rounded-lg bg-background px-2 py-1 text-[10px] font-black uppercase text-muted-foreground sm:col-span-1">
         {days === null ? "Sem data" : days < 0 ? `${Math.abs(days)}d atraso` : days === 0 ? "Hoje" : `${days}d`}
       </span>
     </div>
@@ -502,7 +502,7 @@ const ProgressRow = ({ label, value, helper }: { label: string; value: number; h
   <div className="space-y-2">
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm font-black text-foreground">{label}</span>
-      <span className="text-xs font-bold text-muted-foreground">{helper}</span>
+      <span className="shrink-0 text-xs font-bold text-muted-foreground">{helper}</span>
     </div>
     <ProgressBar value={value} />
   </div>

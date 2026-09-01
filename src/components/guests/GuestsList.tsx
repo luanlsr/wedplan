@@ -1,5 +1,5 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, X, Tags, Plus, Trash2 } from 'lucide-react';
-import { Card, Button, Input, useConfirm } from '../ui';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, X, Tags, Plus, Trash2 } from 'lucide-react';
+import { Card, Button, Input, PaginationBar, useConfirm } from '../ui';
 import type { Guest, GuestCategory } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../../lib/utils';
@@ -424,49 +424,6 @@ export const GuestsList = ({
           </div>
         </div>
           
-          {totalPages > 1 && (
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-4 bg-muted/20 border-t border-border">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                Exibindo <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="text-foreground">{Math.min(currentPage * itemsPerPage, sortedAndFilteredGuests.length)}</span> de <span className="text-foreground">{sortedAndFilteredGuests.length}</span> convidados
-              </p>
-              <div className="flex items-center gap-1">
-                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                  <ChevronLeft size={16} className="-mr-1" /><ChevronLeft size={16} />
-                </Button>
-                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft size={16} />
-                </Button>
-                
-                <div className="flex items-center gap-1 mx-2">
-                  {[...Array(totalPages)].map((_, i) => {
-                    const page = i + 1;
-                    if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
-                      if (page === 2 || page === totalPages - 1) return <span key={page} className="text-muted-foreground text-xs mx-1">...</span>;
-                      return null;
-                    }
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "primary" : "ghost"}
-                        className={cn("h-9 w-9 p-0 rounded-lg text-sm font-bold", currentPage === page && "shadow-md")}
-                        onClick={() => setCurrentPage(page)}
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
-                  <ChevronRight size={16} />
-                </Button>
-                <Button variant="outline" className="h-9 w-9 p-0 rounded-lg" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
-                  <ChevronRight size={16} /><ChevronRight size={16} className="-ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
-
           {sortedAndFilteredGuests.length === 0 && (
             <div className="p-20 text-center space-y-4">
                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">
@@ -476,6 +433,17 @@ export const GuestsList = ({
             </div>
           )}
       </Card>
+
+      <PaginationBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedAndFilteredGuests.length}
+        itemsPerPage={itemsPerPage}
+        itemLabel="convidado"
+        itemLabelPlural="convidados"
+        onPageChange={setCurrentPage}
+        className="mx-0"
+      />
     </div>
   );
 };
