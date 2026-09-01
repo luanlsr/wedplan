@@ -3,6 +3,7 @@ import { Armchair, Edit2, Plus, Search, Trash2, UserPlus, Users, X } from 'lucid
 import { Badge, Button, Card, Input, useConfirm, cn } from '../ui';
 import { supabase } from '../../lib/supabase';
 import type { Guest, WeddingReceptionTable, WeddingTableGuest } from '../../types';
+import { isMissingSupabaseRelationError } from '../../services/supabaseErrors';
 
 type TableWithGuests = WeddingReceptionTable & {
   guestIds: string[];
@@ -92,8 +93,14 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
           .eq('wedding_id', weddingId),
       ]);
 
-      if (tablesResult.error) throw tablesResult.error;
-      if (assignmentsResult.error) throw assignmentsResult.error;
+      if (tablesResult.error || assignmentsResult.error) {
+        const error = tablesResult.error || assignmentsResult.error;
+        if (isMissingSupabaseRelationError(error)) {
+          setTables([]);
+          return;
+        }
+        throw error;
+      }
 
       const assignments = (assignmentsResult.data || []) as WeddingTableGuest[];
       const assignmentsByTable = new Map<string, string[]>();
@@ -108,7 +115,9 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
         guestIds: assignmentsByTable.get(table.id) || [],
       })));
     } catch (error) {
-      console.error('[WeddingDayView] Erro ao carregar mesas:', error);
+      if (!isMissingSupabaseRelationError(error)) {
+        console.error('[WeddingDayView] Erro ao carregar mesas:', error);
+      }
       setTables([]);
     } finally {
       setLoading(false);
@@ -165,6 +174,15 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
       resetForm();
       await loadTables();
     } catch (error) {
+      if (isMissingSupabaseRelationError(error)) {
+        await customAlert({
+          title: 'Recurso ainda não ativado',
+          description: 'A migration 0021 precisa ser aplicada no Supabase para usar a organização de mesas.',
+          type: 'warning',
+          confirmLabel: 'Entendi',
+        });
+        return;
+      }
       const message = error instanceof Error ? error.message : 'Não foi possível salvar a mesa.';
       await customAlert({
         title: 'Não foi possível salvar',
@@ -194,6 +212,15 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
       .eq('id', table.id);
 
     if (error) {
+      if (isMissingSupabaseRelationError(error)) {
+        await customAlert({
+          title: 'Recurso ainda não ativado',
+          description: 'A migration 0021 precisa ser aplicada no Supabase para excluir mesas.',
+          type: 'warning',
+          confirmLabel: 'Entendi',
+        });
+        return;
+      }
       await customAlert({
         title: 'Não foi possível excluir',
         description: error.message,
@@ -233,6 +260,15 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
       .eq('guest_id', guestId);
 
     if (clearError) {
+      if (isMissingSupabaseRelationError(clearError)) {
+        await customAlert({
+          title: 'Recurso ainda não ativado',
+          description: 'A migration 0021 precisa ser aplicada no Supabase para alocar convidados nas mesas.',
+          type: 'warning',
+          confirmLabel: 'Entendi',
+        });
+        return;
+      }
       await customAlert({
         title: 'Não foi possível alocar',
         description: clearError.message,
@@ -251,6 +287,15 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
       });
 
     if (error) {
+      if (isMissingSupabaseRelationError(error)) {
+        await customAlert({
+          title: 'Recurso ainda não ativado',
+          description: 'A migration 0021 precisa ser aplicada no Supabase para alocar convidados nas mesas.',
+          type: 'warning',
+          confirmLabel: 'Entendi',
+        });
+        return;
+      }
       await customAlert({
         title: 'Não foi possível alocar',
         description: error.message,
@@ -271,6 +316,15 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
       .eq('guest_id', guestId);
 
     if (error) {
+      if (isMissingSupabaseRelationError(error)) {
+        await customAlert({
+          title: 'Recurso ainda não ativado',
+          description: 'A migration 0021 precisa ser aplicada no Supabase para remover convidados das mesas.',
+          type: 'warning',
+          confirmLabel: 'Entendi',
+        });
+        return;
+      }
       await customAlert({
         title: 'Não foi possível remover',
         description: error.message,

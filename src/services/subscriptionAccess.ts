@@ -36,7 +36,16 @@ export const getAccountAccessMessage = (status: AccountAccessStatus, currentPeri
   return 'Sua conta está aguardando a confirmação de pagamento para liberar o acesso total ao WedPlan.';
 };
 
+const shouldSkipLocalSubscriptionSync = () => {
+  if (typeof window === 'undefined') return false;
+
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  return isLocalHost && import.meta.env.VITE_ENABLE_LOCAL_EDGE_SYNC !== 'true';
+};
+
 export const syncSubscriptionAccess = async () => {
+  if (shouldSkipLocalSubscriptionSync()) return null;
+
   try {
     const { data, error } = await supabase.functions.invoke('sync-subscription-access', {
       body: { source: 'app_login' },
@@ -44,7 +53,9 @@ export const syncSubscriptionAccess = async () => {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.warn('[subscriptionAccess] Não foi possível sincronizar assinatura agora:', error);
+    if (import.meta.env.PROD) {
+      console.warn('[subscriptionAccess] Não foi possível sincronizar assinatura agora:', error);
+    }
     return null;
   }
 };

@@ -27,6 +27,9 @@ type LogEventInput = {
 
 let context: ObservabilityContext = {};
 
+const shouldSendRemoteEvents = () =>
+  import.meta.env.PROD || import.meta.env.VITE_ENABLE_REMOTE_OBSERVABILITY === 'true';
+
 const sensitiveKeys = [
   'password',
   'senha',
@@ -150,6 +153,8 @@ export const logEvent = async ({
     const method = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'debug';
     console[method]('[observability]', eventName, payload);
   }
+
+  if (!shouldSendRemoteEvents()) return;
 
   const { error: insertError } = await supabase.from('app_events').insert(payload);
   if (insertError && import.meta.env.DEV) {

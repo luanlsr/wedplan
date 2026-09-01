@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
 import { logError, logEvent, setObservabilityContext } from "../utils/observability";
 import { syncSubscriptionAccess } from "../services/subscriptionAccess";
+import { isMissingSupabaseRelationError } from "../services/supabaseErrors";
 
 const STORAGE_KEY = "wedding_manager_data";
 const PROFILE_SELECT_WITH_ACCESS = 'full_name, wedding_id, role, role_id, account_id, guided_tour_completed_at, plan_id, plan_status, billing_interval, plan_current_period_start, plan_current_period_end, plan_access_expires_at, plan_access_checked_at, plan_access_source, refund_window_started_at, refund_window_ends_at, refund_window_status, roles(name), accounts(status)';
@@ -249,16 +250,11 @@ export const useWeddingData = () => {
           if (profileError) console.error('Erro ao carregar perfil:', profileError);
           
           userProfile = profile;
-          
-          // Debugging
-          console.log('DEBUG AUTH - profile from DB:', profile);
 
           // Normaliza a role para minúsculo
           const rolesData = profile?.roles as any;
           const dbRole = (Array.isArray(rolesData) ? rolesData[0]?.name : rolesData?.name) || profile?.role || 'couple';
           role = dbRole.toLowerCase();
-
-          console.log('DEBUG AUTH - resolved role:', role);
 
           if (role === 'master') {
             weddingId = profile?.wedding_id;
@@ -357,7 +353,7 @@ export const useWeddingData = () => {
           .order('name');
 
         if (categoriesError) {
-          if (categoriesError.code !== '42P01') throw categoriesError;
+          if (!isMissingSupabaseRelationError(categoriesError)) throw categoriesError;
         } else {
           guestCategories = (categoriesData || []).map((category: any) => ({
             id: category.id,
@@ -368,7 +364,9 @@ export const useWeddingData = () => {
           }));
         }
       } catch (err) {
-        logError('guest_categories.load.error', err, { weddingId });
+        if (!isMissingSupabaseRelationError(err)) {
+          logError('guest_categories.load.error', err, { weddingId });
+        }
       }
 
       const transformedData: WeddingData = {

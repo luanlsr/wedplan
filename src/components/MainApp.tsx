@@ -8,7 +8,7 @@ import { AppLayout } from './layout/AppLayout';
 import { GlobalModals } from './layout/GlobalModals';
 import { GuidedTour } from './layout/GuidedTour';
 import { LoadingScreen } from './layout/LoadingScreen';
-import { Dashboard } from './dashboard';
+import { Dashboard, type DashboardAction } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { SupplierDetails } from './suppliers/SupplierDetails';
 import { SupplierContractsView } from './suppliers/SupplierContractsView';
@@ -213,10 +213,25 @@ export function MainApp() {
     }
   };
 
-  const handleDashboardAction = (action: 'new_supplier' | 'financial' | 'settings') => {
+  const handleDashboardAction = (action: DashboardAction) => {
     switch (action) {
       case 'new_supplier':
         setIsModalOpen(true);
+        break;
+      case 'suppliers':
+        navigate('/fornecedores');
+        break;
+      case 'guests':
+        navigate('/convidados');
+        break;
+      case 'tasks':
+        navigate('/tarefas');
+        break;
+      case 'timeline':
+        navigate('/cronograma');
+        break;
+      case 'contracts':
+        navigate('/contratos');
         break;
       case 'financial':
         navigate('/financeiro');
@@ -322,7 +337,7 @@ export function MainApp() {
                   ))}
                 </div>
               )}
-              <Dashboard stats={stats} weddingDate={data.casal.data} onAction={handleDashboardAction} />
+              <Dashboard data={data} stats={stats} weddingDate={data.casal.data} onAction={handleDashboardAction} />
             </div>
           )
         } />
