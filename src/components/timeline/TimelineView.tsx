@@ -13,6 +13,7 @@ import {
 import { Button, Card, Input, useConfirm } from "../ui";
 import { WeddingCountdown } from "./WeddingCountdown";
 import { cn } from "../../lib/utils";
+import { sortByLabelPtBr, sortTextPtBr } from "../../utils/sorting";
 import type { TimelineCategory, TimelineItem } from "../../types";
 
 interface TimelineViewProps {
@@ -34,7 +35,8 @@ const STATUS_LABELS = {
   concluido: "Concluído",
 };
 
-const STATUS_OPTIONS = ["pendente", "em_progresso", "concluido"] as const;
+const STATUS_OPTIONS = (Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>)
+  .sort((a, b) => sortTextPtBr(STATUS_LABELS[a], STATUS_LABELS[b]));
 
 const toDate = (date?: string) => {
   if (!date) return null;
@@ -75,7 +77,11 @@ export const TimelineView = ({
 }: TimelineViewProps) => {
   const { confirm, toast } = useConfirm();
   const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome)),
+    () => [...categories].sort((a, b) => a.ordem - b.ordem || sortTextPtBr(a.nome, b.nome)),
+    [categories]
+  );
+  const categoriesForSelect = useMemo(
+    () => sortByLabelPtBr(categories, (category) => category.nome),
     [categories]
   );
 
@@ -101,11 +107,11 @@ export const TimelineView = ({
   }, [sortedCategories]);
 
   useEffect(() => {
-    if (!newItem.categoryId && sortedCategories[0]) {
+    if (!newItem.categoryId && categoriesForSelect[0]) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNewItem(prev => ({ ...prev, categoryId: sortedCategories[0].id }));
+      setNewItem(prev => ({ ...prev, categoryId: categoriesForSelect[0].id }));
     }
-  }, [newItem.categoryId, sortedCategories]);
+  }, [categoriesForSelect, newItem.categoryId]);
 
   const flatItems = useMemo(() => (
     sortedCategories.flatMap((category) => (
@@ -260,7 +266,7 @@ export const TimelineView = ({
                   value={newItem.categoryId}
                   onChange={(event) => setNewItem(prev => ({ ...prev, categoryId: event.target.value }))}
                 >
-                  {sortedCategories.map((category) => (
+                  {categoriesForSelect.map((category) => (
                     <option key={category.id} value={category.id}>{category.nome}</option>
                   ))}
                 </select>

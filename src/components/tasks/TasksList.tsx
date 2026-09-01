@@ -4,6 +4,7 @@ import type { ConfirmOptions, ToastOptions } from '../ui';
 import { ChevronDown } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
+import { sortTextPtBr } from '../../utils/sorting';
 import { useState, useMemo, useEffect } from 'react';
 
 interface TasksListProps {
@@ -15,6 +16,18 @@ interface TasksListProps {
 }
 
 type SortOption = 'titulo' | 'categoria' | 'dataLimite' | 'status';
+
+const getTaskStatusLabel = (status: string) => {
+  if (status === "concluido") return "Concluídas";
+  if (status === "em_progresso") return "Em Progresso";
+  if (status === "pendente") return "Pendentes";
+  return status;
+};
+
+const taskStatusOptions = [
+  'Todos',
+  ...['concluido', 'em_progresso', 'pendente'].sort((a, b) => sortTextPtBr(getTaskStatusLabel(a), getTaskStatusLabel(b))),
+];
 
 export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksListProps) => {
   const { confirm, toast } = useConfirm();
@@ -132,7 +145,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
               <FilterSelect 
                 value={filterStatus} 
                 onChange={(v) => setFilterStatus(v as typeof filterStatus)} 
-                options={['Todos', 'pendente', 'em_progresso', 'concluido']} 
+                options={taskStatusOptions} 
                 icon={<CheckCircle2 size={18}/>} 
                 isStatus 
               />
@@ -339,10 +352,7 @@ const FilterSelect = ({ value, onChange, options, icon }: { value: string, onCha
     >
       {options.map((o: string) => (
         <option key={o} value={o}>
-          {o === "Todos" ? "Todos os Status" : 
-           o === "pendente" ? "Pendentes" : 
-           o === "em_progresso" ? "Em Progresso" : 
-           "Concluídas"}
+          {o === "Todos" ? "Todos os Status" : getTaskStatusLabel(o)}
         </option>
       ))}
     </select>

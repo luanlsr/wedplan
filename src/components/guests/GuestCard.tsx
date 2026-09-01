@@ -3,6 +3,7 @@ import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
+import { sortTextPtBr } from '../../utils/sorting';
 
 interface GuestCardProps {
   guest: Guest;
@@ -11,6 +12,12 @@ interface GuestCardProps {
   onDelete: (id: string) => void | Promise<void>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
+
+const guestStatusOptions = [
+  { value: 'confirmado' as const, label: 'Confirmado' },
+  { value: 'recusado' as const, label: 'Não poderá ir' },
+  { value: 'pendente' as const, label: 'Pendente' },
+].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
   const { toast } = useConfirm();
@@ -68,9 +75,9 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
                 getStatusColor()
               )}
             >
-              <option value="confirmado">Sim</option>
-              <option value="pendente">?</option>
-              <option value="recusado">Não</option>
+              {guestStatusOptions.map((status) => (
+                <option key={status.value} value={status.value}>{status.label}</option>
+              ))}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" size={14} />
           </div>

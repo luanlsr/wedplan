@@ -232,23 +232,15 @@ export const createSupplierContractUrl = async (supplier: Supplier): Promise<str
   const storagePath = supplier.contract_storage_path || getStoragePathFromLegacyUrl(supplier.contract_url);
 
   if (storagePath) {
-    const { data, error } = await supabase.functions.invoke<{ signedUrl?: string | null }>('create-supplier-contract-url', {
-      body: { path: storagePath, supplierId: supplier.id },
-    });
+    const { data: directSigned, error: storageError } = await supabase.storage
+      .from('contracts')
+      .createSignedUrl(storagePath, 60 * 60);
 
-    if (error) {
-      if (isFunctionFetchError(error)) {
-        const { data: directSigned, error: storageError } = await supabase.storage
-          .from('contracts')
-          .createSignedUrl(storagePath, 60 * 60);
-
-        if (storageError) throw new Error(`Falha ao criar URL assinada no Storage: ${storageError.message}`);
-        return directSigned?.signedUrl || null;
-      }
-
-      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível abrir o contrato.'));
+    if (storageError) {
+      throw new Error(`Falha ao criar URL assinada no Storage: ${storageError.message}`);
     }
-    return data?.signedUrl || null;
+
+    return directSigned?.signedUrl || null;
   }
 
   return supplier.contract_url || null;
@@ -259,6 +251,22 @@ export const deleteSupplierContract = async (supplierOrId: Supplier | string) =>
   const fallbackStoragePath = typeof supplierOrId === 'string'
     ? null
     : supplierOrId.contract_storage_path || getStoragePathFromLegacyUrl(supplierOrId.contract_url);
+
+  if (fallbackStoragePath && !fallbackStoragePath.includes('..')) {
+    const { error: storageError } = await supabase.storage
+      .from('contracts')
+      .remove([fallbackStoragePath]);
+
+    if (storageError) {
+      throw new Error(`Falha ao remover documento no Storage: ${storageError.message}`);
+    }
+
+    return {
+      success: true,
+      removedPath: fallbackStoragePath,
+      usedDirectStorage: true,
+    };
+  }
 
   const { data, error } = await supabase.functions.invoke<{ success?: boolean; removedPath?: string | null }>('delete-supplier-contract', {
     body: { supplierId },

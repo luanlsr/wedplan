@@ -9,6 +9,7 @@ import {
 import type { Supplier } from "../../types";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
+import { sortTextPtBr, uniqueSortedTextPtBr } from "../../utils/sorting";
 import { SupplierItem } from "./SupplierItem";
 
 interface SuppliersListProps {
@@ -87,8 +88,14 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
-  const categories = ["Todas", ...Array.from(new Set(suppliers.map((s) => s.categoria))).sort((a, b) => a.localeCompare(b))];
-  const statuses = ["Todos", "pago", "pendente", "parcial", "atrasado"];
+  const categories = useMemo(
+    () => ["Todas", ...uniqueSortedTextPtBr(suppliers.map((s) => s.categoria))],
+    [suppliers]
+  );
+  const statuses = useMemo(
+    () => ["Todos", ...["atrasado", "pago", "parcial", "pendente"].sort((a, b) => sortTextPtBr(getSupplierStatusLabel(a), getSupplierStatusLabel(b)))],
+    []
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -110,16 +117,16 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
 
     if (sortBy === "alphabetical") {
       result.sort((a, b) => sortDirection === "asc" 
-        ? a.fornecedor.localeCompare(b.fornecedor) 
-        : b.fornecedor.localeCompare(a.fornecedor));
+        ? sortTextPtBr(a.fornecedor, b.fornecedor)
+        : sortTextPtBr(b.fornecedor, a.fornecedor));
     } else if (sortBy === "value") {
       result.sort((a, b) => sortDirection === "asc" 
         ? b.valorTotal - a.valorTotal 
         : a.valorTotal - b.valorTotal);
     } else if (sortBy === "category") {
       result.sort((a, b) => sortDirection === "asc" 
-        ? a.categoria.localeCompare(b.categoria) 
-        : b.categoria.localeCompare(a.categoria));
+        ? sortTextPtBr(a.categoria, b.categoria)
+        : sortTextPtBr(b.categoria, a.categoria));
     } else if (sortBy === "status") {
       result.sort((a, b) => sortDirection === "asc" 
         ? statusOrder[a.status] - statusOrder[b.status]
@@ -256,4 +263,12 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
       />
     </div>
   );
+};
+
+const getSupplierStatusLabel = (status: string) => {
+  if (status === "atrasado") return "Atrasados";
+  if (status === "pago") return "Pagos";
+  if (status === "parcial") return "Parciais";
+  if (status === "pendente") return "Pendentes";
+  return status;
 };

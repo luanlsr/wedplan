@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { setPageMetadata } from '../../utils/meta';
 import { Button, Input, useConfirm } from '../ui';
 import { cn } from '../../lib/utils';
+import { sortByLabelPtBr, sortTextPtBr, uniqueSortedTextPtBr } from '../../utils/sorting';
 import { formatMoney, getWeddingSiteTemplate, type GiftCategory, type GiftItem, type WeddingSite } from './weddingSiteTypes';
 
 const priceRanges = [
@@ -109,7 +110,8 @@ export const WeddingGiftsPublic = () => {
   }, [gifts, site]);
 
   const categoryById = useMemo(() => new Map(categories.map((item) => [item.id, item.name])), [categories]);
-  const brands = useMemo(() => ['all', ...Array.from(new Set(gifts.map((gift) => gift.brand).filter(Boolean) as string[])).sort()], [gifts]);
+  const sortedCategories = useMemo(() => sortByLabelPtBr(categories, (item) => item.name), [categories]);
+  const brands = useMemo(() => ['all', ...uniqueSortedTextPtBr(gifts.map((gift) => gift.brand).filter(Boolean) as string[])], [gifts]);
   const deliveryAddress = useMemo(() => {
     if (!site) return '';
     return [
@@ -140,7 +142,7 @@ export const WeddingGiftsPublic = () => {
       if (a.is_bought !== b.is_bought) return a.is_bought ? 1 : -1;
       if (sortOrder === 'low-high') return Number(a.price || 0) - Number(b.price || 0);
       if (sortOrder === 'high-low') return Number(b.price || 0) - Number(a.price || 0);
-      if (sortOrder === 'az') return a.title.localeCompare(b.title);
+      if (sortOrder === 'az') return sortTextPtBr(a.title, b.title);
       return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
     });
 
@@ -263,7 +265,7 @@ export const WeddingGiftsPublic = () => {
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[260px_1fr]">
         <Filters
-          categories={categories}
+          categories={sortedCategories}
           brands={brands}
           category={category}
           brand={brand}
@@ -339,7 +341,7 @@ export const WeddingGiftsPublic = () => {
                 <h2 className="text-xl font-black [font-family:'Outfit',sans-serif]">Filtros</h2>
                 <button onClick={() => setMobileFilters(false)}><X size={22} /></button>
               </div>
-              <Filters categories={categories} brands={brands} category={category} brand={brand} priceRange={priceRange} setCategory={setCategory} setBrand={setBrand} setPriceRange={setPriceRange} />
+              <Filters categories={sortedCategories} brands={brands} category={category} brand={brand} priceRange={priceRange} setCategory={setCategory} setBrand={setBrand} setPriceRange={setPriceRange} />
               <Button onClick={() => setMobileFilters(false)} className="mt-5 h-12 w-full rounded-xl bg-[var(--wedsite-color-secondary)]">Aplicar filtros</Button>
             </motion.div>
           </motion.div>

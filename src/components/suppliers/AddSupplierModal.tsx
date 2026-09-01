@@ -5,6 +5,7 @@ import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock, Chevr
 import { generateInstallments, formatCurrency } from "../../utils/calculations";
 import { maskCurrency, unmaskCurrency, maskPhone, maskCPFOrCNPJ } from "../../utils/masks";
 import { formatFileSize, uploadSupplierContract, type UploadedContract } from "../../services/contractStorage";
+import { sortTextPtBr } from "../../utils/sorting";
 
 interface SupplierModalProps {
   onClose: () => void;
@@ -28,6 +29,12 @@ const ACCEPTED_CONTRACT_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const CONTRACT_ACCEPT_ATTRIBUTE = "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.doc,.docx";
 const MAX_CONTRACT_ORIGINAL_BYTES = 25 * 1024 * 1024;
 const MAX_CONTRACT_DIRECT_UPLOAD_BYTES = 10 * 1024 * 1024;
+const paymentTypeOptions = [
+  { value: "entrada_parcelas" as const, label: "Entrada + Parcelas" },
+  { value: "entrada_quitacao" as const, label: "Entrada + Saldo na Quitação" },
+  { value: "pagamento_unico" as const, label: "Pagamento Único" },
+  { value: "parcelado_fixo" as const, label: "Parcelado Fixo" },
+].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 const isAcceptedContractFile = (file: File) => {
   const fileName = file.name.toLowerCase();
@@ -114,7 +121,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
     "Assessoria", "Bolo e Doces", "Buffet", "Decoração", "Dia da Noiva", "Dia do Noivo", "Documentação",
     "Espaço / Sítio", "Foto & Filmagem", "Iluminação", "Música / DJ",
     "Vestuário", "Viagem", "Outros"
-  ].sort((a, b) => a === "Outros" ? 1 : b === "Outros" ? -1 : a.localeCompare(b));
+  ].sort(sortTextPtBr);
 
   // Helper to sync % and Value
   const handleEntryPercentageChange = (value: string) => {
@@ -458,10 +465,9 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
                   value={formData.tipoPagamento}
                   onChange={e => setFormData({ ...formData, tipoPagamento: e.target.value as PaymentType })}
                 >
-                  <option value="parcelado_fixo">Parcelado Fixo</option>
-                  <option value="pagamento_unico">Pagamento Único</option>
-                  <option value="entrada_parcelas">Entrada + Parcelas</option>
-                  <option value="entrada_quitacao">Entrada + Saldo na Quitação</option>
+                  {paymentTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
               </div>

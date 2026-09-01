@@ -2,6 +2,7 @@ import { Edit2, Trash2, Send, ChevronDown, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
+import { sortTextPtBr } from '../../utils/sorting';
 
 interface GuestRowProps {
   guest: Guest;
@@ -10,6 +11,12 @@ interface GuestRowProps {
   onDelete: (id: string) => void | Promise<void>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
+
+const guestStatusOptions = [
+  { value: 'confirmado' as const, label: 'Confirmado' },
+  { value: 'recusado' as const, label: 'Não poderá ir' },
+  { value: 'pendente' as const, label: 'Pendente' },
+].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRowProps) => {
   const { toast } = useConfirm();
@@ -49,9 +56,9 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
               getStatusColor()
             )}
           >
-            <option value="confirmado">Confirmado</option>
-            <option value="pendente">Pendente</option>
-            <option value="recusado">Recusado</option>
+            {guestStatusOptions.map((status) => (
+              <option key={status.value} value={status.value}>{status.label}</option>
+            ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" size={14} />
         </div>

@@ -1,0 +1,8 @@
+[functions.upload-supplier-contract]
+verify_jwt = false
+
+[functions.create-supplier-contract-url]
+verify_jwt = false
+
+[functions.delete-supplier-contract]
+verify_jwt = false

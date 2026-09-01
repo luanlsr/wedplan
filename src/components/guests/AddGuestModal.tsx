@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import type { Guest } from "../../types";
 import { Card, Button, Input } from "../ui";
 import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus, Plus, Trash2, ChevronDown } from "lucide-react";
 
 import { maskPhone } from "../../utils/masks";
+import { sortTextPtBr } from "../../utils/sorting";
 
 interface AddGuestModalProps {
   onClose: () => void;
@@ -76,7 +77,18 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories 
         setFormData({ ...formData, children_names: newList.join(", ") });
     };
 
-    const availableCategories = categories.length ? categories : ["Outros"];
+    const availableCategories = useMemo(
+      () => (categories.length ? [...categories] : ["Outros"]).sort(sortTextPtBr),
+      [categories]
+    );
+    const statusOptions = useMemo(
+      () => [
+        { value: "confirmado" as const, label: "Confirmado" },
+        { value: "recusado" as const, label: "Não poderá ir" },
+        { value: "pendente" as const, label: "Pendente" },
+      ].sort((a, b) => sortTextPtBr(a.label, b.label)),
+      []
+    );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -149,9 +161,9 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories 
                     value={formData.status}
                     onChange={e => setFormData({...formData, status: e.target.value as Guest['status']})}
                   >
-                    <option value="pendente">Pendente</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="recusado">Não poderá ir</option>
+                    {statusOptions.map((status) => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
                 </div>

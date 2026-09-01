@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from '../ui';
 import type { Supplier, Installment } from '../../types';
+import { uniqueSortedTextPtBr } from '../../utils/sorting';
 
 interface FinancialViewProps {
   suppliers: Supplier[];
@@ -24,7 +25,7 @@ export const FinancialView = ({ suppliers }: FinancialViewProps) => {
   const [showPastMonths, setShowPastMonths] = useState(false);
 
   const categories = useMemo(() => 
-    ["Todas", ...Array.from(new Set(suppliers.map(s => s.categoria))).sort()], 
+    ["Todas", ...uniqueSortedTextPtBr(suppliers.map(s => s.categoria))], 
     [suppliers]
   );
 

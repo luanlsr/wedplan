@@ -12,6 +12,7 @@ import {
   hasSupplierContract,
   uploadSupplierContract,
 } from '../../services/contractStorage';
+import { sortByLabelPtBr } from '../../utils/sorting';
 import type { Supplier } from '../../types';
 
 type SupplierContractsViewProps = {
@@ -62,6 +63,11 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
     [suppliers]
   );
 
+  const sortedSuppliers = useMemo(
+    () => sortByLabelPtBr(suppliers, (supplier) => `${supplier.fornecedor} ${supplier.servico}`),
+    [suppliers]
+  );
+
   const categoriesCount = useMemo(
     () => new Set(suppliersWithContracts.map((supplier) => supplier.categoria)).size,
     [suppliersWithContracts]
@@ -70,7 +76,7 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
   const filteredSuppliers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
-    return suppliersWithContracts.filter((supplier) => {
+    return sortByLabelPtBr(suppliersWithContracts.filter((supplier) => {
       const fileKind = getContractFileKind(supplier);
       const matchesType = typeFilter === 'todos' || fileKind === typeFilter;
       const matchesSearch = !term || (
@@ -81,7 +87,7 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
       );
 
       return matchesType && matchesSearch;
-    });
+    }), (supplier) => `${supplier.fornecedor} ${supplier.contract_file_name || supplier.servico}`);
   }, [searchTerm, suppliersWithContracts, typeFilter]);
 
   const totalStoredBytes = suppliersWithContracts.reduce(
@@ -343,7 +349,7 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
                   className="h-12 w-full rounded-xl border border-border bg-secondary/40 px-4 text-sm font-bold text-foreground outline-none focus:border-primary/40"
                 >
                   <option value="">Selecione...</option>
-                  {suppliers.map((supplier) => (
+                  {sortedSuppliers.map((supplier) => (
                     <option key={supplier.id} value={supplier.id}>
                       {supplier.fornecedor} - {supplier.servico}
                     </option>

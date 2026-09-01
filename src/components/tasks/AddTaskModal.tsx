@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { Task } from "../../types";
 import { Card, Button, Input } from "../ui";
 import { X, Calendar, CheckSquare, Tag, AlignLeft, Flag, ChevronDown } from "lucide-react";
+import { sortTextPtBr } from "../../utils/sorting";
 
 interface AddTaskModalProps {
   onClose: () => void;
@@ -9,6 +10,13 @@ interface AddTaskModalProps {
   onUpdate?: (id: string, task: Partial<Task>) => void;
   editTask?: Task | null;
 }
+
+const taskCategories = ["Geral", "Financeiro", "Convidados", "Fornecedores", "Documentação", "Cerimônia", "Festa", "Vestuário", "Outros"].sort(sortTextPtBr);
+const taskStatusOptions = [
+  { value: "concluido" as const, label: "Concluída" },
+  { value: "em_progresso" as const, label: "Em Progresso" },
+  { value: "pendente" as const, label: "Pendente" },
+].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModalProps) => {
   const isEditing = !!editTask;
@@ -34,8 +42,6 @@ export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModa
       });
     }
   }, [editTask]);
-
-  const categories = ["Geral", "Financeiro", "Convidados", "Fornecedores", "Documentação", "Cerimônia", "Festa", "Vestuário", "Outros"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +109,7 @@ export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModa
                       value={formData.categoria}
                       onChange={e => setFormData({...formData, categoria: e.target.value})}
                     >
-                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      {taskCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
                   </div>
@@ -133,9 +139,9 @@ export const AddTaskModal = ({ onClose, onAdd, onUpdate, editTask }: AddTaskModa
                   value={formData.status}
                   onChange={e => setFormData({...formData, status: e.target.value as Task['status']})}
                 >
-                  <option value="pendente">Pendente</option>
-                  <option value="em_progresso">Em Progresso</option>
-                  <option value="concluido">Concluída</option>
+                  {taskStatusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
               </div>

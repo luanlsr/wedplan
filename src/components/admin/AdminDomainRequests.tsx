@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Globe2, Search, X } from 'lucide-react';
 import { Badge, Card, Input } from '../ui';
 import { supabase } from '../../lib/supabase';
+import { sortTextPtBr } from '../../utils/sorting';
 
 type DomainRequest = {
   id: string;
@@ -223,7 +224,7 @@ const SelectCell = ({
     onChange={(event) => onChange(event.target.value)}
     className="h-10 w-full min-w-40 rounded-xl border border-border bg-background px-3 text-xs font-bold text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
   >
-    {options.map((option) => (
+    {[...options].sort(sortTextPtBr).map((option) => (
       <option key={option} value={option} className="bg-background text-foreground">
         {option}
       </option>

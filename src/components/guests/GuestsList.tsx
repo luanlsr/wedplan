@@ -3,6 +3,7 @@ import { Card, Button, Input, PaginationBar, useConfirm } from '../ui';
 import type { Guest, GuestCategory } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../../lib/utils';
+import { sortTextPtBr, uniqueSortedTextPtBr } from '../../utils/sorting';
 import { GuestStats } from './GuestStats';
 import { GuestRow } from './GuestRow';
 import { GuestCard } from './GuestCard';
@@ -20,6 +21,8 @@ interface GuestsListProps {
 }
 
 type GuestSortKey = keyof Guest | 'total_pessoas';
+
+const guestSortOptions: GuestSortKey[] = ['total_pessoas', 'categoria', 'nome', 'status', 'invitation_sent'];
 
 export const GuestsList = ({
   guests,
@@ -47,8 +50,14 @@ export const GuestsList = ({
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const itemsPerPage = 15;
 
-  const filterCategories = Array.from(new Set(['Todos', 'Convidados da Noiva', 'Convidados do Noivo', 'Padrinhos', 'Família', 'Amigos', ...categories]));
-  const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
+  const filterCategories = useMemo(() => [
+    'Todos',
+    ...uniqueSortedTextPtBr(['Convidados da Noiva', 'Convidados do Noivo', 'Padrinhos', 'Família', 'Amigos', ...categories]),
+  ], [categories]);
+  const statuses = useMemo(() => [
+    'Todos',
+    ...['confirmado', 'pendente', 'recusado'].sort((a, b) => sortTextPtBr(getGuestStatusLabel(a), getGuestStatusLabel(b))),
+  ], []);
 
   const handleAddCategory = async () => {
     const name = newCategory.trim();
@@ -351,7 +360,7 @@ export const GuestsList = ({
                   <FilterSelect 
                     value={sortConfig?.key || 'nome'} 
                     onChange={(val) => setSortConfig({ key: val as GuestSortKey, direction: 'asc' })} 
-                    options={['nome', 'categoria', 'status', 'total_pessoas', 'invitation_sent']} 
+                    options={guestSortOptions} 
                     icon={<ArrowUp size={18}/>} 
                     label="Ordenar por" 
                   />
@@ -460,8 +469,8 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { val
     >
       {options.map((o: string) => (
         <option key={o} value={o}>
-          {o === "Todos" ? (isStatus ? "Todos os Status" : `Todas as ${label}s`) : 
-           isStatus ? (o === "confirmado" ? "Confirmados" : o === "pendente" ? "Pendentes" : "Recusados") : 
+          {o === "Todos" ? (isStatus ? "Todos os Status" : `Todas as ${label}s`) :
+           isStatus ? getGuestStatusLabel(o) :
            o === "total_pessoas" ? "Acompanhantes" :
            o === "invitation_sent" ? "Status do Convite" :
            o}
@@ -471,3 +480,10 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus, label }: { val
     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
   </div>
 );
+
+const getGuestStatusLabel = (status: string) => {
+  if (status === "confirmado") return "Confirmados";
+  if (status === "pendente") return "Pendentes";
+  if (status === "recusado") return "Recusados";
+  return status;
+};

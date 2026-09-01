@@ -7,7 +7,9 @@ import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
 }
 
 const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024
@@ -119,7 +121,7 @@ const compactPdf = async (bytes: Uint8Array) => {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders, status: 204 })
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 
   try {

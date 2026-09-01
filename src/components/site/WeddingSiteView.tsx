@@ -29,6 +29,7 @@ import { supabase } from '../../lib/supabase';
 import { usePlanFeatures } from '../../hooks/usePlanFeatures';
 import type { WeddingData } from '../../types';
 import { compressImageFile } from '../../utils/imageCompression';
+import { sortByLabelPtBr, sortTextPtBr } from '../../utils/sorting';
 import { WeddingSitePreview } from './WeddingSitePreview';
 import {
   defaultWeddingSiteTemplateId,
@@ -107,7 +108,15 @@ const fontOptions = [
   { value: 'Nunito Sans', label: 'Nunito Sans' },
   { value: 'Raleway', label: 'Raleway' },
   { value: 'Quicksand', label: 'Quicksand' },
-];
+].sort((a, b) => sortTextPtBr(a.label, b.label));
+
+const storyIconOptions = [
+  { value: 'calendar', label: 'Data' },
+  { value: 'heart', label: 'Coração' },
+  { value: 'camera', label: 'Foto' },
+  { value: 'message', label: 'Mensagem' },
+  { value: 'gift', label: 'Presente' },
+].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 const slugify = (value: string) =>
   value
@@ -981,11 +990,9 @@ export const WeddingSiteView = ({ data }: WeddingSiteViewProps) => {
                     <textarea value={item.body || ''} onChange={(event) => setStoryItems((current) => current.map((story) => story.id === item.id ? { ...story, body: event.target.value } : story))} placeholder="Conte esse momento" className="mt-3 min-h-24 w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none" />
                     <div className="mt-3 grid gap-3 sm:grid-cols-[160px_1fr]">
                       <select value={item.icon} onChange={(event) => setStoryItems((current) => current.map((story) => story.id === item.id ? { ...story, icon: event.target.value } : story))} className="h-11 rounded-xl border border-border bg-card px-3 text-sm font-bold text-foreground outline-none">
-                        <option value="heart">Coração</option>
-                        <option value="calendar">Data</option>
-                        <option value="camera">Foto</option>
-                        <option value="message">Mensagem</option>
-                        <option value="gift">Presente</option>
+                        {storyIconOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </select>
                       <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card text-xs font-black uppercase text-muted-foreground hover:bg-accent">
                         <Upload size={15} /> Foto do capítulo
@@ -1517,6 +1524,10 @@ const GiftEditModal = ({
   onSave: (gift: GiftItem) => void;
 }) => {
   const [draft, setDraft] = useState<GiftItem>(gift);
+  const sortedCategories = useMemo(
+    () => sortByLabelPtBr(categories, (category) => category.name),
+    [categories]
+  );
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1570,7 +1581,7 @@ const GiftEditModal = ({
           <Field label="Categoria">
             <select value={draft.category || ''} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value || null }))} className="h-11 w-full rounded-xl border border-border bg-secondary/30 px-3 text-sm font-bold text-foreground outline-none">
               <option value="">Sem categoria</option>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              {sortedCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
           </Field>
           <div className="sm:col-span-2">
