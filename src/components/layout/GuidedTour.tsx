@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
+  Armchair,
   Briefcase,
   Calculator,
   CalendarClock,
@@ -70,6 +71,14 @@ const steps: TourStep[] = [
     eyebrow: 'Lista e presença',
     title: 'Convidados',
     description: 'Organize famílias, confirmações, crianças, acompanhantes, envio de convite e presença no evento.',
+  },
+  {
+    id: 'wedding-day',
+    path: '/dia-do-casamento',
+    icon: Armchair,
+    eyebrow: 'Recepção',
+    title: 'Dia do Casamento',
+    description: 'Crie mesas, defina cadeiras e distribua convidados confirmados para planejar a recepção com clareza.',
   },
   {
     id: 'tasks',

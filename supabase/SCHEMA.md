@@ -66,6 +66,15 @@ Relação N:N entre `weddings` e usuários (membros que não são o owner). PK c
 Convidados de um casamento. Colunas: `id`, `wedding_id` (FK), `nome`, `categoria`, `status` (`confirmado`/`pendente`/`recusado`), `adultos`, `criancas`, `children_names`, `telefone`, `observacoes`, `is_present`, `created_at`, `updated_at`.
 **Policies:** membros do casamento gerenciam; **policy `Leitura pública de convidados` (`USING (true)`) e `Check-in via Token Público` (`USING (true)`, sem validar o token) expõem dados publicamente — ver `KNOWN_ISSUES.md`.**
 
+### `guest_categories`
+Categorias personalizadas de convidados por casamento. Colunas: `id`, `wedding_id`, `name`, `color`, `sort_order`, `created_at`, `updated_at`. Cada casamento não pode repetir o mesmo `name`. Membros do casamento e master gerenciam.
+
+### `wedding_reception_tables`
+Mesas da recepção para o dia do casamento. Colunas: `id`, `wedding_id`, `name`, `chair_count`, `notes`, `sort_order`, `created_at`, `updated_at`. Cada casamento não pode repetir o mesmo `name`; `chair_count` deve ficar entre 1 e 100. Membros do casamento e master gerenciam.
+
+### `wedding_table_guests`
+Vínculo entre mesas e convidados. Colunas: `table_id`, `guest_id`, `wedding_id`, `created_at`. Um convidado só pode estar em uma mesa por vez (`UNIQUE guest_id`); chaves compostas garantem que mesa e convidado pertençam ao mesmo `wedding_id`; remoção de mesa ou convidado limpa o vínculo por cascade. Membros do casamento e master gerenciam.
+
 ### `suppliers`
 Fornecedores contratados. Colunas: `id`, `wedding_id`, `fornecedor`, `servico`, `categoria`, `valor_total`, `tipo_pagamento`, `data_contrato`, `staff_names`, `phone`, `email`, `cnpj_cpf`, `address`, `contract_url` (legado), `contract_storage_path`, `contract_file_name`, `contract_file_size_bytes`, `contract_compressed_size_bytes`, `contract_mime_type`, `contract_uploaded_at`, `created_at`, `updated_at`. Gerenciado por membros do casamento.
 

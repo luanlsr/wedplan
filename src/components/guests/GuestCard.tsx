@@ -1,5 +1,5 @@
 import { MoreVertical, Users, Send, Edit2, Trash2, ChevronDown } from 'lucide-react';
-import { Button, Badge } from '../ui';
+import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
@@ -8,11 +8,12 @@ interface GuestCardProps {
   guest: Guest;
   onEdit: (guest: Guest) => void;
   onUpdate: (id: string, guest: Partial<Guest>) => void;
-  onDelete: (id: string) => void;
-  confirm: (options: any) => Promise<boolean>;
+  onDelete: (id: string) => void | Promise<void>;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
 
 export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
+  const { toast } = useConfirm();
   const [showActions, setShowActions] = useState(false);
 
   const getStatusColor = () => {
@@ -61,7 +62,7 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
           <div className="relative group hidden sm:block">
             <select
               value={guest.status}
-              onChange={(e) => onUpdate(guest.id, { status: e.target.value as any })}
+              onChange={(e) => onUpdate(guest.id, { status: e.target.value as Guest['status'] })}
               className={cn(
                 "h-10 pl-3 pr-8 rounded-2xl border font-black text-[10px] uppercase tracking-widest appearance-none transition-all cursor-pointer outline-none focus:ring-2 focus:ring-primary/20 shadow-sm",
                 getStatusColor()
@@ -126,7 +127,14 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
                         description: `Remover ${guest.nome}?`,
                         type: "danger",
                       });
-                      if (isConfirmed) onDelete(guest.id);
+                      if (isConfirmed) {
+                        await onDelete(guest.id);
+                        toast({
+                          title: 'Convidado removido',
+                          description: `${guest.nome} saiu da lista.`,
+                          type: 'success',
+                        });
+                      }
                     }}
                     className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
                   >

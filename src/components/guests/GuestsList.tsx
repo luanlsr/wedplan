@@ -1,6 +1,6 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, ChevronLeft, ChevronRight, X, Tags, Plus, Trash2 } from 'lucide-react';
 import { Card, Button, Input, useConfirm } from '../ui';
-import type { Guest } from '../../types';
+import type { Guest, GuestCategory } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { GuestStats } from './GuestStats';
@@ -9,42 +9,111 @@ import { GuestCard } from './GuestCard';
 
 interface GuestsListProps {
   guests: Guest[];
+  categories: string[];
+  customCategories: GuestCategory[];
   onAdd: () => void;
   onEdit: (guest: Guest) => void;
-  onUpdate: (id: string, guest: Partial<Guest>) => void;
-  onDelete: (id: string) => void;
+  onUpdate: (id: string, guest: Partial<Guest>) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
+  onAddCategory: (name: string) => void | Promise<void>;
+  onDeleteCategory: (categoryId: string, categoryName: string) => void | Promise<void>;
 }
 
-export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: GuestsListProps) => {
-  const { confirm } = useConfirm();
+type GuestSortKey = keyof Guest | 'total_pessoas';
+
+export const GuestsList = ({
+  guests,
+  categories,
+  customCategories,
+  onAdd,
+  onEdit,
+  onUpdate,
+  onDelete,
+  onAddCategory,
+  onDeleteCategory
+}: GuestsListProps) => {
+  const { confirm, alert: customAlert, toast } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Guest | 'total_pessoas', direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
+  const [showCategories, setShowCategories] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: GuestSortKey, direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const itemsPerPage = 15;
 
-  const categories = [
-    'Todos', 
-    'Convidados da Noiva', 
-    'Convidados do Noivo', 
-    'Padrinhos Noiva', 
-    'Padrinhos Noivo',
-    'Família Noiva', 
-    'Família Noivo', 
-    'Amigos Noiva', 
-    'Amigos Noivo',
-    'Padrinhos', 
-    'Staff', 
-    'Outros'
-  ];
+  const filterCategories = Array.from(new Set(['Todos', 'Convidados da Noiva', 'Convidados do Noivo', 'Padrinhos', 'Família', 'Amigos', ...categories]));
   const statuses = ['Todos', 'confirmado', 'pendente', 'recusado'];
 
-  const requestSort = (key: keyof Guest | 'total_pessoas') => {
+  const handleAddCategory = async () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    if (categories.some((category) => category.toLowerCase() === name.toLowerCase())) {
+      await customAlert({
+        title: 'Categoria já existe',
+        description: 'Escolha outro nome para a categoria de convidados.',
+        type: 'warning',
+        confirmLabel: 'Entendi',
+      });
+      return;
+    }
+
+    setSavingCategory(true);
+    try {
+      await onAddCategory(name);
+      setNewCategory('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível criar a categoria.';
+      await customAlert({
+        title: 'Não foi possível criar',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: GuestCategory) => {
+    const guestsInCategory = guests.filter((guest) => guest.categoria === category.name).length;
+    const isConfirmed = await confirm({
+      title: 'Excluir categoria?',
+      description: guestsInCategory > 0
+        ? `A categoria "${category.name}" será removida e ${guestsInCategory} convidado(s) voltarão para "Outros".`
+        : `A categoria "${category.name}" será removida.`,
+      type: 'danger',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      await onDeleteCategory(category.id, category.name);
+      if (filterCategory === category.name) setFilterCategory('Todos');
+      toast({
+        title: 'Categoria removida',
+        description: `A categoria "${category.name}" foi excluída.`,
+        type: 'success',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível excluir a categoria.';
+      await customAlert({
+        title: 'Não foi possível excluir',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
+    }
+  };
+
+  const requestSort = (key: GuestSortKey) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -53,10 +122,11 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [searchTerm, filterCategory, filterStatus]);
   const sortedAndFilteredGuests = useMemo(() => {
-    let items = guests.filter(g => {
+    const items = guests.filter(g => {
       const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
       
       let matchesCategory = false;
@@ -104,8 +174,9 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
 
   // Effect to update orderedIds only when criteria change OR guests are added/removed
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOrderedIds(sortedAndFilteredGuests.map(g => g.id));
-  }, [searchTerm, filterCategory, filterStatus, sortConfig, guests.length]);
+  }, [sortedAndFilteredGuests]);
 
   // The actual guests to display, in the frozen order, with latest data
   const displayGuests = useMemo(() => {
@@ -201,8 +272,71 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
                 <Button onClick={onAdd} className="h-11 flex-1 sm:flex-none px-5 rounded-xl font-extrabold gap-2 whitespace-nowrap text-sm">
                   <UserPlus size={18} className="shrink-0" /> Adicionar Convidado
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("h-11 flex-1 sm:flex-none px-5 rounded-xl font-extrabold gap-2 whitespace-nowrap text-sm", showCategories && "border-primary/30 bg-primary/10 text-primary")}
+                  onClick={() => setShowCategories(!showCategories)}
+                >
+                  <Tags size={18} className="shrink-0" /> Categorias
+                </Button>
               </div>
             </div>
+
+            {showCategories && (
+              <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+                <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Categorias de convidados</p>
+                    <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                      Crie grupos personalizados para filtrar a lista e organizar melhor os convites.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newCategory}
+                      onChange={(event) => setNewCategory(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          void handleAddCategory();
+                        }
+                      }}
+                      placeholder="Nova categoria"
+                      className="h-11 min-w-0 rounded-xl bg-background md:w-64"
+                    />
+                    <Button
+                      type="button"
+                      className="h-11 rounded-xl font-black"
+                      onClick={handleAddCategory}
+                      disabled={savingCategory || !newCategory.trim()}
+                    >
+                      <Plus size={17} /> Criar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {customCategories.length === 0 ? (
+                    <span className="rounded-full border border-border bg-background px-3 py-2 text-xs font-bold text-muted-foreground">
+                      Nenhuma categoria personalizada criada.
+                    </span>
+                  ) : customCategories.map((category) => (
+                    <span key={category.id} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-xs font-black text-foreground">
+                      {category.name}
+                      <button
+                        type="button"
+                        className="text-muted-foreground transition hover:text-destructive"
+                        onClick={() => void handleDeleteCategory(category)}
+                        aria-label={`Excluir categoria ${category.name}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* SEGUNDA LINHA: FILTROS E CONTAGEM */}
             <div className={cn(
@@ -210,13 +344,13 @@ export const GuestsList = ({ guests, onAdd, onEdit, onUpdate, onDelete }: Guests
               showMobileFilters ? "flex" : "hidden xl:flex"
             )}>
               <div className="flex flex-col md:flex-row flex-wrap items-center gap-3 w-full xl:w-auto">
-                <FilterSelect value={filterCategory} onChange={setFilterCategory} options={categories} icon={<Filter size={18}/>} label="Categoria" />
+                <FilterSelect value={filterCategory} onChange={setFilterCategory} options={filterCategories} icon={<Filter size={18}/>} label="Categoria" />
                 <FilterSelect value={filterStatus} onChange={setFilterStatus} options={statuses} icon={<Users size={18}/>} isStatus label="Status" />
                 
                 <div className="md:hidden w-full mt-2">
                   <FilterSelect 
                     value={sortConfig?.key || 'nome'} 
-                    onChange={(val) => setSortConfig({ key: val as any, direction: 'asc' })} 
+                    onChange={(val) => setSortConfig({ key: val as GuestSortKey, direction: 'asc' })} 
                     options={['nome', 'categoria', 'status', 'total_pessoas', 'invitation_sent']} 
                     icon={<ArrowUp size={18}/>} 
                     label="Ordenar por" 

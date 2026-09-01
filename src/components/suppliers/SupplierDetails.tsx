@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Input, Badge, type ConfirmOptions } from '../ui';
+import { Card, Button, Input, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import {
   ChevronLeft, CheckCircle2, Circle, Calendar, Printer,
   Download, Heart, DollarSign, FileText, Edit2, Info,
@@ -54,6 +54,7 @@ export const SupplierDetails = ({
 }: SupplierDetailsProps) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { alert: customAlert, toast } = useConfirm();
   const [editingInstallmentId, setEditingInstallmentId] = useState<string | null>(null);
   const [openingContract, setOpeningContract] = useState(false);
   const [removingContract, setRemovingContract] = useState(false);
@@ -127,7 +128,12 @@ export const SupplierDetails = ({
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível abrir o contrato.';
-      alert(message);
+      await customAlert({
+        title: 'Não foi possível abrir',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setOpeningContract(false);
     }
@@ -148,11 +154,21 @@ export const SupplierDetails = ({
 
     setRemovingContract(true);
     try {
-      await deleteSupplierContract(currentSupplier.id);
+      await deleteSupplierContract(currentSupplier);
       await updateSupplier(currentSupplier.id, clearSupplierContractFields(currentSupplier));
+      toast({
+        title: 'Contrato removido',
+        description: `O contrato de ${currentSupplier.fornecedor} foi excluído.`,
+        type: 'success',
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível remover o contrato.';
-      alert(message);
+      await customAlert({
+        title: 'Não foi possível remover',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setRemovingContract(false);
     }
@@ -447,6 +463,11 @@ export const SupplierDetails = ({
                 });
                 if (isConfirmed) {
                   deleteSupplier(currentSupplier.id);
+                  toast({
+                    title: 'Fornecedor removido',
+                    description: `${currentSupplier.fornecedor} foi excluído do planejamento.`,
+                    type: 'success',
+                  });
                   navigate('/fornecedores');
                 }
               }}>

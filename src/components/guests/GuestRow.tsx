@@ -1,17 +1,18 @@
 import { Edit2, Trash2, Send, ChevronDown, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Button, Badge } from '../ui';
+import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
 
 interface GuestRowProps {
   guest: Guest;
   onEdit: (guest: Guest) => void;
   onUpdate: (id: string, guest: Partial<Guest>) => void;
-  onDelete: (id: string) => void;
-  confirm: (options: any) => Promise<boolean>;
+  onDelete: (id: string) => void | Promise<void>;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
 
 export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRowProps) => {
+  const { toast } = useConfirm();
   const getStatusColor = () => {
     switch (guest.status) {
       case 'confirmado': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
@@ -42,7 +43,7 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
         <div className="relative w-fit">
           <select
             value={guest.status}
-            onChange={(e) => onUpdate(guest.id, { status: e.target.value as any })}
+            onChange={(e) => onUpdate(guest.id, { status: e.target.value as Guest['status'] })}
             className={cn(
               "h-9 pl-3 pr-9 rounded-lg border font-extrabold text-[11px] uppercase tracking-wide shadow-sm appearance-none cursor-pointer outline-none transition-all active:scale-95",
               getStatusColor()
@@ -79,7 +80,14 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
               description: `Remover ${guest.nome}?`,
               type: "danger",
             });
-            if (isConfirmed) onDelete(guest.id);
+            if (isConfirmed) {
+              await onDelete(guest.id);
+              toast({
+                title: 'Convidado removido',
+                description: `${guest.nome} saiu da lista.`,
+                type: 'success',
+              });
+            }
           }}>
             <Trash2 size={18} />
           </Button>

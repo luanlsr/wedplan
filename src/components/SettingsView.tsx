@@ -30,7 +30,7 @@ export const SettingsView = ({
   refreshData
 }: SettingsViewProps) => {
   const { user, updatePassword } = useAuth();
-  const { confirm } = useConfirm();
+  const { confirm, toast } = useConfirm();
 
   // Local state for the form
   const [localData, setLocalData] = useState({
@@ -570,6 +570,11 @@ export const SettingsView = ({
                     if (isConfirmed) {
                       localStorage.removeItem("wedding_manager_data");
                       await refreshData();
+                      toast({
+                        title: "Base local limpa",
+                        description: "Os dados locais foram removidos e o sistema foi recarregado.",
+                        type: "success",
+                      });
                     }
                   }}
                 >

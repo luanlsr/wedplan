@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { WeddingData, Supplier, Installment, Guest, Task, UserRole, TimelineCategory, TimelineItem } from "../types";
+import type { WeddingData, Supplier, Installment, Guest, GuestCategory, Task, UserRole, TimelineCategory, TimelineItem } from "../types";
 import { INITIAL_DATA } from "../data/initialData";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
@@ -346,6 +346,30 @@ export const useWeddingData = () => {
       if (!wedding) throw new Error('Casamento não encontrado');
 
       const cronograma = await loadTimelineData(weddingId);
+      let guestCategories: GuestCategory[] = [];
+
+      try {
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('guest_categories')
+          .select('*')
+          .eq('wedding_id', weddingId)
+          .order('sort_order')
+          .order('name');
+
+        if (categoriesError) {
+          if (categoriesError.code !== '42P01') throw categoriesError;
+        } else {
+          guestCategories = (categoriesData || []).map((category: any) => ({
+            id: category.id,
+            wedding_id: category.wedding_id,
+            name: category.name,
+            color: category.color,
+            sort_order: category.sort_order,
+          }));
+        }
+      } catch (err) {
+        logError('guest_categories.load.error', err, { weddingId });
+      }
 
       const transformedData: WeddingData = {
         id: wedding.id,
@@ -418,6 +442,7 @@ export const useWeddingData = () => {
           is_present: g.is_present,
           invitation_sent: g.invitation_sent
         })),
+        guestCategories,
         tarefas: (tasksData || []).map((t: any) => ({
           id: t.id,
           titulo: t.titulo,
@@ -767,6 +792,94 @@ export const useWeddingData = () => {
       });
     } catch (err) {
       logError('guest.delete.error', err, { guestId: id, weddingId: data.id });
+    }
+  };
+
+  const addGuestCategory = async (name: string) => {
+    const normalizedName = name.trim();
+    if (!user || !data.id || !normalizedName) return;
+
+    try {
+      const { data: categoryData, error } = await supabase
+        .from('guest_categories')
+        .insert({
+          wedding_id: data.id,
+          name: normalizedName,
+          sort_order: data.guestCategories?.length || 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const category: GuestCategory = {
+        id: categoryData.id,
+        wedding_id: categoryData.wedding_id,
+        name: categoryData.name,
+        color: categoryData.color,
+        sort_order: categoryData.sort_order,
+      };
+
+      setData(prev => ({
+        ...prev,
+        guestCategories: [...(prev.guestCategories || []), category],
+      }));
+
+      void logEvent({
+        eventName: 'guest_category.created',
+        entityType: 'guest_category',
+        entityId: category.id,
+        metadata: { weddingId: data.id, name: category.name },
+      });
+    } catch (err) {
+      logError('guest_category.create.error', err, { weddingId: data.id, name: normalizedName });
+      throw err;
+    }
+  };
+
+  const deleteGuestCategory = async (categoryId: string, categoryName: string) => {
+    if (!user || !data.id) return;
+    const previousGuests = data.convidados || [];
+    const previousCategories = data.guestCategories || [];
+
+    setData(prev => ({
+      ...prev,
+      convidados: (prev.convidados || []).map((guest) =>
+        guest.categoria === categoryName ? { ...guest, categoria: 'Outros' } : guest
+      ),
+      guestCategories: (prev.guestCategories || []).filter((category) => category.id !== categoryId),
+    }));
+
+    try {
+      const { error: guestsError } = await supabase
+        .from('guests')
+        .update({ categoria: 'Outros' })
+        .eq('wedding_id', data.id)
+        .eq('categoria', categoryName);
+
+      if (guestsError) throw guestsError;
+
+      const { error: categoryError } = await supabase
+        .from('guest_categories')
+        .delete()
+        .eq('id', categoryId);
+
+      if (categoryError) throw categoryError;
+
+      void logEvent({
+        eventName: 'guest_category.deleted',
+        entityType: 'guest_category',
+        entityId: categoryId,
+        metadata: { weddingId: data.id, name: categoryName },
+      });
+    } catch (err) {
+      logError('guest_category.delete.error', err, { weddingId: data.id, categoryId, name: categoryName });
+      setData(prev => ({
+        ...prev,
+        convidados: previousGuests,
+        guestCategories: previousCategories,
+      }));
+      throw err;
     }
   };
 
@@ -1247,6 +1360,8 @@ export const useWeddingData = () => {
     addGuest,
     updateGuest,
     deleteGuest,
+    addGuestCategory,
+    deleteGuestCategory,
     addTask,
     updateTask,
     deleteTask,

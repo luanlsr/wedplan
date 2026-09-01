@@ -73,7 +73,7 @@ export const TimelineView = ({
   onUpdateItem,
   onDeleteItem,
 }: TimelineViewProps) => {
-  const { confirm } = useConfirm();
+  const { confirm, toast } = useConfirm();
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome)),
     [categories]
@@ -91,6 +91,7 @@ export const TimelineView = ({
   const [calendarMonth, setCalendarMonth] = useState(() => toDate(weddingDate) || new Date());
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCategoryDrafts(
       sortedCategories.reduce<Record<string, { nome: string; cor: string }>>((acc, category) => {
         acc[category.id] = { nome: category.nome, cor: category.cor };
@@ -101,6 +102,7 @@ export const TimelineView = ({
 
   useEffect(() => {
     if (!newItem.categoryId && sortedCategories[0]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNewItem(prev => ({ ...prev, categoryId: sortedCategories[0].id }));
     }
   }, [newItem.categoryId, sortedCategories]);
@@ -164,7 +166,14 @@ export const TimelineView = ({
       description: `Remover "${category.nome}" e todos os itens dentro dela?`,
       type: "danger",
     });
-    if (isConfirmed) await onDeleteCategory(category.id);
+    if (isConfirmed) {
+      await onDeleteCategory(category.id);
+      toast({
+        title: "Categoria removida",
+        description: `"${category.nome}" saiu do cronograma.`,
+        type: "success",
+      });
+    }
   };
 
   const viewTabs = [
@@ -210,6 +219,11 @@ export const TimelineView = ({
                 weddingDate={weddingDate}
                 onUpdateItem={onUpdateItem}
                 onDeleteItem={onDeleteItem}
+                onItemDeleted={(item) => toast({
+                  title: "Item removido",
+                  description: `"${item.titulo}" saiu do cronograma.`,
+                  type: "success",
+                })}
               />
             )}
 
@@ -343,11 +357,13 @@ const TimelineMode = ({
   weddingDate,
   onUpdateItem,
   onDeleteItem,
+  onItemDeleted,
 }: {
   categories: TimelineCategory[];
   weddingDate?: string;
   onUpdateItem: TimelineViewProps["onUpdateItem"];
   onDeleteItem: TimelineViewProps["onDeleteItem"];
+  onItemDeleted: (item: TimelineItem) => void;
 }) => (
   <div className="relative mt-6 space-y-6">
     <div className="absolute bottom-8 left-4 top-3 w-px bg-border sm:left-5" />
@@ -381,6 +397,7 @@ const TimelineMode = ({
                   category={category}
                   onUpdateItem={onUpdateItem}
                   onDeleteItem={onDeleteItem}
+                  onDeleted={() => onItemDeleted(item)}
                 />
               ))
             ) : (
@@ -411,11 +428,13 @@ const TimelineItemCard = ({
   category,
   onUpdateItem,
   onDeleteItem,
+  onDeleted,
 }: {
   item: TimelineItem;
   category: TimelineCategory;
   onUpdateItem: TimelineViewProps["onUpdateItem"];
   onDeleteItem: TimelineViewProps["onDeleteItem"];
+  onDeleted: () => void;
 }) => {
   const distance = getDayDistance(item.data);
   const isOverdue = distance < 0 && item.status !== "concluido";
@@ -471,7 +490,10 @@ const TimelineItemCard = ({
           </select>
           <button
             type="button"
-            onClick={() => void onDeleteItem(category.id, item.id)}
+            onClick={async () => {
+              await onDeleteItem(category.id, item.id);
+              onDeleted();
+            }}
             className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             aria-label={`Excluir item ${item.titulo}`}
           >

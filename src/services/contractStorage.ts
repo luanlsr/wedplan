@@ -103,12 +103,48 @@ export const createSupplierContractUrl = async (supplier: Supplier): Promise<str
   return supplier.contract_url || null;
 };
 
-export const deleteSupplierContract = async (supplierId: string) => {
+const isFunctionFetchError = (error: unknown) => {
+  if (!error) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  const name = error instanceof Error ? error.name : '';
+
+  return (
+    name === 'FunctionsFetchError' ||
+    message.includes('Failed to send a request to the Edge Function') ||
+    message.includes('fetch')
+  );
+};
+
+export const deleteSupplierContract = async (supplierOrId: Supplier | string) => {
+  const supplierId = typeof supplierOrId === 'string' ? supplierOrId : supplierOrId.id;
+  const fallbackStoragePath = typeof supplierOrId === 'string'
+    ? null
+    : supplierOrId.contract_storage_path || getStoragePathFromLegacyUrl(supplierOrId.contract_url);
+
   const { data, error } = await supabase.functions.invoke<{ success?: boolean; removedPath?: string | null }>('delete-supplier-contract', {
     body: { supplierId },
   });
 
-  if (error) throw error;
+  if (error) {
+    if (!isFunctionFetchError(error)) throw error;
+
+    if (fallbackStoragePath && !fallbackStoragePath.includes('..')) {
+      const { error: storageError } = await supabase.storage
+        .from('contracts')
+        .remove([fallbackStoragePath]);
+
+      if (storageError) {
+        throw new Error(`A Edge Function de remoção não respondeu e o fallback pelo Storage falhou: ${storageError.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      removedPath: fallbackStoragePath,
+      usedFallback: true,
+    };
+  }
+
   if (!data?.success) throw new Error('Não foi possível remover o contrato.');
   return data;
 };

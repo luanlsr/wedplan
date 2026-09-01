@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Download, Eye, FileText, Filter, Search, Trash2, Upload, X } from 'lucide-react';
-import { Badge, Button, Card, Input, cn } from '../ui';
+import { Badge, Button, Card, Input, cn, useConfirm } from '../ui';
 import { formatCurrency, formatDate } from '../../utils/calculations';
 import {
   clearSupplierContractFields,
@@ -42,6 +42,7 @@ const getUploadValidationError = (file: File) => {
 
 export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }: SupplierContractsViewProps) => {
   const navigate = useNavigate();
+  const { confirm, alert: customAlert, toast } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('todos');
   const [preview, setPreview] = useState<PreviewState | null>(null);
@@ -99,7 +100,12 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível abrir o documento.';
-      alert(message);
+      await customAlert({
+        title: 'Não foi possível abrir',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setLoadingId(null);
     }
@@ -111,7 +117,12 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
 
     const validationError = getUploadValidationError(selectedFile);
     if (validationError) {
-      alert(validationError);
+      await customAlert({
+        title: 'Arquivo inválido',
+        description: validationError,
+        type: 'warning',
+        confirmLabel: 'Entendi',
+      });
       return;
     }
 
@@ -137,29 +148,55 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
       setSelectedFile(null);
       setSelectedSupplierId('');
       setUploadOpen(false);
+      toast({
+        title: 'Documento anexado',
+        description: 'O contrato foi salvo no fornecedor selecionado.',
+        type: 'success',
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível enviar o documento.';
-      alert(message);
+      await customAlert({
+        title: 'Não foi possível enviar',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (supplier: Supplier) => {
-    const confirmed = window.confirm(`Deseja remover o documento de ${supplier.fornecedor}?`);
+    const confirmed = await confirm({
+      title: 'Remover documento?',
+      description: `Deseja remover o documento de ${supplier.fornecedor}?`,
+      type: 'danger',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+    });
     if (!confirmed) return;
 
     setDeletingId(supplier.id);
     try {
-      await deleteSupplierContract(supplier.id);
+      await deleteSupplierContract(supplier);
       await onUpdateSupplier(supplier.id, clearSupplierContractFields(supplier));
 
       if (preview?.supplier.id === supplier.id) {
         setPreview(null);
       }
+      toast({
+        title: 'Documento removido',
+        description: `O contrato de ${supplier.fornecedor} foi excluído.`,
+        type: 'success',
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível remover o documento.';
-      alert(message);
+      await customAlert({
+        title: 'Não foi possível remover',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setDeletingId(null);
     }
@@ -325,7 +362,12 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
                     if (file) {
                       const validationError = getUploadValidationError(file);
                       if (validationError) {
-                        alert(validationError);
+                        void customAlert({
+                          title: 'Arquivo inválido',
+                          description: validationError,
+                          type: 'warning',
+                          confirmLabel: 'Entendi',
+                        });
                         event.currentTarget.value = '';
                         return;
                       }

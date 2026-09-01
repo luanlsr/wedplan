@@ -10,9 +10,10 @@ interface AddGuestModalProps {
   onAdd: (guest: Omit<Guest, 'id'>) => void;
   onUpdate?: (id: string, guest: Partial<Guest>) => void;
   editGuest?: Guest | null;
+  categories?: string[];
 }
 
-export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestModalProps) => {
+export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories = [] }: AddGuestModalProps) => {
   const isEditing = !!editGuest;
 
   const [formData, setFormData] = useState({
@@ -28,6 +29,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
 
   useEffect(() => {
     if (editGuest) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         nome: editGuest.nome,
         categoria: editGuest.categoria,
@@ -45,6 +47,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
 
     useEffect(() => {
         if (editGuest && editGuest.children_names) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setChildList(editGuest.children_names.split(", "));
         }
     }, [editGuest]);
@@ -73,7 +76,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
         setFormData({ ...formData, children_names: newList.join(", ") });
     };
 
-    const categories = ["Noivos", "Padrinhos Noiva", "Padrinhos Noivo", "Família Noiva", "Família Noivo", "Amigos Noiva", "Amigos Noivo", "Trabalho", "Igreja", "Padrinhos", "Staff", "Outros"];
+    const availableCategories = categories.length ? categories : ["Outros"];
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -132,7 +135,7 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest }: AddGuestM
                       value={formData.categoria}
                       onChange={e => setFormData({...formData, categoria: e.target.value})}
                     >
-                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
                   </div>

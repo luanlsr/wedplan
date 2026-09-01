@@ -15,6 +15,7 @@ import { SupplierContractsView } from './suppliers/SupplierContractsView';
 import { FinancialView } from './suppliers/FinancialView';
 import { PlanningView } from './suppliers/PlanningView';
 import { GuestsList } from './guests/GuestsList';
+import { WeddingDayView } from './wedding-day/WeddingDayView';
 import { TasksList } from './tasks/TasksList';
 import { TimelineView } from './timeline/TimelineView';
 import { CheckInView } from './guests/CheckInView';
@@ -38,6 +39,7 @@ import { cn } from '../lib/utils';
 import { logError, logEvent, setObservabilityContext } from '../utils/observability';
 import { getAccountAccessTitle, isAccountAccessBlocked } from '../services/subscriptionAccess';
 import type { Installment } from '../types';
+import { getGuestCategoryNames } from '../data/guestCategories';
 
 export function MainApp() {
   const navigate = useNavigate();
@@ -49,6 +51,7 @@ export function MainApp() {
     data, loading,
     addSupplier, updateSupplier, deleteSupplier, updateInstallment,
     addGuest, updateGuest, deleteGuest,
+    addGuestCategory, deleteGuestCategory,
     addTask, updateTask, deleteTask,
     addTimelineCategory, updateTimelineCategory, deleteTimelineCategory,
     addTimelineItem, updateTimelineItem, deleteTimelineItem,
@@ -66,6 +69,10 @@ export function MainApp() {
   } = useAppModals();
 
   const stats = useMemo(() => calculateStats(data), [data]);
+  const guestCategoryNames = useMemo(
+    () => getGuestCategoryNames(data.guestCategories || [], data.convidados || []),
+    [data.convidados, data.guestCategories]
+  );
   const isDark = data.configuracoes.tema === 'dark';
   const isNewWedding = useMemo(() => {
     if (loading || !data.casal || data.role === 'master') return false;
@@ -226,6 +233,7 @@ export function MainApp() {
     if (path === "/fornecedores") return "Lista de Fornecedores";
     if (path === "/contratos") return "Contratos";
     if (path === "/convidados") return "Lista de Convidados";
+    if (path === "/dia-do-casamento") return "Dia do Casamento";
     if (path === "/tarefas") return "Minhas Tarefas";
     if (path === "/cronograma") return "Cronograma";
     if (path === "/financeiro") return "Fluxo de Caixa";
@@ -360,10 +368,21 @@ export function MainApp() {
         <Route path="convidados" element={
           <GuestsList
             guests={data.convidados || []}
+            customCategories={data.guestCategories || []}
+            categories={guestCategoryNames}
             onAdd={() => setIsGuestModalOpen(true)}
             onEdit={handleEditGuest}
             onUpdate={updateGuest}
             onDelete={deleteGuest}
+            onAddCategory={addGuestCategory}
+            onDeleteCategory={deleteGuestCategory}
+          />
+        } />
+
+        <Route path="dia-do-casamento" element={
+          <WeddingDayView
+            weddingId={data.id}
+            guests={data.convidados || []}
           />
         } />
 
@@ -435,6 +454,7 @@ export function MainApp() {
         updateSupplier={updateSupplier}
         isGuestModalOpen={isGuestModalOpen}
         guestToEdit={guestToEdit}
+        guestCategories={guestCategoryNames}
         addGuest={addGuest}
         updateGuest={updateGuest}
         isTaskModalOpen={isTaskModalOpen}

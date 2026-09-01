@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Copy, Gift, Heart, Loader2, MapPin, Search, ShoppingB
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { setPageMetadata } from '../../utils/meta';
-import { Button, Input } from '../ui';
+import { Button, Input, useConfirm } from '../ui';
 import { cn } from '../../lib/utils';
 import { formatMoney, getWeddingSiteTemplate, type GiftCategory, type GiftItem, type WeddingSite } from './weddingSiteTypes';
 
@@ -22,6 +22,7 @@ const PUBLIC_GIFTS_PAGE_SIZE = 12;
 
 export const WeddingGiftsPublic = () => {
   const { slug } = useParams();
+  const { alert: customAlert } = useConfirm();
   const [site, setSite] = useState<WeddingSite | null>(null);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [categories, setCategories] = useState<GiftCategory[]>([]);
@@ -38,26 +39,7 @@ export const WeddingGiftsPublic = () => {
   const [submitting, setSubmitting] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PUBLIC_GIFTS_PAGE_SIZE);
 
-  useEffect(() => {
-    loadGifts();
-  }, [slug]);
-
-  useEffect(() => {
-    if (!site) return;
-
-    const title = `Lista de presentes de ${site.title || 'um casal especial'} | WedPlan`;
-    const description = (site.gift_intro || `Veja a lista de presentes preparada por ${site.title || 'este casal'} e escolha uma sugestão com carinho.`).replace(/\s+/g, ' ').trim();
-    const image = gifts.find((gift) => gift.image_url)?.image_url || site.cover_image_url || '/image/wedplan_logo.png';
-
-    setPageMetadata({
-      title,
-      description: description.slice(0, 180),
-      image,
-      url: window.location.href,
-    });
-  }, [gifts, site]);
-
-  const loadGifts = async () => {
+  async function loadGifts() {
     if (!slug) return;
     setLoading(true);
     try {
@@ -103,7 +85,28 @@ export const WeddingGiftsPublic = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadGifts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  useEffect(() => {
+    if (!site) return;
+
+    const title = `Lista de presentes de ${site.title || 'um casal especial'} | WedPlan`;
+    const description = (site.gift_intro || `Veja a lista de presentes preparada por ${site.title || 'este casal'} e escolha uma sugestão com carinho.`).replace(/\s+/g, ' ').trim();
+    const image = gifts.find((gift) => gift.image_url)?.image_url || site.cover_image_url || '/image/wedplan_logo.png';
+
+    setPageMetadata({
+      title,
+      description: description.slice(0, 180),
+      image,
+      url: window.location.href,
+    });
+  }, [gifts, site]);
 
   const categoryById = useMemo(() => new Map(categories.map((item) => [item.id, item.name])), [categories]);
   const brands = useMemo(() => ['all', ...Array.from(new Set(gifts.map((gift) => gift.brand).filter(Boolean) as string[])).sort()], [gifts]);
@@ -147,6 +150,7 @@ export const WeddingGiftsPublic = () => {
   const visibleGifts = useMemo(() => filteredGifts.slice(0, visibleCount), [filteredGifts, visibleCount]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleCount(PUBLIC_GIFTS_PAGE_SIZE);
   }, [brand, category, gifts.length, priceRange, search, sortOrder]);
 
@@ -182,7 +186,12 @@ export const WeddingGiftsPublic = () => {
     setSubmitting(false);
 
     if (error) {
-      alert('Esse presente não está mais disponível. Escolha outra opção.');
+      await customAlert({
+        title: 'Presente indisponível',
+        description: 'Esse presente não está mais disponível. Escolha outra opção.',
+        type: 'warning',
+        confirmLabel: 'Entendi',
+      });
       setSelectedGift(null);
       setGuestName('');
       await loadGifts();

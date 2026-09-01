@@ -61,6 +61,30 @@ export interface Guest {
   invitation_sent?: boolean;
 }
 
+export interface GuestCategory {
+  id: string;
+  wedding_id?: string;
+  name: string;
+  color?: string | null;
+  sort_order?: number;
+}
+
+export interface WeddingReceptionTable {
+  id: string;
+  wedding_id?: string;
+  name: string;
+  chair_count: number;
+  notes?: string | null;
+  sort_order?: number;
+}
+
+export interface WeddingTableGuest {
+  table_id: string;
+  guest_id: string;
+  wedding_id?: string;
+  created_at?: string;
+}
+
 export interface Task {
   id: string;
   titulo: string;
@@ -118,6 +142,7 @@ export interface WeddingData {
   };
   fornecedores: Supplier[];
   convidados?: Guest[];
+  guestCategories?: GuestCategory[];
   tarefas?: Task[];
   cronograma?: TimelineCategory[];
   configuracoes: {

@@ -13,6 +13,7 @@ interface GlobalModalsProps {
   
   isGuestModalOpen: boolean;
   guestToEdit: Guest | null;
+  guestCategories?: string[];
   addGuest: (g: Omit<Guest, 'id'>) => void | Promise<void>;
   updateGuest: (id: string, g: Partial<Guest>) => void | Promise<void>;
   
@@ -33,6 +34,7 @@ export const GlobalModals = ({
   updateSupplier,
   isGuestModalOpen,
   guestToEdit,
+  guestCategories,
   addGuest,
   updateGuest,
   isTaskModalOpen,
@@ -60,6 +62,7 @@ export const GlobalModals = ({
           onAdd={addGuest}
           onUpdate={updateGuest}
           editGuest={guestToEdit}
+          categories={guestCategories}
         />
       )}
 

@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect, type FormEvent } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, Search, Key, Plus, ShieldAlert, X, Mail, UserPlus, ShieldCheck, RefreshCw } from 'lucide-react';
-import { Card, Button, Input } from '../ui';
+import { Card, Button, Input, useConfirm } from '../ui';
 import { TRANSACTIONAL_FROM_EMAIL } from '../../config/support';
 
 interface AdminUser {
@@ -18,6 +18,7 @@ const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Erro inesperado';
 
 export function AdminUsers() {
+  const { confirm, alert: customAlert, toast } = useConfirm();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -57,16 +58,32 @@ export function AdminUsers() {
 
   const handleResetPassword = async (email: string) => {
     if (!email) return;
-    if (!confirm(`Deseja enviar um e-mail de redefinição de senha para ${email}?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Enviar reset de senha?',
+      description: `Deseja enviar um e-mail de redefinição de senha para ${email}?`,
+      type: 'warning',
+      confirmLabel: 'Enviar e-mail',
+      cancelLabel: 'Cancelar',
+    });
+    if (!isConfirmed) return;
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
-      alert(`E-mail de redefinição enviado com sucesso para ${email} pelo remetente oficial ${TRANSACTIONAL_FROM_EMAIL}`);
+      toast({
+        title: 'Reset enviado',
+        description: `E-mail enviado para ${email} por ${TRANSACTIONAL_FROM_EMAIL}.`,
+        type: 'success',
+      });
     } catch (err: unknown) {
-      alert(`Erro ao enviar reset: ${getErrorMessage(err)}`);
+      await customAlert({
+        title: 'Erro ao enviar reset',
+        description: getErrorMessage(err),
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     }
   };
 
@@ -75,7 +92,14 @@ export function AdminUsers() {
 
   const handleUpdateAccess = async (user: AdminUser, status: 'active' | 'past_due' | 'canceled' | 'pending_payment') => {
     const actionLabel = status === 'active' ? 'liberar' : 'bloquear';
-    if (!confirm(`Deseja ${actionLabel} o acesso de ${user.email}?`)) return;
+    const isConfirmed = await confirm({
+      title: status === 'active' ? 'Liberar acesso?' : 'Bloquear acesso?',
+      description: `Deseja ${actionLabel} o acesso de ${user.email}?`,
+      type: status === 'active' ? 'info' : 'warning',
+      confirmLabel: status === 'active' ? 'Liberar' : 'Bloquear',
+      cancelLabel: 'Cancelar',
+    });
+    if (!isConfirmed) return;
 
     setUpdatingUserId(user.id);
     try {
@@ -103,9 +127,18 @@ export function AdminUsers() {
       if (!response.ok) throw new Error(result.error || 'Erro ao alterar acesso');
 
       await fetchUsers();
-      alert(status === 'active' ? 'Acesso liberado com sucesso.' : 'Acesso bloqueado com sucesso.');
+      toast({
+        title: status === 'active' ? 'Acesso liberado' : 'Acesso bloqueado',
+        description: user.email,
+        type: 'success',
+      });
     } catch (err: unknown) {
-      alert(`Erro: ${getErrorMessage(err)}`);
+      await customAlert({
+        title: 'Erro ao alterar acesso',
+        description: getErrorMessage(err),
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setUpdatingUserId(null);
     }
@@ -135,12 +168,21 @@ export function AdminUsers() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Erro ao criar usuário');
 
-      alert(`Usuário ${newUser.email} criado com sucesso!`);
+      toast({
+        title: 'Usuário criado',
+        description: `${newUser.email} foi criado com sucesso.`,
+        type: 'success',
+      });
       setIsModalOpen(false);
       setNewUser({ email: '', full_name: '', password: '', status: 'active' });
       void fetchUsers();
     } catch (err: unknown) {
-      alert(`Erro: ${getErrorMessage(err)}`);
+      await customAlert({
+        title: 'Erro ao criar usuário',
+        description: getErrorMessage(err),
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { Supplier, PaymentType } from "../../types";
-import { Card, Button, Input } from "../ui";
+import { Card, Button, Input, useConfirm } from "../ui";
 import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock, ChevronDown, Users, Phone, Mail, FileText, MapPin, Upload, FileCheck } from "lucide-react";
 import { generateInstallments, formatCurrency } from "../../utils/calculations";
 import { maskCurrency, unmaskCurrency, maskPhone, maskCPFOrCNPJ } from "../../utils/masks";
@@ -40,6 +40,7 @@ const getContractFileValidationError = (file: File) => {
 };
 
 export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId, editSupplier }: SupplierModalProps) => {
+  const { alert: customAlert } = useConfirm();
   const isEditing = !!editSupplier;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
@@ -204,14 +205,24 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
 
     if (contractFile) {
       if (!weddingId) {
-        alert("Salve os dados do casamento antes de anexar contratos.");
+        await customAlert({
+          title: "Casamento não salvo",
+          description: "Salve os dados do casamento antes de anexar contratos.",
+          type: "warning",
+          confirmLabel: "Entendi",
+        });
         setIsSubmitting(false);
         return;
       }
 
       const validationError = getContractFileValidationError(contractFile);
       if (validationError) {
-        alert(validationError);
+        await customAlert({
+          title: "Arquivo inválido",
+          description: validationError,
+          type: "warning",
+          confirmLabel: "Entendi",
+        });
         setIsSubmitting(false);
         return;
       }
@@ -234,7 +245,12 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erro ao fazer upload do contrato. Tente novamente.";
         console.error("Error uploading contract:", error);
-        alert(message);
+        await customAlert({
+          title: "Erro no upload",
+          description: message,
+          type: "danger",
+          confirmLabel: "Entendi",
+        });
         setIsSubmitting(false);
         return;
       }
@@ -635,7 +651,12 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
                             if (file) {
                               const validationError = getContractFileValidationError(file);
                               if (validationError) {
-                                alert(validationError);
+                                void customAlert({
+                                  title: "Arquivo inválido",
+                                  description: validationError,
+                                  type: "warning",
+                                  confirmLabel: "Entendi",
+                                });
                                 e.currentTarget.value = "";
                                 return;
                               }
@@ -667,7 +688,12 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
                             if (file) {
                               const validationError = getContractFileValidationError(file);
                               if (validationError) {
-                                alert(validationError);
+                                void customAlert({
+                                  title: "Arquivo inválido",
+                                  description: validationError,
+                                  type: "warning",
+                                  confirmLabel: "Entendi",
+                                });
                                 e.currentTarget.value = "";
                                 return;
                               }

@@ -1,5 +1,6 @@
 import { CheckCircle2, Plus, Trash2, Calendar, Tag, Edit2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Filter, MoreVertical } from 'lucide-react';
 import { Button, useConfirm } from '../ui';
+import type { ConfirmOptions, ToastOptions } from '../ui';
 import { ChevronDown } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
@@ -10,13 +11,13 @@ interface TasksListProps {
   onAdd: () => void;
   onEdit: (task: Task) => void;
   onUpdate: (id: string, task: Partial<Task>) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
 }
 
 type SortOption = 'titulo' | 'categoria' | 'dataLimite' | 'status';
 
 export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksListProps) => {
-  const { confirm } = useConfirm();
+  const { confirm, toast } = useConfirm();
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'pendente' | 'em_progresso' | 'concluido'>('Todos');
   const [sortBy, setSortBy] = useState<SortOption>('dataLimite');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -28,6 +29,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
 
   // Reset page when filters or sorting change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [filterStatus, sortBy, sortDirection]);
 
@@ -41,11 +43,11 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
   };
 
   const sortedTasks = useMemo(() => {
-    let result = tasks.filter(t => filterStatus === 'Todos' || t.status === filterStatus);
+    const result = tasks.filter(t => filterStatus === 'Todos' || t.status === filterStatus);
     
     result.sort((a, b) => {
-      let valA: any = a[sortBy] || '';
-      let valB: any = b[sortBy] || '';
+      let valA: string | number = String(a[sortBy] || '');
+      let valB: string | number = String(b[sortBy] || '');
 
       if (sortBy === 'status') {
          const statusOrder = { pendente: 0, em_progresso: 1, concluido: 2 };
@@ -129,7 +131,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
             )}>
               <FilterSelect 
                 value={filterStatus} 
-                onChange={(v: any) => setFilterStatus(v)} 
+                onChange={(v) => setFilterStatus(v as typeof filterStatus)} 
                 options={['Todos', 'pendente', 'em_progresso', 'concluido']} 
                 icon={<CheckCircle2 size={18}/>} 
                 isStatus 
@@ -169,6 +171,7 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
             onEdit={onEdit} 
             onDelete={onDelete}
             confirm={confirm}
+            toast={toast}
           />
         ))}
 
@@ -250,7 +253,16 @@ export const TasksList = ({ tasks, onAdd, onEdit, onUpdate, onDelete }: TasksLis
   );
 };
 
-const TaskItem = ({ task, onUpdate, onEdit, onDelete, confirm }: any) => {
+type TaskItemProps = {
+  task: Task;
+  onUpdate: (id: string, task: Partial<Task>) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
+  toast: (options: ToastOptions) => void;
+};
+
+const TaskItem = ({ task, onUpdate, onEdit, onDelete, confirm, toast }: TaskItemProps) => {
   const [showActions, setShowActions] = useState(false);
 
   return (
@@ -335,7 +347,14 @@ const TaskItem = ({ task, onUpdate, onEdit, onDelete, confirm }: any) => {
                       description: `Remover esta tarefa?`,
                       type: "danger",
                     });
-                    if (isConfirmed) onDelete(task.id);
+                    if (isConfirmed) {
+                      await onDelete(task.id);
+                      toast({
+                        title: "Tarefa removida",
+                        description: `"${task.titulo}" foi excluída.`,
+                        type: "success",
+                      });
+                    }
                   }}
                   className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
                 >
@@ -351,7 +370,7 @@ const TaskItem = ({ task, onUpdate, onEdit, onDelete, confirm }: any) => {
   );
 };
 
-const SortTab = ({ active, onClick, label, direction }: any) => (
+const SortTab = ({ active, onClick, label, direction }: { active: boolean; onClick: () => void; label: string; direction?: 'asc' | 'desc' | null }) => (
   <button 
     onClick={onClick}
     className={cn(

@@ -7,6 +7,7 @@ export const INITIAL_DATA: WeddingData = {
     data: ""
   },
   fornecedores: [],
+  guestCategories: [],
   cronograma: [],
   configuracoes: {
     orcamentoTotal: 50000,
