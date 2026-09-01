@@ -18,8 +18,8 @@ Perfil de cada usuário autenticado (1:1 com `auth.users`).
 | `id` | uuid (PK) | = `auth.users.id` |
 | `full_name` | text | |
 | `email` | text | |
-| `role` | text | **Legado.** Valores: `master`/`couple`/`staff`. Ainda é a coluna que `is_master()` e a maioria das policies de negócio realmente leem. |
-| `role_id` | uuid (FK → `roles.id`) | Arquitetura "nova" introduzida em 2025, hoje sem uso real nas policies — ver `KNOWN_ISSUES.md`. |
+| `role` | text | Valores: `master`/`couple`/`staff`. A migration `0020_admin_master_foundation.sql` mantém esta coluna alinhada para blindagem das policies. |
+| `role_id` | uuid (FK → `roles.id`) | Relação normalizada com `roles`. `public.is_master()` considera tanto `profiles.role = 'master'` quanto `roles.name = 'master'`. |
 | `wedding_id` | uuid | **Legado.** Coluna que várias policies de negócio atuais (`Acesso ao casamento vinculado`, `Noivo gere convidados/fornecedores/parcelas/tarefas`) realmente usam para escopar acesso — não `wedding_members`. |
 | `account_id` | uuid (FK → `accounts.id`) | |
 | `asaas_customer_id` | text | |
@@ -30,13 +30,15 @@ Perfil de cada usuário autenticado (1:1 com `auth.users`).
 | `created_at`, `updated_at` | timestamptz | |
 
 ### `roles`
-Tabela de referência para `role_id`. Valores esperados: `master`, `couple`, `staff`, `guest`. **RLS ligado, zero policies** (ver `KNOWN_ISSUES.md`).
+Tabela de referência para `role_id`. Valores esperados: `master`, `couple`, `staff`, `guest`. Autenticados podem ler os nomes de roles; gerenciamento deve ocorrer apenas por migration ou ação master segura.
 
 ### `account_types`
 Planos disponíveis. Colunas: `id`, `name`, `price numeric(10,2)`, `features jsonb`, `created_at`. **RLS ligado, zero policies.**
 
 ### `accounts`
-Conta/tenant (uma por usuário pagante). Colunas: `id` (= `auth.users.id` para novos signups), `account_type_id` (FK), `status` (`pending_payment`/`active`/`past_due`/`canceled`), `asaas_customer_id`, `asaas_subscription_id`, `created_at`, `updated_at`. **RLS ligado, zero policies.**
+Conta/tenant (uma por usuário pagante). Colunas: `id` (= `auth.users.id` para novos signups), `account_type_id` (FK), `status` (`pending_payment`/`active`/`past_due`/`canceled`), `asaas_customer_id`, `asaas_subscription_id`, `created_at`, `updated_at`. RLS ligado; usuário autenticado vê a própria conta e master gerencia todas via `public.is_master()`.
+
+Conta master inicial criada por migration: `admin.master@wedplan.com.br`, role `master`, conta ativa e sem bloqueio por assinatura. Trocar a senha temporária após o primeiro acesso.
 
 ### `subscriptions`
 Assinaturas comerciais processadas pelo Asaas. Colunas principais: `id`, `account_id`, `plan_id`, `status` (`incomplete`/`trialing`/`active`/`past_due`/`canceled`/`expired`), `billing_interval`, `asaas_customer_id`, `asaas_subscription_id`, `current_period_start`, `current_period_end`, `access_expires_at`, `last_payment_id`, `last_payment_status`, `last_payment_at`, `last_status_checked_at`, `last_status_source`, `refund_window_days`, `refund_window_started_at`, `refund_window_ends_at`, `refund_window_status`, `refund_window_checked_at`, `metadata`, `created_at`, `updated_at`. O webhook do Asaas e a Edge Function `sync-subscription-access` mantêm essa tabela sincronizada.
@@ -65,7 +67,7 @@ Convidados de um casamento. Colunas: `id`, `wedding_id` (FK), `nome`, `categoria
 **Policies:** membros do casamento gerenciam; **policy `Leitura pública de convidados` (`USING (true)`) e `Check-in via Token Público` (`USING (true)`, sem validar o token) expõem dados publicamente — ver `KNOWN_ISSUES.md`.**
 
 ### `suppliers`
-Fornecedores contratados. Colunas: `id`, `wedding_id`, `fornecedor`, `servico`, `categoria`, `valor_total`, `tipo_pagamento`, `data_contrato`, `staff_names`, `phone`, `email`, `cnpj_cpf`, `address`, `contract_url`, `created_at`, `updated_at`. Gerenciado por membros do casamento.
+Fornecedores contratados. Colunas: `id`, `wedding_id`, `fornecedor`, `servico`, `categoria`, `valor_total`, `tipo_pagamento`, `data_contrato`, `staff_names`, `phone`, `email`, `cnpj_cpf`, `address`, `contract_url` (legado), `contract_storage_path`, `contract_file_name`, `contract_file_size_bytes`, `contract_compressed_size_bytes`, `contract_mime_type`, `contract_uploaded_at`, `created_at`, `updated_at`. Gerenciado por membros do casamento.
 
 ### `installments`
 Parcelas de pagamento de um fornecedor. Colunas: `id`, `supplier_id` (FK), `wedding_id` (FK, denormalizado para RLS), `numero`, `valor`, `data_vencimento`, `data_pagamento`, `status`. Gerenciado por membros do casamento.
@@ -92,7 +94,7 @@ Todas as quatro têm policies de `anon` escopadas a um `wedding_id` fixo (`c2820
 | Nome | Tipo | O que faz |
 |---|---|---|
 | `handle_new_user()` | function, `SECURITY DEFINER`, trigger em `auth.users` (`on_auth_user_created`) | Ao criar um usuário, cria `accounts` (status `pending_payment`) e `profiles` (`role_id`='couple', `account_id`=user.id). |
-| `is_master()` | function, `SECURITY DEFINER` | Retorna `true` se `profiles.role = 'master'` para o usuário atual. Usada em quase toda policy de bypass de master. **Lê a coluna legada `role`, não `role_id`.** |
+| `is_master()` | function, `SECURITY DEFINER` | Retorna `true` se `profiles.role = 'master'` ou se `profiles.role_id` aponta para `roles.name = 'master'`. Usada nas policies e nas Edge Functions administrativas. |
 | `update_updated_at_column()` | function, trigger (4x: `weddings`, `guests`, `suppliers`, `tasks`) | Atualiza `updated_at = now()` antes de cada UPDATE. |
 | `sync_guest_name()` | function, trigger (`trg_sync_guest_name` em `confirmacoes`) | Sincroniza `guests.nome` a partir de `confirmacoes.full_name` via `unaccent()`/`ILIKE`. Pertence ao fluxo do sistema de convite separado. |
 | `rls_auto_enable()` | function, **event trigger** | Habilita RLS automaticamente em qualquer `CREATE TABLE` novo no schema `public`. Existia em produção sem nenhuma migration documentada — agora capturado na baseline. |
@@ -101,5 +103,5 @@ Todas as quatro têm policies de `anon` escopadas a um `wedding_id` fixo (`c2820
 
 | Bucket | Público | Policies |
 |---|---|---|
-| `contracts` | sim | Leitura pública sem restrição (`Public Access`); insert/update/delete só autenticado. **Ver `KNOWN_ISSUES.md` — contratos contêm dados sensíveis e estão publicamente baixáveis.** |
+| `contracts` | não | Documentos privados de contratos de fornecedores em PDF, DOC ou DOCX. Paths seguem `{wedding_id}/{uuid}.{ext}`; acesso restrito a membros do casamento ou master. Upload passa pela Edge Function `upload-supplier-contract`, que tenta compactar PDFs antes de salvar; visualização usa URL assinada temporária via `create-supplier-contract-url`; remoção usa `delete-supplier-contract`. |
 | `casamentos` | sim (a nível de bucket) | Ver/upload/deletar restrito a membros do casamento (via prefixo `{wedding_id}/` no path) ou master. |

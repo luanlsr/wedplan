@@ -39,6 +39,12 @@ export interface Supplier {
   cnpj_cpf?: string;
   address?: string;
   contract_url?: string;
+  contract_storage_path?: string | null;
+  contract_file_name?: string | null;
+  contract_file_size_bytes?: number | null;
+  contract_compressed_size_bytes?: number | null;
+  contract_mime_type?: string | null;
+  contract_uploaded_at?: string | null;
 }
 
 export interface Guest {

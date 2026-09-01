@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, type FormEvent } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, Search, Key, Plus, ShieldAlert, X, Mail, UserPlus } from 'lucide-react';
+import { Users, Search, Key, Plus, ShieldAlert, X, Mail, UserPlus, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Card, Button, Input } from '../ui';
 import { TRANSACTIONAL_FROM_EMAIL } from '../../config/support';
 
@@ -8,10 +8,14 @@ interface AdminUser {
   id: string;
   email: string;
   full_name: string;
+  role: string | null;
   roles: { name: string };
   accounts?: { status: string };
   created_at: string;
 }
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Erro inesperado';
 
 export function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -20,12 +24,9 @@ export function AdminUsers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', full_name: '', password: '', status: 'active' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -33,6 +34,7 @@ export function AdminUsers() {
           id,
           email,
           full_name,
+          role,
           created_at,
           roles (name),
           accounts (status)
@@ -40,13 +42,18 @@ export function AdminUsers() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUsers((data as any) || []);
+      setUsers((data || []) as unknown as AdminUser[]);
     } catch (err) {
       console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchUsers();
+  }, [fetchUsers]);
 
   const handleResetPassword = async (email: string) => {
     if (!email) return;
@@ -58,12 +65,53 @@ export function AdminUsers() {
       });
       if (error) throw error;
       alert(`E-mail de redefinição enviado com sucesso para ${email} pelo remetente oficial ${TRANSACTIONAL_FROM_EMAIL}`);
-    } catch (err: any) {
-      alert(`Erro ao enviar reset: ${err.message}`);
+    } catch (err: unknown) {
+      alert(`Erro ao enviar reset: ${getErrorMessage(err)}`);
     }
   };
 
-  const handleCreateUser = async (e: React.FormEvent) => {
+  const getUserRole = (user: AdminUser) => user.role || user.roles?.name || 'couple';
+  const getAccountStatus = (user: AdminUser) => user.accounts?.status || 'pending_payment';
+
+  const handleUpdateAccess = async (user: AdminUser, status: 'active' | 'past_due' | 'canceled' | 'pending_payment') => {
+    const actionLabel = status === 'active' ? 'liberar' : 'bloquear';
+    if (!confirm(`Deseja ${actionLabel} o acesso de ${user.email}?`)) return;
+
+    setUpdatingUserId(user.id);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-update-user-access`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            status,
+            note: `Alterado manualmente pelo Admin Master na tela de usuarios`,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao alterar acesso');
+
+      await fetchUsers();
+      alert(status === 'active' ? 'Acesso liberado com sucesso.' : 'Acesso bloqueado com sucesso.');
+    } catch (err: unknown) {
+      alert(`Erro: ${getErrorMessage(err)}`);
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleCreateUser = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -87,12 +135,12 @@ export function AdminUsers() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Erro ao criar usuário');
 
-      alert(`✅ Usuário ${newUser.email} criado com sucesso!`);
+      alert(`Usuário ${newUser.email} criado com sucesso!`);
       setIsModalOpen(false);
       setNewUser({ email: '', full_name: '', password: '', status: 'active' });
-      fetchUsers();
-    } catch (err: any) {
-      alert(`❌ Erro: ${err.message}`);
+      void fetchUsers();
+    } catch (err: unknown) {
+      alert(`Erro: ${getErrorMessage(err)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -162,25 +210,34 @@ export function AdminUsers() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Carregando usuários...</td></tr>
-              ) : filteredUsers.map(user => (
+              ) : filteredUsers.map(user => {
+                const role = getUserRole(user);
+                const status = getAccountStatus(user);
+                const isMaster = role === 'master';
+                const isActive = status === 'active';
+                const isUpdating = updatingUserId === user.id;
+
+                return (
                 <tr key={user.id} className="border-b border-border/10 hover:bg-white/5 transition-colors">
                   <td className="p-4 font-bold">{user.full_name || 'Sem nome'}</td>
                   <td className="p-4 text-muted-foreground">{user.email || 'Sem e-mail'}</td>
                   <td className="p-4">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase ${
-                      user.roles?.name === 'master' ? 'bg-yellow-500/20 text-yellow-500' :
+                      role === 'master' ? 'bg-yellow-500/20 text-yellow-500' :
                       'bg-primary/20 text-primary'
                     }`}>
-                      {user.roles?.name || 'couple'}
+                      {role}
                     </span>
                   </td>
                   <td className="p-4">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase ${
-                      user.accounts?.status === 'active' ? 'bg-green-500/20 text-green-500' :
-                      user.accounts?.status === 'pending_payment' ? 'bg-orange-500/20 text-orange-500' :
+                      status === 'active' ? 'bg-green-500/20 text-green-500' :
+                      status === 'pending_payment' ? 'bg-orange-500/20 text-orange-500' :
+                      status === 'past_due' ? 'bg-amber-500/20 text-amber-500' :
+                      status === 'canceled' ? 'bg-destructive/20 text-destructive' :
                       'bg-secondary text-muted-foreground'
                     }`}>
-                      {user.accounts?.status || 'Sem conta'}
+                      {status}
                     </span>
                   </td>
                   <td className="p-4 text-right space-x-2">
@@ -191,17 +248,25 @@ export function AdminUsers() {
                     >
                       <Key size={16} />
                     </button>
-                    {user.roles?.name !== 'master' && (
+                    {!isMaster && (
                       <button 
+                        onClick={() => handleUpdateAccess(user, isActive ? 'past_due' : 'active')}
+                        disabled={isUpdating}
                         className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                        title="Bloquear usuário"
+                        title={isActive ? 'Bloquear usuário' : 'Liberar usuário'}
                       >
-                        <ShieldAlert size={16} />
+                        {isUpdating ? (
+                          <RefreshCw size={16} className="animate-spin" />
+                        ) : isActive ? (
+                          <ShieldAlert size={16} />
+                        ) : (
+                          <ShieldCheck size={16} />
+                        )}
                       </button>
                     )}
                   </td>
                 </tr>
-              ))}
+              )})}
               {!loading && filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-muted-foreground">

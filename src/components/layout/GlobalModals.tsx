@@ -7,18 +7,19 @@ interface GlobalModalsProps {
   isModalOpen: boolean;
   supplierToEdit: Supplier | null;
   weddingDate: string;
-  addSupplier: (s: any) => void;
-  updateSupplier: (id: string, s: any) => void;
+  weddingId?: string;
+  addSupplier: (s: Supplier) => void | Promise<void>;
+  updateSupplier: (id: string, s: Supplier) => void | Promise<void>;
   
   isGuestModalOpen: boolean;
   guestToEdit: Guest | null;
-  addGuest: (g: any) => void;
-  updateGuest: (id: string, g: any) => void;
+  addGuest: (g: Omit<Guest, 'id'>) => void | Promise<void>;
+  updateGuest: (id: string, g: Partial<Guest>) => void | Promise<void>;
   
   isTaskModalOpen: boolean;
   taskToEdit: Task | null;
-  addTask: (t: any) => void;
-  updateTask: (id: string, t: any) => void;
+  addTask: (t: Omit<Task, 'id'>) => void | Promise<void>;
+  updateTask: (id: string, t: Partial<Task>) => void | Promise<void>;
   
   onClose: () => void;
 }
@@ -27,6 +28,7 @@ export const GlobalModals = ({
   isModalOpen,
   supplierToEdit,
   weddingDate,
+  weddingId,
   addSupplier,
   updateSupplier,
   isGuestModalOpen,
@@ -44,6 +46,7 @@ export const GlobalModals = ({
       {isModalOpen && (
         <SupplierModal
           weddingDate={weddingDate}
+          weddingId={weddingId}
           onClose={onClose}
           onAdd={addSupplier}
           onUpdate={updateSupplier}

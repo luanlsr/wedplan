@@ -1,22 +1,30 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Input, Badge } from '../ui';
+import { Card, Button, Input, Badge, type ConfirmOptions } from '../ui';
 import {
   ChevronLeft, CheckCircle2, Circle, Calendar, Printer,
   Download, Heart, DollarSign, FileText, Edit2, Info,
   ArrowUp, ArrowDown, ArrowUpDown,
-  Share2, Phone, Mail, MapPin, Building
+  Share2, Phone, Mail, MapPin, Building, Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatCurrency, formatDate } from '../../utils/calculations';
 import { maskCurrency, unmaskCurrency } from '../../utils/masks';
+import {
+  clearSupplierContractFields,
+  createSupplierContractUrl,
+  deleteSupplierContract,
+  formatFileSize,
+  hasSupplierContract
+} from '../../services/contractStorage';
 import type { Supplier, Installment } from '../../types';
 
 interface SupplierDetailsProps {
   suppliers: Supplier[];
   updateInstallment: (supplierId: string, installmentId: string, updates: Partial<Installment>) => void;
+  updateSupplier: (id: string, supplier: Supplier) => void | Promise<void>;
   deleteSupplier: (id: string) => void;
-  confirm: (options: any) => Promise<boolean>;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
   onToggleStatus: (supplierId: string, installment: Installment) => void;
   onEdit: (supplier: Supplier) => void;
 }
@@ -38,6 +46,7 @@ const SortButton = ({ active, onClick, label, direction }: { active: boolean, on
 export const SupplierDetails = ({
   suppliers,
   updateInstallment,
+  updateSupplier,
   deleteSupplier,
   confirm,
   onToggleStatus,
@@ -46,6 +55,8 @@ export const SupplierDetails = ({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [editingInstallmentId, setEditingInstallmentId] = useState<string | null>(null);
+  const [openingContract, setOpeningContract] = useState(false);
+  const [removingContract, setRemovingContract] = useState(false);
 
   // Força o scroll para o topo ao trocar de fornecedor
   useState(() => {
@@ -105,6 +116,46 @@ export const SupplierDetails = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleOpenContract = async () => {
+    if (!currentSupplier || !hasSupplierContract(currentSupplier)) return;
+    setOpeningContract(true);
+    try {
+      const url = await createSupplierContractUrl(currentSupplier);
+      if (!url) throw new Error('Contrato indisponível.');
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível abrir o contrato.';
+      alert(message);
+    } finally {
+      setOpeningContract(false);
+    }
+  };
+
+  const handleRemoveContract = async () => {
+    if (!currentSupplier || !hasSupplierContract(currentSupplier)) return;
+
+    const isConfirmed = await confirm({
+      title: 'Remover contrato?',
+      description: `Isso removerá o documento anexado ao fornecedor "${currentSupplier.fornecedor}". O cadastro e as parcelas serão mantidos.`,
+      type: 'danger',
+      confirmLabel: 'Sim, remover',
+      cancelLabel: 'Cancelar',
+    });
+
+    if (!isConfirmed) return;
+
+    setRemovingContract(true);
+    try {
+      await deleteSupplierContract(currentSupplier.id);
+      await updateSupplier(currentSupplier.id, clearSupplierContractFields(currentSupplier));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível remover o contrato.';
+      alert(message);
+    } finally {
+      setRemovingContract(false);
+    }
   };
 
   if (!currentSupplier) {
@@ -362,11 +413,27 @@ export const SupplierDetails = ({
               <Button 
                 variant="outline" 
                 className="w-full justify-start font-bold h-12"
-                disabled={!currentSupplier.contract_url}
-                onClick={() => currentSupplier.contract_url && window.open(currentSupplier.contract_url, '_blank')}
+                disabled={!hasSupplierContract(currentSupplier) || openingContract || removingContract}
+                onClick={handleOpenContract}
               >
-                <FileText size={18} /> Ver Contrato
+                <FileText size={18} /> {openingContract ? 'Abrindo...' : 'Ver Contrato'}
               </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start font-bold h-12 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                disabled={!hasSupplierContract(currentSupplier) || openingContract || removingContract}
+                onClick={handleRemoveContract}
+              >
+                <Trash2 size={18} /> {removingContract ? 'Removendo...' : 'Remover Contrato'}
+              </Button>
+              {hasSupplierContract(currentSupplier) && (
+                <div className="rounded-xl border border-border bg-secondary/30 p-3 text-xs font-bold text-muted-foreground">
+                  <p className="truncate text-foreground">{currentSupplier.contract_file_name || 'Contrato PDF'}</p>
+                  <p className="mt-1">
+                    Tamanho salvo: {formatFileSize(currentSupplier.contract_compressed_size_bytes || currentSupplier.contract_file_size_bytes)}
+                  </p>
+                </div>
+              )}
               <Button variant="outline" className="w-full justify-start font-bold h-12">
                 <Share2 size={18} /> Compartilhar Dados
               </Button>

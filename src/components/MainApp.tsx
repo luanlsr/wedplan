@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { parseISO, differenceInDays } from "date-fns";
@@ -11,6 +11,7 @@ import { LoadingScreen } from './layout/LoadingScreen';
 import { Dashboard } from './dashboard';
 import { SuppliersList } from './suppliers';
 import { SupplierDetails } from './suppliers/SupplierDetails';
+import { SupplierContractsView } from './suppliers/SupplierContractsView';
 import { FinancialView } from './suppliers/FinancialView';
 import { PlanningView } from './suppliers/PlanningView';
 import { GuestsList } from './guests/GuestsList';
@@ -223,6 +224,7 @@ export function MainApp() {
     const path = location.pathname;
     if (path.includes('/fornecedores/')) return "Detalhes do Fornecedor";
     if (path === "/fornecedores") return "Lista de Fornecedores";
+    if (path === "/contratos") return "Contratos";
     if (path === "/convidados") return "Lista de Convidados";
     if (path === "/tarefas") return "Minhas Tarefas";
     if (path === "/cronograma") return "Cronograma";
@@ -317,16 +319,12 @@ export function MainApp() {
           )
         } />
 
-        {/* Rotas Administrativas */}
-        {data.role === 'master' && (
-          <>
-            <Route path="usuarios" element={<AdminUsers />} />
-            <Route path="assinaturas" element={<AdminSubscriptions />} />
-            <Route path="dominios" element={<AdminDomainRequests />} />
-            <Route path="logs" element={<AdminLogs />} />
-            <Route path="configuracoes-master" element={<AdminSettings />} />
-          </>
-        )}
+        {/* Rotas administrativas blindadas por role master */}
+        <Route path="usuarios" element={<AdminRouteGuard isMaster={data.role === 'master'}><AdminUsers /></AdminRouteGuard>} />
+        <Route path="assinaturas" element={<AdminRouteGuard isMaster={data.role === 'master'}><AdminSubscriptions /></AdminRouteGuard>} />
+        <Route path="dominios" element={<AdminRouteGuard isMaster={data.role === 'master'}><AdminDomainRequests /></AdminRouteGuard>} />
+        <Route path="logs" element={<AdminRouteGuard isMaster={data.role === 'master'}><AdminLogs /></AdminRouteGuard>} />
+        <Route path="configuracoes-master" element={<AdminRouteGuard isMaster={data.role === 'master'}><AdminSettings /></AdminRouteGuard>} />
 
         <Route path="fornecedores" element={
           <SuppliersList
@@ -341,10 +339,19 @@ export function MainApp() {
           <SupplierDetails 
             suppliers={data.fornecedores}
             updateInstallment={updateInstallment}
+            updateSupplier={updateSupplier}
             deleteSupplier={deleteSupplier}
             confirm={confirm}
             onToggleStatus={handleToggleStatus}
             onEdit={handleEditSupplier}
+          />
+        } />
+
+        <Route path="contratos" element={
+          <SupplierContractsView
+            suppliers={data.fornecedores}
+            weddingId={data.id}
+            onUpdateSupplier={updateSupplier}
           />
         } />
 
@@ -423,6 +430,7 @@ export function MainApp() {
         isModalOpen={isModalOpen}
         supplierToEdit={supplierToEdit}
         weddingDate={data.casal.data}
+        weddingId={data.id}
         addSupplier={addSupplier}
         updateSupplier={updateSupplier}
         isGuestModalOpen={isGuestModalOpen}
@@ -451,3 +459,19 @@ export function MainApp() {
     </AppLayout>
   );
 }
+
+const AdminRouteGuard = ({ isMaster, children }: { isMaster: boolean; children: ReactNode }) => {
+  if (isMaster) return <>{children}</>;
+
+  return (
+    <div className="flex min-h-[420px] items-center justify-center">
+      <div className="max-w-md rounded-2xl border border-destructive/20 bg-destructive/10 p-6 text-center">
+        <AlertTriangle className="mx-auto mb-4 text-destructive" size={34} />
+        <h2 className="text-xl font-black uppercase tracking-tight text-foreground">Acesso administrativo restrito</h2>
+        <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">
+          Esta área é exclusiva do perfil Admin Master. Sua sessão atual não tem permissão para visualizar ou executar estas ações.
+        </p>
+      </div>
+    </div>
+  );
+};

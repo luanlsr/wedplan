@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardList,
   DollarSign,
+  FileText,
   Globe2,
   Heart,
   LayoutDashboard,
@@ -53,6 +54,14 @@ const steps: TourStep[] = [
     eyebrow: 'Contratos',
     title: 'Fornecedores',
     description: 'Cadastre fornecedores, contratos, contatos, parcelas e observações para centralizar tudo em um só lugar.',
+  },
+  {
+    id: 'contracts',
+    path: '/contratos',
+    icon: FileText,
+    eyebrow: 'Documentos',
+    title: 'Contratos',
+    description: 'Visualize os PDFs anexados, confira o tamanho compactado e abra o fornecedor relacionado em um clique.',
   },
   {
     id: 'guests',

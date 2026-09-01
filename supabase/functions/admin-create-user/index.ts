@@ -38,13 +38,15 @@ serve(async (req) => {
 
     const { data: callerProfile } = await adminClient
       .from('profiles')
-      .select('roles(name)')
+      .select('role, roles(name)')
       .eq('id', caller.id)
       .maybeSingle()
 
-    const callerRole = (callerProfile as any)?.roles?.name
-    // Permite master ou e-mail hardcoded como fallback
-    if (callerRole !== 'master' && caller.email !== 'luanfswd@gmail.com') {
+    const relationRole = Array.isArray((callerProfile as any)?.roles)
+      ? (callerProfile as any)?.roles?.[0]?.name
+      : (callerProfile as any)?.roles?.name
+    const callerRole = (callerProfile as any)?.role || relationRole
+    if (callerRole !== 'master') {
       return new Response(JSON.stringify({ error: 'Forbidden: only master can create users' }), { status: 403, headers: corsHeaders })
     }
 
@@ -103,7 +105,9 @@ serve(async (req) => {
       id: userId,
       full_name: full_name || '',
       email: email,
+      role: 'couple',
       role_id: coupleRole?.id,
+      account_id: userId,
     })
 
     console.log(`[admin-create-user] ✅ Usuário criado: ${email} (${userId})`)

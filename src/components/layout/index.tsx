@@ -1,4 +1,4 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard, Globe2, Bug, Calculator, CalendarClock } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard, Globe2, Bug, Calculator, CalendarClock, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
@@ -75,6 +75,7 @@ export const Sidebar = ({ isDark, toggleTheme, userRole = 'couple', isCollapsed,
   const coupleItems = [
     { id: "dashboard", path: "/", label: "Dashboard", icon: LayoutDashboard, end: true, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "suppliers", path: "/fornecedores", label: "Fornecedores", icon: Briefcase, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "contracts", path: "/contratos", label: "Contratos", icon: FileText, hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "guests", path: "/convidados", label: "Convidados", icon: Heart, hidden: userRole === 'master' || isPublicMode },
     { id: "tasks", path: "/tarefas", icon: CheckCircle2, label: "Tarefas", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "timeline", path: "/cronograma", icon: CalendarClock, label: "Cronograma", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
@@ -320,6 +321,7 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
 
   const coupleMoreActions = [
     { id: "financial", path: "/financeiro", icon: DollarSign, label: "Financeiro", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
+    { id: "contracts", path: "/contratos", icon: FileText, label: "Contratos", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "timeline", path: "/cronograma", icon: CalendarClock, label: "Cronograma", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "planning", path: "/planejamento", icon: TrendingUp, label: "Planejamento", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },
     { id: "tools", path: "/ferramentas", icon: Calculator, label: "Ferramentas", hidden: userRole === 'master' || userRole === 'staff' || isPublicMode },

@@ -4,20 +4,46 @@ import { Card, Button, Input } from "../ui";
 import { X, Calendar, DollarSign, Briefcase, Percent, Layers, Info, Clock, ChevronDown, Users, Phone, Mail, FileText, MapPin, Upload, FileCheck } from "lucide-react";
 import { generateInstallments, formatCurrency } from "../../utils/calculations";
 import { maskCurrency, unmaskCurrency, maskPhone, maskCPFOrCNPJ } from "../../utils/masks";
-import { supabase } from "../../lib/supabase";
+import { formatFileSize, uploadSupplierContract, type UploadedContract } from "../../services/contractStorage";
 
 interface SupplierModalProps {
   onClose: () => void;
-  onAdd: (supplier: Supplier) => void;
-  onUpdate?: (id: string, supplier: Supplier) => void;
+  onAdd: (supplier: Supplier) => void | Promise<void>;
+  onUpdate?: (id: string, supplier: Supplier) => void | Promise<void>;
   weddingDate: string;
+  weddingId?: string;
   editSupplier?: Supplier | null;
 }
 
-export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSupplier }: SupplierModalProps) => {
+type InstallmentConfig = {
+  startDate: string;
+  finalPaymentDaysBeforeWedding: number;
+  numInstallments?: number;
+  entryValue?: number;
+  entryPercentage?: number;
+  entryInInstallments?: number;
+};
+
+const ACCEPTED_CONTRACT_EXTENSIONS = [".pdf", ".doc", ".docx"];
+const CONTRACT_ACCEPT_ATTRIBUTE = "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.doc,.docx";
+const MAX_CONTRACT_ORIGINAL_BYTES = 25 * 1024 * 1024;
+
+const isAcceptedContractFile = (file: File) => {
+  const fileName = file.name.toLowerCase();
+  return ACCEPTED_CONTRACT_EXTENSIONS.some((extension) => fileName.endsWith(extension));
+};
+
+const getContractFileValidationError = (file: File) => {
+  if (!isAcceptedContractFile(file)) return "Envie um arquivo PDF, DOC ou DOCX válido.";
+  if (file.size > MAX_CONTRACT_ORIGINAL_BYTES) return "O arquivo original deve ter no máximo 25MB.";
+  return null;
+};
+
+export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId, editSupplier }: SupplierModalProps) => {
   const isEditing = !!editSupplier;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
+  const [contractUploadInfo, setContractUploadInfo] = useState<UploadedContract | null>(null);
 
   const [formData, setFormData] = useState({
     fornecedor: "",
@@ -38,11 +64,18 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     email: "",
     cnpj_cpf: "",
     address: "",
-    contract_url: ""
+    contract_url: "",
+    contract_storage_path: "",
+    contract_file_name: "",
+    contract_file_size_bytes: 0,
+    contract_compressed_size_bytes: 0,
+    contract_mime_type: "application/pdf",
+    contract_uploaded_at: ""
   });
 
   useEffect(() => {
     if (editSupplier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         fornecedor: editSupplier.fornecedor,
         servico: editSupplier.servico,
@@ -63,6 +96,12 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
         cnpj_cpf: editSupplier.cnpj_cpf || "",
         address: editSupplier.address || "",
         contract_url: editSupplier.contract_url || "",
+        contract_storage_path: editSupplier.contract_storage_path || "",
+        contract_file_name: editSupplier.contract_file_name || "",
+        contract_file_size_bytes: editSupplier.contract_file_size_bytes || 0,
+        contract_compressed_size_bytes: editSupplier.contract_compressed_size_bytes || 0,
+        contract_mime_type: editSupplier.contract_mime_type || "application/pdf",
+        contract_uploaded_at: editSupplier.contract_uploaded_at || "",
       });
     }
   }, [editSupplier]);
@@ -139,7 +178,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     setIsSubmitting(true);
     const total = unmaskCurrency(formData.valorTotal);
 
-    const config: any = {
+    const config: InstallmentConfig = {
       startDate: formData.dataContrato,
       finalPaymentDaysBeforeWedding: parseInt(formData.finalPaymentDaysBeforeWedding)
     };
@@ -156,33 +195,49 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
     const installments = generateInstallments(weddingDate, total, formData.tipoPagamento, config);
 
     let contractUrl = formData.contract_url;
+    let contractStoragePath = formData.contract_storage_path || null;
+    let contractFileName = formData.contract_file_name || null;
+    let contractFileSizeBytes = formData.contract_file_size_bytes || null;
+    let contractCompressedSizeBytes = formData.contract_compressed_size_bytes || null;
+    let contractMimeType = formData.contract_mime_type || "application/pdf";
+    let contractUploadedAt = formData.contract_uploaded_at || null;
 
     if (contractFile) {
-      if (contractFile.size > 10 * 1024 * 1024) {
-        alert("O contrato deve ter no máximo 10MB");
+      if (!weddingId) {
+        alert("Salve os dados do casamento antes de anexar contratos.");
         setIsSubmitting(false);
         return;
       }
-      const fileExt = contractFile.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${fileName}`;
-      
-      const { error } = await supabase.storage
-        .from('contracts')
-        .upload(filePath, contractFile);
-        
-      if (error) {
+
+      const validationError = getContractFileValidationError(contractFile);
+      if (validationError) {
+        alert(validationError);
+        setIsSubmitting(false);
+        return;
+      }
+
+      try {
+        const uploaded = await uploadSupplierContract({
+          file: contractFile,
+          weddingId,
+          previousPath: formData.contract_storage_path || null,
+        });
+
+        setContractUploadInfo(uploaded);
+        contractUrl = "";
+        contractStoragePath = uploaded.path;
+        contractFileName = uploaded.fileName;
+        contractFileSizeBytes = uploaded.originalSize;
+        contractCompressedSizeBytes = uploaded.compressedSize;
+        contractMimeType = uploaded.mimeType;
+        contractUploadedAt = uploaded.uploadedAt;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro ao fazer upload do contrato. Tente novamente.";
         console.error("Error uploading contract:", error);
-        alert("Erro ao fazer upload do contrato. Tente novamente.");
+        alert(message);
         setIsSubmitting(false);
         return;
       }
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('contracts')
-        .getPublicUrl(filePath);
-        
-      contractUrl = publicUrl;
     }
 
     const supplierData: Supplier = {
@@ -207,13 +262,19 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
       email: formData.email,
       cnpj_cpf: formData.cnpj_cpf,
       address: formData.address,
-      contract_url: contractUrl
+      contract_url: contractUrl,
+      contract_storage_path: contractStoragePath,
+      contract_file_name: contractFileName,
+      contract_file_size_bytes: contractFileSizeBytes,
+      contract_compressed_size_bytes: contractCompressedSizeBytes,
+      contract_mime_type: contractMimeType,
+      contract_uploaded_at: contractUploadedAt
     };
 
     if (isEditing && onUpdate) {
-      onUpdate(editSupplier!.id, supplierData);
+      await onUpdate(editSupplier!.id, supplierData);
     } else {
-      onAdd(supplierData);
+      await onAdd(supplierData);
     }
     setIsSubmitting(false);
     onClose();
@@ -518,24 +579,72 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
 
           <div className="space-y-2">
             <label className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-              <Upload size={16} className="text-primary" /> Contrato em PDF (Max 10MB)
+              <Upload size={16} className="text-primary" /> Contrato ou documento
             </label>
             <div className="mt-2 flex justify-center rounded-xl border border-dashed border-border px-6 py-8 hover:bg-secondary/30 transition-colors">
               <div className="text-center">
-                {contractFile || formData.contract_url ? (
+                {contractFile || formData.contract_storage_path || formData.contract_url ? (
                   <div className="flex flex-col items-center gap-2">
                     <FileCheck className="mx-auto h-12 w-12 text-primary" aria-hidden="true" />
                     <div className="text-sm font-medium text-foreground">
-                      {contractFile ? contractFile.name : 'Contrato anexado'}
+                      {contractFile ? contractFile.name : formData.contract_file_name || 'Contrato anexado'}
                     </div>
+                    {contractFile && (
+                      <p className="text-xs font-bold text-muted-foreground">
+                        Original: {formatFileSize(contractFile.size)}. PDFs serão compactados antes de salvar.
+                      </p>
+                    )}
+                    {!contractFile && formData.contract_compressed_size_bytes > 0 && (
+                      <p className="text-xs font-bold text-muted-foreground">
+                        Salvo com {formatFileSize(formData.contract_compressed_size_bytes)}
+                      </p>
+                    )}
+                    {contractUploadInfo && (
+                      <p className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-primary">
+                        {contractUploadInfo.mimeType === 'application/pdf'
+                          ? `Compactado: ${formatFileSize(contractUploadInfo.originalSize)} para ${formatFileSize(contractUploadInfo.compressedSize)}`
+                          : `Arquivo salvo: ${formatFileSize(contractUploadInfo.compressedSize)}`}
+                      </p>
+                    )}
                     {contractFile && (
                       <button 
                         type="button" 
-                        onClick={() => setContractFile(null)}
+                        onClick={() => {
+                          setContractFile(null);
+                          setContractUploadInfo(null);
+                        }}
                         className="text-xs text-red-500 hover:text-red-400 font-bold"
                       >
                         Remover
                       </button>
+                    )}
+                    {!contractFile && (
+                      <label
+                        htmlFor="contract-file-upload"
+                        className="cursor-pointer rounded-full bg-secondary px-3 py-1.5 text-xs font-black text-foreground transition-colors hover:bg-accent"
+                      >
+                        Trocar arquivo
+                        <input
+                          id="contract-file-upload"
+                          name="contract-file-upload"
+                          type="file"
+                          className="sr-only"
+                          accept={CONTRACT_ACCEPT_ATTRIBUTE}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const validationError = getContractFileValidationError(file);
+                              if (validationError) {
+                                alert(validationError);
+                                e.currentTarget.value = "";
+                                return;
+                              }
+                              setContractFile(file);
+                              setContractUploadInfo(null);
+                            }
+                          }}
+                        />
+                      </label>
                     )}
                   </div>
                 ) : (
@@ -543,24 +652,33 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, editSuppl
                     <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" aria-hidden="true" />
                     <div className="mt-4 flex text-sm leading-6 justify-center">
                       <label
-                        htmlFor="file-upload"
+                        htmlFor="contract-file-upload"
                         className="relative cursor-pointer rounded-md font-semibold text-primary hover:text-primary/80"
                       >
-                        <span>Selecione um arquivo PDF</span>
+                        <span>Selecione PDF ou Word</span>
                         <input 
-                          id="file-upload" 
-                          name="file-upload" 
+                          id="contract-file-upload" 
+                          name="contract-file-upload" 
                           type="file" 
                           className="sr-only" 
-                          accept="application/pdf"
+                          accept={CONTRACT_ACCEPT_ATTRIBUTE}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) setContractFile(file);
+                            if (file) {
+                              const validationError = getContractFileValidationError(file);
+                              if (validationError) {
+                                alert(validationError);
+                                e.currentTarget.value = "";
+                                return;
+                              }
+                              setContractFile(file);
+                              setContractUploadInfo(null);
+                            }
                           }}
                         />
                       </label>
                     </div>
-                    <p className="text-xs leading-5 text-muted-foreground">PDF até 10MB</p>
+                    <p className="text-xs leading-5 text-muted-foreground">PDF, DOC ou DOCX. Até 25MB no envio e até 10MB salvo.</p>
                   </>
                 )}
               </div>

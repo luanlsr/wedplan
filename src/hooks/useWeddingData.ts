@@ -396,6 +396,12 @@ export const useWeddingData = () => {
             cnpj_cpf: s.cnpj_cpf,
             address: s.address,
             contract_url: s.contract_url,
+            contract_storage_path: s.contract_storage_path,
+            contract_file_name: s.contract_file_name,
+            contract_file_size_bytes: s.contract_file_size_bytes ? Number(s.contract_file_size_bytes) : null,
+            contract_compressed_size_bytes: s.contract_compressed_size_bytes ? Number(s.contract_compressed_size_bytes) : null,
+            contract_mime_type: s.contract_mime_type,
+            contract_uploaded_at: s.contract_uploaded_at,
             parcelas: parcelasFormatadas
           };
         }),
@@ -464,7 +470,13 @@ export const useWeddingData = () => {
         email: supplier.email,
         cnpj_cpf: supplier.cnpj_cpf,
         address: supplier.address,
-        contract_url: supplier.contract_url
+        contract_url: supplier.contract_url,
+        contract_storage_path: supplier.contract_storage_path,
+        contract_file_name: supplier.contract_file_name,
+        contract_file_size_bytes: supplier.contract_file_size_bytes,
+        contract_compressed_size_bytes: supplier.contract_compressed_size_bytes,
+        contract_mime_type: supplier.contract_mime_type,
+        contract_uploaded_at: supplier.contract_uploaded_at
       }).select().single();
       if (sError) throw sError;
       let parcelas: Installment[] = [];
@@ -532,6 +544,12 @@ export const useWeddingData = () => {
       if (updated.cnpj_cpf !== undefined) payload.cnpj_cpf = updated.cnpj_cpf;
       if (updated.address !== undefined) payload.address = updated.address;
       if (updated.contract_url !== undefined) payload.contract_url = updated.contract_url;
+      if (updated.contract_storage_path !== undefined) payload.contract_storage_path = updated.contract_storage_path;
+      if (updated.contract_file_name !== undefined) payload.contract_file_name = updated.contract_file_name;
+      if (updated.contract_file_size_bytes !== undefined) payload.contract_file_size_bytes = updated.contract_file_size_bytes;
+      if (updated.contract_compressed_size_bytes !== undefined) payload.contract_compressed_size_bytes = updated.contract_compressed_size_bytes;
+      if (updated.contract_mime_type !== undefined) payload.contract_mime_type = updated.contract_mime_type;
+      if (updated.contract_uploaded_at !== undefined) payload.contract_uploaded_at = updated.contract_uploaded_at;
       const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
       if (error) throw error;
       setData(prev => ({

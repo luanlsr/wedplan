@@ -5,7 +5,7 @@
 ## CRÍTICO
 
 1. **Dados de convidados/RSVP/presentes legíveis e editáveis por qualquer visitante anônimo.** As tabelas `weddings`, `guests`, `confirmacoes`, `lista_presentes`, `categorias_presentes` têm policies com `USING (true)` / `WITH CHECK (true)` para `anon`, sem nenhum filtro por `wedding_id` ou token. Em `confirmacoes`, isso inclui `DELETE`. Correção precisa validar o `public_checkin_token` de fato (hoje nenhuma policy faz isso) e, para as 4 tabelas do sistema de convite separado, coordenar com esse outro consumidor antes de mudar qualquer policy.
-2. **Bucket de storage `contracts` é publicamente legível** (`Public Access` policy sem nenhuma condição além do bucket). Qualquer pessoa baixa qualquer contrato de fornecedor de qualquer casamento, sem login.
+2. **Resolvido em `0019_secure_supplier_contracts.sql`: bucket de storage `contracts` era publicamente legível.** A migration torna o bucket privado, remove a policy pública e restringe acesso por `wedding_id`/membro/master.
 3. **"Check-in via Token Público" não valida token nenhum.** A policy de UPDATE em `guests` só confere que o `wedding_id` existe — o próprio autor original deixou um comentário admitindo a limitação na migration arquivada `0009_checkin_token_rls.sql`. Qualquer pessoa pode marcar qualquer convidado de qualquer casamento como presente.
 
 ## ALTO
