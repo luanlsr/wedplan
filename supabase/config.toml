@@ -6,3 +6,21 @@ verify_jwt = false
 
 [functions.delete-supplier-contract]
 verify_jwt = false
+
+[functions.sync-subscription-access]
+verify_jwt = false
+
+[functions.create-subscription-checkout]
+verify_jwt = false
+
+[functions.request-custom-domain]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.admin-update-user-access]
+verify_jwt = false
+
+[functions.asaas-webhook]
+verify_jwt = false

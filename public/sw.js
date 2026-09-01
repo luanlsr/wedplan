@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wedplan-v2'; // Incrementamos a versão para forçar atualização
+const CACHE_NAME = 'wedplan-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -6,9 +6,8 @@ const ASSETS = [
   '/favicon.svg'
 ];
 
-// Instalação: Cacheia os assets básicos
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Força o novo SW a se tornar ativo imediatamente
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -16,26 +15,33 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Ativação: Limpa caches de versões antigas
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Limpando cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Assume o controle das abas abertas imediatamente
+    }).then(() => self.clients.claim())
   );
 });
 
-// Fetch: Tenta buscar na rede primeiro (Network First)
 self.addEventListener('fetch', (event) => {
-  // Ignora requisições de extensões ou esquemas que não sejam http/https (como chrome-extension)
   if (!event.request.url.startsWith('http')) return;
+
+  const requestUrl = new URL(event.request.url);
+  const appUrl = new URL(self.location.origin);
+
+  if (
+    event.request.method !== 'GET' ||
+    requestUrl.origin !== appUrl.origin ||
+    requestUrl.hostname.endsWith('.supabase.co')
+  ) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)
@@ -50,8 +56,7 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Se a rede falhar (offline), tenta buscar no cache
-        return caches.match(event.request);
+        return caches.match(event.request).then((cachedResponse) => cachedResponse || Response.error());
       })
   );
 });

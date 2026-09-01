@@ -5,7 +5,7 @@ import {
   ChevronLeft, CheckCircle2, Circle, Calendar, Printer,
   Download, Heart, DollarSign, FileText, Edit2, Info,
   ArrowUp, ArrowDown, ArrowUpDown,
-  Share2, Phone, Mail, MapPin, Building, Trash2
+  Share2, Phone, Mail, MapPin, Building, Trash2, X
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatCurrency, formatDate } from '../../utils/calculations';
@@ -15,9 +15,15 @@ import {
   createSupplierContractUrl,
   deleteSupplierContract,
   formatFileSize,
+  getContractFileKind,
   hasSupplierContract
 } from '../../services/contractStorage';
 import type { Supplier, Installment } from '../../types';
+
+type ContractPreviewState = {
+  url: string;
+  mode: 'preview' | 'download';
+};
 
 interface SupplierDetailsProps {
   suppliers: Supplier[];
@@ -58,6 +64,7 @@ export const SupplierDetails = ({
   const [editingInstallmentId, setEditingInstallmentId] = useState<string | null>(null);
   const [openingContract, setOpeningContract] = useState(false);
   const [removingContract, setRemovingContract] = useState(false);
+  const [contractPreview, setContractPreview] = useState<ContractPreviewState | null>(null);
 
   // Força o scroll para o topo ao trocar de fornecedor
   useState(() => {
@@ -125,7 +132,8 @@ export const SupplierDetails = ({
     try {
       const url = await createSupplierContractUrl(currentSupplier);
       if (!url) throw new Error('Contrato indisponível.');
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const fileKind = getContractFileKind(currentSupplier);
+      setContractPreview({ url, mode: fileKind === 'pdf' ? 'preview' : 'download' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível abrir o contrato.';
       await customAlert({
@@ -136,6 +144,63 @@ export const SupplierDetails = ({
       });
     } finally {
       setOpeningContract(false);
+    }
+  };
+
+  const getShareText = (supplier: Supplier) => {
+    const paidTotal = supplier.parcelas.reduce((acc, installment) => installment.status === 'pago' ? acc + installment.valor : acc, 0);
+    const pendingTotal = supplier.parcelas.reduce((acc, installment) => installment.status !== 'pago' ? acc + installment.valor : acc, 0);
+    const nextInstallment = [...supplier.parcelas]
+      .filter((installment) => installment.status !== 'pago')
+      .sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento))[0];
+
+    return [
+      `Fornecedor: ${supplier.fornecedor}`,
+      `Serviço: ${supplier.servico}`,
+      `Categoria: ${supplier.categoria}`,
+      supplier.phone ? `Telefone: ${supplier.phone}` : null,
+      supplier.email ? `E-mail: ${supplier.email}` : null,
+      supplier.cnpj_cpf ? `CPF/CNPJ: ${supplier.cnpj_cpf}` : null,
+      supplier.address ? `Endereço: ${supplier.address}` : null,
+      `Valor contratado: ${formatCurrency(supplier.valorTotal)}`,
+      `Total pago: ${formatCurrency(paidTotal)}`,
+      `Pendente: ${formatCurrency(pendingTotal)}`,
+      nextInstallment ? `Próximo vencimento: ${formatDate(nextInstallment.dataVencimento)} - ${formatCurrency(nextInstallment.valor)}` : null,
+      supplier.contract_file_name ? `Contrato: ${supplier.contract_file_name}` : null,
+      supplier.observacoes ? `Observações: ${supplier.observacoes}` : null,
+    ].filter(Boolean).join('\n');
+  };
+
+  const handleShareSupplier = async () => {
+    if (!currentSupplier) return;
+
+    const shareData = {
+      title: `Dados de ${currentSupplier.fornecedor}`,
+      text: getShareText(currentSupplier),
+    };
+
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareData.text);
+      toast({
+        title: 'Dados copiados',
+        description: 'As informações do fornecedor foram copiadas para compartilhar.',
+        type: 'success',
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+
+      const message = error instanceof Error ? error.message : 'Não foi possível compartilhar os dados.';
+      await customAlert({
+        title: 'Não foi possível compartilhar',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
     }
   };
 
@@ -450,7 +515,7 @@ export const SupplierDetails = ({
                   </p>
                 </div>
               )}
-              <Button variant="outline" className="w-full justify-start font-bold h-12">
+              <Button variant="outline" className="w-full justify-start font-bold h-12" onClick={handleShareSupplier}>
                 <Share2 size={18} /> Compartilhar Dados
               </Button>
               <Button variant="destructive" className="w-full justify-start font-bold h-12" onClick={async () => {
@@ -477,6 +542,55 @@ export const SupplierDetails = ({
           </Card>
         </div>
       </div>
+
+      {contractPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm print:hidden">
+          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Visualização do contrato</p>
+                <h3 className="truncate text-lg font-black text-foreground">{currentSupplier.fornecedor}</h3>
+                <p className="truncate text-xs font-semibold text-muted-foreground">
+                  {currentSupplier.contract_file_name || 'Contrato anexado'}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-xl"
+                  onClick={() => window.open(contractPreview.url, '_blank', 'noopener,noreferrer')}
+                >
+                  <Download size={16} /> Abrir em nova aba
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setContractPreview(null)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Fechar visualização"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            {contractPreview.mode === 'preview' ? (
+              <iframe title={`Contrato de ${currentSupplier.fornecedor}`} src={contractPreview.url} className="min-h-0 flex-1 bg-white" />
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+                <FileText className="text-primary" size={44} />
+                <div>
+                  <h4 className="text-xl font-black text-foreground">Visualização indisponível para Word</h4>
+                  <p className="mt-2 max-w-md text-sm font-semibold leading-6 text-muted-foreground">
+                    Arquivos DOC/DOCX precisam ser abertos em uma nova aba ou baixados para visualização.
+                  </p>
+                </div>
+                <Button className="h-11 rounded-xl" onClick={() => window.open(contractPreview.url, '_blank', 'noopener,noreferrer')}>
+                  <Download size={16} /> Abrir documento
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
