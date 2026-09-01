@@ -27,6 +27,7 @@ type InstallmentConfig = {
 const ACCEPTED_CONTRACT_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const CONTRACT_ACCEPT_ATTRIBUTE = "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.doc,.docx";
 const MAX_CONTRACT_ORIGINAL_BYTES = 25 * 1024 * 1024;
+const MAX_CONTRACT_DIRECT_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 const isAcceptedContractFile = (file: File) => {
   const fileName = file.name.toLowerCase();
@@ -34,8 +35,10 @@ const isAcceptedContractFile = (file: File) => {
 };
 
 const getContractFileValidationError = (file: File) => {
-  if (!isAcceptedContractFile(file)) return "Envie um arquivo PDF, DOC ou DOCX válido.";
-  if (file.size > MAX_CONTRACT_ORIGINAL_BYTES) return "O arquivo original deve ter no máximo 25MB.";
+  if (!isAcceptedContractFile(file)) return `Envie um arquivo PDF, DOC ou DOCX válido. Arquivo selecionado: ${formatFileSize(file.size)}.`;
+  if (file.size > MAX_CONTRACT_ORIGINAL_BYTES) {
+    return `Arquivo selecionado: ${formatFileSize(file.size)}. Limite permitido: ${formatFileSize(MAX_CONTRACT_ORIGINAL_BYTES)}. Excedeu em ${formatFileSize(Math.max(file.size - MAX_CONTRACT_ORIGINAL_BYTES, 0))}.`;
+  }
   return null;
 };
 
@@ -610,6 +613,11 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
                         Original: {formatFileSize(contractFile.size)}. PDFs serão compactados antes de salvar.
                       </p>
                     )}
+                    {contractFile && contractFile.size > MAX_CONTRACT_DIRECT_UPLOAD_BYTES && (
+                      <p className="rounded-full bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        Acima de {formatFileSize(MAX_CONTRACT_DIRECT_UPLOAD_BYTES)} depende da compactação
+                      </p>
+                    )}
                     {!contractFile && formData.contract_compressed_size_bytes > 0 && (
                       <p className="text-xs font-bold text-muted-foreground">
                         Salvo com {formatFileSize(formData.contract_compressed_size_bytes)}
@@ -617,7 +625,9 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
                     )}
                     {contractUploadInfo && (
                       <p className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-primary">
-                        {contractUploadInfo.mimeType === 'application/pdf'
+                        {contractUploadInfo.uploadMode === 'direct'
+                          ? `Arquivo salvo: ${formatFileSize(contractUploadInfo.compressedSize)}`
+                          : contractUploadInfo.mimeType === 'application/pdf'
                           ? `Compactado: ${formatFileSize(contractUploadInfo.originalSize)} para ${formatFileSize(contractUploadInfo.compressedSize)}`
                           : `Arquivo salvo: ${formatFileSize(contractUploadInfo.compressedSize)}`}
                       </p>

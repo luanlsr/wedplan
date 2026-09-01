@@ -10,7 +10,28 @@ export type UploadedContract = {
   compressionRatio: number;
   mimeType: string;
   uploadedAt: string;
+  uploadMode?: 'edge' | 'direct';
 };
+
+const MAX_DIRECT_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const allowedDocuments = [
+  {
+    extension: 'pdf',
+    contentTypes: ['application/pdf'],
+    outputContentType: 'application/pdf',
+  },
+  {
+    extension: 'doc',
+    contentTypes: ['application/msword'],
+    outputContentType: 'application/msword',
+  },
+  {
+    extension: 'docx',
+    contentTypes: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    outputContentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  },
+];
 
 export const formatFileSize = (bytes?: number | null) => {
   if (!bytes || bytes <= 0) return '0 KB';
@@ -19,6 +40,9 @@ export const formatFileSize = (bytes?: number | null) => {
   const value = bytes / Math.pow(1024, index);
   return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
 };
+
+const formatExceededFileLimit = (fileSize: number, limit: number) =>
+  `Arquivo selecionado: ${formatFileSize(fileSize)}. Limite permitido: ${formatFileSize(limit)}. Excedeu em ${formatFileSize(Math.max(fileSize - limit, 0))}.`;
 
 export const hasSupplierContract = (supplier: Supplier) =>
   Boolean(supplier.contract_storage_path || supplier.contract_url);
@@ -54,6 +78,113 @@ const getStoragePathFromLegacyUrl = (url?: string | null) => {
   return path ? decodeURIComponent(path) : null;
 };
 
+const sanitizeFileName = (name: string) =>
+  String(name || 'contrato.pdf')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 120) || 'contrato.pdf';
+
+const getFileExtension = (name: string) =>
+  String(name || '').split('.').pop()?.toLowerCase() || '';
+
+const getAllowedDocument = (file: File, fileName: string) => {
+  const extension = getFileExtension(fileName);
+  return allowedDocuments.find((document) => (
+    document.extension === extension ||
+    document.contentTypes.includes(file.type)
+  ));
+};
+
+const createClientId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const isFunctionFetchError = (error: unknown) => {
+  if (!error) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  const name = error instanceof Error ? error.name : '';
+
+  return (
+    name === 'FunctionsFetchError' ||
+    message.includes('Failed to send a request to the Edge Function') ||
+    message.includes('fetch')
+  );
+};
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const maybeError = error as { message?: string; context?: Response };
+
+  if (maybeError?.context?.clone) {
+    try {
+      const payload = await maybeError.context.clone().json();
+      if (payload?.error) return String(payload.error);
+      if (payload?.message) return String(payload.message);
+    } catch {
+      try {
+        const text = await maybeError.context.clone().text();
+        if (text) return text;
+      } catch {
+        return maybeError.message || fallback;
+      }
+    }
+  }
+
+  return maybeError?.message || fallback;
+};
+
+const uploadSupplierContractDirectly = async ({
+  file,
+  weddingId,
+  previousPath,
+}: {
+  file: File;
+  weddingId: string;
+  previousPath?: string | null;
+}): Promise<UploadedContract> => {
+  const fileName = sanitizeFileName(file.name);
+  const documentType = getAllowedDocument(file, fileName);
+
+  if (!documentType) throw new Error('Envie um arquivo PDF, DOC ou DOCX válido.');
+  if (file.size > MAX_DIRECT_UPLOAD_BYTES) {
+    throw new Error(
+      `A função de compactação não respondeu. Para upload direto temporário, envie um arquivo de até ${formatFileSize(MAX_DIRECT_UPLOAD_BYTES)}. ${formatExceededFileLimit(file.size, MAX_DIRECT_UPLOAD_BYTES)}`
+    );
+  }
+
+  const path = `${weddingId}/${createClientId()}.${documentType.extension}`;
+  const uploadBody = new File([file], fileName, { type: documentType.outputContentType });
+
+  const { error: uploadError } = await supabase.storage
+    .from('contracts')
+    .upload(path, uploadBody, {
+      contentType: documentType.outputContentType,
+      cacheControl: 'private, max-age=0',
+      upsert: false,
+    });
+
+  if (uploadError) throw new Error(`Falha no Storage: ${uploadError.message}`);
+
+  if (previousPath && !previousPath.includes('..') && (previousPath.startsWith(`${weddingId}/`) || !previousPath.includes('/'))) {
+    await supabase.storage.from('contracts').remove([previousPath]);
+  }
+
+  return {
+    path,
+    signedUrl: null,
+    fileName,
+    originalSize: file.size,
+    compressedSize: file.size,
+    compressionRatio: 0,
+    mimeType: documentType.outputContentType,
+    uploadedAt: new Date().toISOString(),
+    uploadMode: 'direct',
+  };
+};
+
 export const uploadSupplierContract = async ({
   file,
   weddingId,
@@ -72,9 +203,18 @@ export const uploadSupplierContract = async ({
     body: formData,
   });
 
-  if (error) throw error;
+  if (error) {
+    if (isFunctionFetchError(error)) {
+      return uploadSupplierContractDirectly({ file, weddingId, previousPath });
+    }
+
+    throw new Error(await getFunctionErrorMessage(error, 'Não foi possível enviar o contrato.'));
+  }
   if (!data?.path) throw new Error('Não foi possível salvar o contrato.');
-  return data;
+  return {
+    ...data,
+    uploadMode: 'edge',
+  };
 };
 
 export const clearSupplierContractFields = (supplier: Supplier): Supplier => ({
@@ -96,23 +236,22 @@ export const createSupplierContractUrl = async (supplier: Supplier): Promise<str
       body: { path: storagePath, supplierId: supplier.id },
     });
 
-    if (error) throw error;
+    if (error) {
+      if (isFunctionFetchError(error)) {
+        const { data: directSigned, error: storageError } = await supabase.storage
+          .from('contracts')
+          .createSignedUrl(storagePath, 60 * 60);
+
+        if (storageError) throw new Error(`Falha ao criar URL assinada no Storage: ${storageError.message}`);
+        return directSigned?.signedUrl || null;
+      }
+
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível abrir o contrato.'));
+    }
     return data?.signedUrl || null;
   }
 
   return supplier.contract_url || null;
-};
-
-const isFunctionFetchError = (error: unknown) => {
-  if (!error) return false;
-  const message = error instanceof Error ? error.message : String(error);
-  const name = error instanceof Error ? error.name : '';
-
-  return (
-    name === 'FunctionsFetchError' ||
-    message.includes('Failed to send a request to the Edge Function') ||
-    message.includes('fetch')
-  );
 };
 
 export const deleteSupplierContract = async (supplierOrId: Supplier | string) => {

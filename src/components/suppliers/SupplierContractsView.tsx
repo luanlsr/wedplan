@@ -30,13 +30,17 @@ type TypeFilter = 'todos' | 'pdf' | 'word';
 const ACCEPT_ATTRIBUTE = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.doc,.docx';
 const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
 const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
+const MAX_DIRECT_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const getFileSizeLimitMessage = (file: File, limit: number) =>
+  `Arquivo selecionado: ${formatFileSize(file.size)}. Limite permitido: ${formatFileSize(limit)}. Excedeu em ${formatFileSize(Math.max(file.size - limit, 0))}.`;
 
 const getUploadValidationError = (file: File) => {
   const fileName = file.name.toLowerCase();
   const isAccepted = ACCEPTED_EXTENSIONS.some((extension) => fileName.endsWith(extension));
 
-  if (!isAccepted) return 'Envie um arquivo PDF, DOC ou DOCX válido.';
-  if (file.size > MAX_ORIGINAL_BYTES) return 'O arquivo original deve ter no máximo 25MB.';
+  if (!isAccepted) return `Envie um arquivo PDF, DOC ou DOCX válido. Arquivo selecionado: ${formatFileSize(file.size)}.`;
+  if (file.size > MAX_ORIGINAL_BYTES) return getFileSizeLimitMessage(file, MAX_ORIGINAL_BYTES);
   return null;
 };
 
@@ -150,8 +154,10 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
       setUploadOpen(false);
       toast({
         title: 'Documento anexado',
-        description: 'O contrato foi salvo no fornecedor selecionado.',
-        type: 'success',
+        description: uploaded.uploadMode === 'direct'
+          ? 'Salvo pelo Storage direto. Publique a Edge Function para compactar PDFs acima de 10MB.'
+          : 'O contrato foi salvo no fornecedor selecionado.',
+        type: uploaded.uploadMode === 'direct' ? 'warning' : 'success',
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível enviar o documento.';
@@ -351,8 +357,15 @@ export const SupplierContractsView = ({ suppliers, weddingId, onUpdateSupplier }
                   {selectedFile ? selectedFile.name : 'Selecionar PDF ou Word'}
                 </span>
                 <span className="mt-1 text-xs font-semibold text-muted-foreground">
-                  Até 25MB no envio e até 10MB salvo
+                  {selectedFile
+                    ? `Tamanho selecionado: ${formatFileSize(selectedFile.size)}`
+                    : 'Até 25MB no envio e até 10MB salvo'}
                 </span>
+                {selectedFile && selectedFile.size > MAX_DIRECT_UPLOAD_BYTES && (
+                  <span className="mt-2 rounded-full bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                    Acima de {formatFileSize(MAX_DIRECT_UPLOAD_BYTES)} depende da compactação
+                  </span>
+                )}
                 <input
                   type="file"
                   className="sr-only"

@@ -59,12 +59,26 @@ const getAllowedDocument = (file: File, fileName: string) => {
 const canAccessWedding = async (adminClient: any, userId: string, weddingId: string) => {
   const { data: profile } = await adminClient
     .from('profiles')
-    .select('id, role, wedding_id')
+    .select('id, role, wedding_id, account_id')
     .eq('id', userId)
     .maybeSingle()
 
   if (profile?.role === 'master') return true
   if (profile?.wedding_id === weddingId) return true
+
+  const { data: wedding } = await adminClient
+    .from('weddings')
+    .select('id, owner_id, account_id')
+    .eq('id', weddingId)
+    .maybeSingle()
+
+  if (
+    wedding?.owner_id === userId ||
+    wedding?.account_id === userId ||
+    (profile?.account_id && wedding?.account_id === profile.account_id)
+  ) {
+    return true
+  }
 
   const { data: membership } = await adminClient
     .from('wedding_members')
