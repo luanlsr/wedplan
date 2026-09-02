@@ -52,6 +52,33 @@ const metrics = [
   { value: "18", label: "exemplo de contratos" },
 ];
 
+const trustSeals = [
+  {
+    icon: ShieldCheck,
+    title: "7 dias de garantia",
+    text: "Teste sem risco, com cancelamento e reembolso dentro da janela.",
+    tone: "emerald",
+  },
+  {
+    icon: LockKeyhole,
+    title: "Site seguro",
+    text: "Checkout protegido e dados financeiros fora do WedPlan.",
+    tone: "sky",
+  },
+  {
+    icon: BadgeCheck,
+    title: "LGPD em prática",
+    text: "Termos, privacidade e aceite registrados com versão.",
+    tone: "rose",
+  },
+  {
+    icon: CreditCard,
+    title: "Pagamento via Asaas",
+    text: "Cartão, Pix e boleto em ambiente de pagamento externo.",
+    tone: "slate",
+  },
+];
+
 const freeToolCards = [
   {
     icon: Calculator,
@@ -370,11 +397,7 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                 Leva menos de 2 minutos para começar. A assinatura é mensal e o pagamento é seguro.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-bold text-slate-600">
-                <span className="inline-flex items-center gap-2"><ShieldCheck size={17} className="text-emerald-600" /> Compra segura</span>
-                <span className="inline-flex items-center gap-2"><LockKeyhole size={17} className="text-sky-600" /> Dados protegidos</span>
-                <span className="inline-flex items-center gap-2"><BadgeCheck size={17} className="text-primary" /> Assinatura mensal</span>
-              </div>
+              <TrustSealRail className="mt-8" compact />
             </Reveal>
 
             <ProductPreview />
@@ -392,6 +415,16 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-white py-6">
+          <Reveal className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {trustSeals.map((seal) => (
+                <TrustSealCard key={seal.title} seal={seal} />
+              ))}
+            </div>
+          </Reveal>
         </section>
 
         <section className="bg-white py-12">
@@ -634,27 +667,48 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-                {["Dados pessoais", "Dados do casamento", "Escolha do plano", "Pagamento seguro", "Primeiros passos"].map((step, index) => (
-                  <div key={step} className="flex gap-4 border-b border-slate-100 py-4 last:border-b-0">
-                    <span className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black",
-                      index < 3 ? "bg-primary text-white" : "bg-slate-100 text-slate-600"
-                    )}>
-                      {index + 1}
-                    </span>
+              <div className="space-y-4">
+                <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                  {["Dados pessoais", "Dados do casamento", "Escolha do plano", "Pagamento seguro", "Primeiros passos"].map((step, index) => (
+                    <div key={step} className="flex gap-4 border-b border-slate-100 py-4 last:border-b-0">
+                      <span className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black",
+                        index < 3 ? "bg-primary text-white" : "bg-slate-100 text-slate-600"
+                      )}>
+                        {index + 1}
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-950">{step}</h3>
+                        <p className="mt-1 text-sm font-medium text-slate-500">
+                          {index === 0 && "Nome, email e telefone para iniciar o cadastro."}
+                          {index === 1 && "Nome do casal e data para personalizar o planejamento."}
+                          {index === 2 && "Escolha o nível ideal para a fase do casamento."}
+                          {index === 3 && "Pagamento protegido com liberação após confirmação."}
+                          {index === 4 && "Orientação inicial para configurar o casamento."}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-lg border border-sky-200 bg-sky-50 p-5 shadow-sm">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h3 className="text-sm font-black text-slate-950">{step}</h3>
-                      <p className="mt-1 text-sm font-medium text-slate-500">
-                        {index === 0 && "Nome, email e telefone para iniciar o cadastro."}
-                        {index === 1 && "Nome do casal e data para personalizar o planejamento."}
-                        {index === 2 && "Escolha o nível ideal para a fase do casamento."}
-                        {index === 3 && "Pagamento protegido com liberação após confirmação."}
-                        {index === 4 && "Orientação inicial para configurar o casamento."}
-                      </p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-sky-700">Pagamentos processados via</p>
+                      <p className="mt-1 text-3xl font-black tracking-normal text-sky-950 [font-family:'Outfit',sans-serif]">Asaas</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {["Cartão", "Pix", "Boleto"].map((method) => (
+                        <span key={method} className="rounded-md border border-sky-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-sky-800">
+                          {method}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                ))}
+                  <p className="mt-4 text-sm font-bold leading-6 text-sky-900">
+                    O WedPlan não armazena número completo de cartão, CVV, senha bancária ou credenciais financeiras.
+                  </p>
+                </div>
               </div>
             </div>
           </Reveal>
@@ -676,9 +730,8 @@ export const LandingPage = ({ onLogin, onGetStarted }: LandingPageProps) => {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm font-black text-emerald-100">
-                <ShieldCheck className="mb-2" size={20} />
-                Teste sem risco por 7 dias. Assine agora e use todos os recursos.
+              <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-5 py-4">
+                <TrustSealRail dark />
               </div>
             </div>
 
@@ -960,6 +1013,77 @@ const ProductPreview = () => (
     </div>
   </div>
 );
+
+type TrustSeal = (typeof trustSeals)[number];
+
+const sealToneClasses: Record<TrustSeal["tone"], { icon: string; ring: string; panel: string }> = {
+  emerald: {
+    icon: "bg-emerald-500/10 text-emerald-700",
+    ring: "border-emerald-200",
+    panel: "bg-emerald-50/70",
+  },
+  sky: {
+    icon: "bg-sky-500/10 text-sky-700",
+    ring: "border-sky-200",
+    panel: "bg-sky-50/70",
+  },
+  rose: {
+    icon: "bg-primary/10 text-primary",
+    ring: "border-primary/20",
+    panel: "bg-[#fff7f5]",
+  },
+  slate: {
+    icon: "bg-slate-900 text-white",
+    ring: "border-slate-200",
+    panel: "bg-slate-50",
+  },
+};
+
+const TrustSealCard = ({ seal }: { seal: TrustSeal }) => {
+  const Icon = seal.icon;
+  const tone = sealToneClasses[seal.tone];
+
+  return (
+    <article className={cn("rounded-lg border p-4 shadow-sm", tone.ring, tone.panel)}>
+      <div className="flex items-start gap-3">
+        <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", tone.icon)}>
+          <Icon size={20} />
+        </span>
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-950">{seal.title}</h3>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{seal.text}</p>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+const TrustSealRail = ({ className, compact = false, dark = false }: { className?: string; compact?: boolean; dark?: boolean }) => {
+  const visibleSeals = compact ? [trustSeals[0], trustSeals[3]] : trustSeals;
+
+  return (
+    <div className={cn(compact ? "grid max-w-md grid-cols-1 gap-2 sm:grid-cols-2" : "flex flex-wrap gap-2", className)}>
+      {visibleSeals.map((seal) => {
+        const Icon = seal.icon;
+
+        return (
+          <span
+            key={seal.title}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black uppercase leading-4 tracking-[0.1em]",
+              compact && "justify-center px-2 text-[10px]",
+              compact ? "bg-white/85" : "bg-white",
+              dark ? "border-white/10 bg-white/10 text-white" : "border-slate-200 text-slate-700"
+            )}
+          >
+            <Icon size={15} className={dark ? "text-emerald-200" : "text-primary"} />
+            {seal.title}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
 
 const CompareCard = ({ title, items, tone }: { title: string; items: string[]; tone: "old" | "new" }) => (
   <article className={cn(

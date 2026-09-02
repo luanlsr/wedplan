@@ -488,8 +488,8 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
 
   return (
     <AuthLayout
-      className="h-full max-w-[1500px]"
-      contentClassName="flex h-[calc(100dvh-1rem)] max-h-[820px] flex-col overflow-hidden sm:h-[calc(100dvh-1.5rem)] lg:h-[calc(100dvh-2rem)]"
+      className="h-auto min-h-full max-w-[1500px] pb-36 sm:pb-0"
+      contentClassName="flex min-h-[calc(100dvh-1rem)] flex-col overflow-visible sm:min-h-[calc(100dvh-1.5rem)] lg:h-[calc(100dvh-2rem)] lg:max-h-[820px] lg:min-h-0 lg:overflow-hidden"
       title={checkoutSteps[currentStepIndex]?.label || 'Checkout'}
       subtitle="Um fluxo guiado para criar seu espaço, escolher o plano e iniciar a assinatura."
       compact
@@ -536,10 +536,10 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
           isPlanStep ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.65fr)]"
         )}>
           <main className={cn(
-            "flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5 lg:p-5",
+            "flex min-h-0 flex-col overflow-visible rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5 lg:overflow-hidden lg:p-5",
             isPlanStep && "lg:p-4"
           )}>
-            <div className="min-h-0 flex-1 overflow-hidden animate-in fade-in slide-in-from-right-3 duration-300">
+            <div className="min-h-0 flex-1 overflow-visible animate-in fade-in slide-in-from-right-3 duration-300 lg:overflow-x-hidden lg:overflow-y-auto lg:pr-1 custom-scrollbar">
               {routeStep === 'dados-pessoais' && (
                 <PersonalStep checkout={checkout} updateCheckout={updateCheckout} />
               )}
@@ -577,7 +577,7 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
                   type="button"
                   variant="outline"
                   onClick={currentStepIndex === 0 ? onNavigateToLogin : goBack}
-                  className="h-11 rounded-xl px-5"
+                  className="min-h-11 w-full rounded-xl px-5 py-3 sm:h-11 sm:w-auto sm:py-0"
                   disabled={loading}
                 >
                   <ArrowLeft size={17} />
@@ -589,7 +589,7 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
                     type="button"
                     onClick={startCheckout}
                     disabled={loading || !checkout.acceptedTerms || !checkout.acceptedPrivacy}
-                    className="h-11 rounded-xl px-5 font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+                    className="min-h-11 w-full min-w-0 rounded-xl px-4 py-3 text-center font-black uppercase leading-5 tracking-[0.08em] shadow-xl shadow-primary/20 sm:h-11 sm:w-auto sm:px-5 sm:py-0 sm:tracking-widest"
                   >
                     {loading ? (
                       <>
@@ -607,7 +607,7 @@ export const SignUpForm = ({ onNavigateToLogin }: SignUpFormProps) => {
                   <Button
                     type="button"
                     onClick={goNext}
-                    className="h-11 rounded-xl px-5 font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+                    className="min-h-11 w-full rounded-xl px-4 py-3 text-center font-black uppercase leading-5 tracking-[0.08em] shadow-xl shadow-primary/20 sm:h-11 sm:w-auto sm:px-5 sm:py-0 sm:tracking-widest"
                   >
                     {routeStep === 'casamento' ? 'Escolher meu plano' : routeStep === 'plano' ? 'Continuar para pagamento' : 'Continuar'}
                     <ArrowRight size={17} />
@@ -653,7 +653,7 @@ const PersonalStep = ({
           type="text"
           autoComplete="name"
           placeholder="Ex: Maria Oliveira"
-          className="h-14 rounded-xl bg-background pl-12"
+          className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
           value={checkout.fullName}
           onChange={(e) => updateCheckout({ fullName: e.target.value })}
           required
@@ -665,7 +665,7 @@ const PersonalStep = ({
           type="email"
           autoComplete="email"
           placeholder="exemplo@email.com"
-          className="h-14 rounded-xl bg-background pl-12"
+          className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
           value={checkout.email}
           onChange={(e) => updateCheckout({ email: e.target.value.toLowerCase() })}
           required
@@ -679,7 +679,7 @@ const PersonalStep = ({
           autoComplete="tel"
           placeholder="(00) 00000-0000"
           maxLength={15}
-          className="h-14 rounded-xl bg-background pl-12"
+          className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
           value={checkout.phone}
           onChange={(e) => updateCheckout({ phone: maskPhone(e.target.value) })}
           required
@@ -725,7 +725,7 @@ const WeddingStep = ({
             type="text"
             autoComplete="given-name"
             placeholder="Ex: Luan"
-            className="h-14 rounded-xl bg-background pl-12"
+            className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
             value={checkout.partnerName || firstName}
             onChange={(e) => updateNames({ partnerName: e.target.value })}
             required
@@ -736,7 +736,7 @@ const WeddingStep = ({
           <Input
             type="text"
             placeholder="Ex: Laís"
-            className="h-14 rounded-xl bg-background pl-12"
+            className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
             value={getPartnerFromWeddingName(checkout)}
             onChange={(e) => {
               const partner = e.target.value;
@@ -752,7 +752,7 @@ const WeddingStep = ({
           <Input
             type="text"
             placeholder="Ex: Luan & Laís"
-            className="h-14 rounded-xl bg-background pl-12"
+            className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
             value={checkout.weddingName}
             onChange={(e) => updateCheckout({ weddingName: e.target.value })}
             required
@@ -762,7 +762,7 @@ const WeddingStep = ({
         <Field label="Data do casamento" icon={Calendar}>
           <Input
             type="date"
-            className="h-14 rounded-xl bg-background pl-12"
+            className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
             value={checkout.weddingDate}
             onChange={(e) => updateCheckout({ weddingDate: e.target.value })}
             required
@@ -773,7 +773,7 @@ const WeddingStep = ({
           <Input
             type="text"
             placeholder="Ex: Araçatuba, SP"
-            className="h-14 rounded-xl bg-background pl-12"
+            className="h-[3.25rem] min-w-0 rounded-xl bg-background pl-11 pr-3 sm:h-14 sm:pl-12"
             value={checkout.weddingCity}
             onChange={(e) => updateCheckout({ weddingCity: e.target.value })}
           />
@@ -805,7 +805,7 @@ const PlanStep = ({
   plansLoading: boolean;
   updateCheckout: (patch: Partial<CheckoutState>) => void;
 }) => (
-  <section className="flex h-full min-h-0 flex-col">
+  <section className="flex min-h-full flex-col lg:h-full lg:min-h-0">
     <div className="mb-3 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Assinatura</p>
@@ -841,7 +841,7 @@ const PlanStep = ({
       )}
     </div>
 
-    <div className="grid min-h-0 flex-1 auto-rows-fr gap-3 [grid-template-columns:repeat(auto-fit,minmax(215px,1fr))] 2xl:[grid-template-columns:repeat(auto-fit,minmax(235px,1fr))]">
+    <div className="grid min-h-0 flex-1 auto-rows-auto gap-3 [grid-template-columns:repeat(auto-fit,minmax(215px,1fr))] lg:auto-rows-fr 2xl:[grid-template-columns:repeat(auto-fit,minmax(235px,1fr))]">
       {plans.map((plan) => {
         const isSelected = plan.code === checkout.planCode;
         const value = checkout.billingInterval === 'yearly' ? plan.price_yearly || plan.price_monthly * 12 : plan.price_monthly;
@@ -938,7 +938,7 @@ const PaymentStep = ({
           type="button"
           onClick={() => updateCheckout({ paymentMethod: method.id as PaymentMethod })}
           className={cn(
-            'flex h-16 items-center justify-center gap-2 rounded-2xl border text-sm font-black transition-all',
+            'flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-black transition-all sm:h-16 sm:py-0',
             checkout.paymentMethod === method.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'
           )}
         >
@@ -949,11 +949,11 @@ const PaymentStep = ({
     </div>
 
     <div className="mt-5 rounded-2xl border border-border bg-background p-4">
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <LockKeyhole size={20} />
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="text-lg font-black text-foreground">Pagamento seguro via Asaas</h3>
           <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
             O WedPlan não coleta número do cartão, CVV, senha bancária ou chave Pix. Ao assinar, você será direcionado para o checkout seguro do Asaas.
@@ -963,11 +963,11 @@ const PaymentStep = ({
     </div>
 
     <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
           <ShieldCheck size={20} />
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="text-lg font-black text-foreground">Teste sem risco por 7 dias</h3>
           <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
             Assine agora e use todos os recursos. Se dentro de 7 dias você decidir que o WedPlan não é para você, basta solicitar o cancelamento e o reembolso.
@@ -1000,7 +1000,7 @@ const SuccessStep = ({
   selectedPlan: Plan;
   selectedValue: number;
 }) => (
-  <div className="flex h-full min-h-0 flex-col items-center justify-center text-center">
+  <div className="flex min-h-full flex-col items-center justify-start py-6 text-center lg:h-full lg:min-h-0 lg:justify-center lg:py-0">
     <div className="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
       <CheckCircle2 size={48} />
     </div>
@@ -1218,7 +1218,7 @@ const StepShell = ({
   icon: ElementType;
   children: ReactNode;
 }) => (
-  <section className="flex h-full min-h-0 flex-col">
+  <section className="flex min-h-full flex-col lg:h-full lg:min-h-0">
     <div className="mb-5 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-start">
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
         <Icon size={23} />
@@ -1246,8 +1246,8 @@ const Field = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn('space-y-2', className)}>
-    <label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
+  <div className={cn('min-w-0 space-y-2', className)}>
+    <label className="ml-1 block text-[11px] font-black uppercase tracking-[0.12em] text-muted-foreground sm:tracking-widest">{label}</label>
     <div className="relative group">
       <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
       {children}
@@ -1264,14 +1264,14 @@ const Checkbox = ({
   onChange: (checked: boolean) => void;
   children: ReactNode;
 }) => (
-  <label className="flex items-start gap-3 rounded-2xl border border-border bg-background p-4 text-xs font-bold text-muted-foreground">
+  <label className="flex items-start gap-3 rounded-2xl border border-border bg-background p-3 text-xs font-bold leading-5 text-muted-foreground sm:p-4">
     <input
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+      className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
     />
-    <span>{children}</span>
+    <span className="min-w-0">{children}</span>
   </label>
 );
 

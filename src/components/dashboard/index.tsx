@@ -81,6 +81,35 @@ const EMPTY_GUESTS: Guest[] = [];
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_TIMELINE: TimelineCategory[] = [];
 
+const CoupleNameTitle = ({ firstName, secondName }: { firstName: string; secondName: string }) => {
+  if (!firstName && !secondName) {
+    return (
+      <h2 className="mx-auto mt-1 max-w-full truncate text-center text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
+        Planejamento do casamento
+      </h2>
+    );
+  }
+
+  const fullName = [firstName, secondName].filter(Boolean).join(" & ");
+  const shouldStack = fullName.length > 30 || firstName.length > 16 || secondName.length > 16;
+
+  if (shouldStack && firstName && secondName) {
+    return (
+      <h2 className="mx-auto mt-1 grid max-w-full justify-items-center text-center font-black leading-none tracking-tight text-foreground">
+        <span className="max-w-full truncate text-[clamp(1.3rem,7vw,2rem)] sm:text-3xl">{firstName}</span>
+        <span className="my-1 text-[clamp(1rem,4vw,1.35rem)] text-primary">&</span>
+        <span className="max-w-full truncate text-[clamp(1.3rem,7vw,2rem)] sm:text-3xl">{secondName}</span>
+      </h2>
+    );
+  }
+
+  return (
+    <h2 className="mx-auto mt-1 max-w-full truncate text-center text-[clamp(1.15rem,5.4vw,1.65rem)] font-black leading-tight tracking-tight text-foreground sm:text-2xl">
+      {fullName}
+    </h2>
+  );
+};
+
 export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps) => {
   const guests = data.convidados || EMPTY_GUESTS;
   const tasks = data.tarefas || EMPTY_TASKS;
@@ -171,25 +200,27 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
   const paidRate = stats.totalContratado > 0 ? Math.round((stats.totalPago / stats.totalContratado) * 100) : 0;
   const budgetBalance = stats.totalOrcado - stats.totalContratado;
   const weddingDays = daysFromToday(weddingDate);
+  const coupleName = {
+    first: data.casal.nome1.trim(),
+    second: data.casal.nome2.trim(),
+  };
 
   return (
-    <div className="space-y-4 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 sm:space-y-6">
+    <div className="w-full min-w-0 max-w-full space-y-4 overflow-x-clip pb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 sm:space-y-6">
       <WeddingCountdown weddingDate={weddingDate} compact />
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
-        <Card className="overflow-hidden border-border bg-card p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
+      <section className="grid min-w-0 max-w-full gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
+        <Card className="min-w-0 overflow-hidden border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 text-center lg:flex-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">Visão geral do sistema</p>
-              <h2 className="mt-1 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
-                {data.casal.nome1 || data.casal.nome2 ? `${data.casal.nome1} & ${data.casal.nome2}` : "Planejamento do casamento"}
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-muted-foreground sm:block">
+              <CoupleNameTitle firstName={coupleName.first} secondName={coupleName.second} />
+              <p className="mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 text-muted-foreground sm:block">
                 Acompanhe orçamento, pagamentos, convidados, fornecedores, tarefas e próximos eventos.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:min-w-[520px]">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:w-[520px] lg:shrink-0">
               <Metric label="Fornecedores" value={supplierOverview.total} icon={Briefcase} />
               <Metric label="Convidados" value={guestStats.totalPeople} icon={Users} />
               <Metric label="Tarefas abertas" value={taskOverview.open} icon={ListChecks} />
@@ -198,7 +229,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
           </div>
         </Card>
 
-        <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+        <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">Ações rápidas</p>
@@ -208,7 +239,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
               <Plus size={16} /> Fornecedor
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid min-w-0 grid-cols-2 gap-2">
             <QuickAction label="Convidados" icon={Heart} onClick={() => onAction("guests")} />
             <QuickAction label="Financeiro" icon={CircleDollarSign} onClick={() => onAction("financial")} />
             <QuickAction label="Tarefas" icon={CheckCircle2} onClick={() => onAction("tasks")} />
@@ -217,7 +248,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
         </Card>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <InsightCard
           title="Financeiro"
           value={formatCurrency(stats.totalRestante)}
@@ -252,9 +283,9 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+          <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Financeiro" title="Próximos vencimentos" actionLabel="Ver financeiro" onAction={() => onAction("financial")} />
             <div className="mt-4 space-y-3">
               {stats.proximosVencimentos.length > 0 ? (
@@ -267,7 +298,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+          <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Tarefas" title="O que fazer agora" actionLabel="Ver tarefas" onAction={() => onAction("tasks")} />
             <div className="mt-4 space-y-3">
               {taskOverview.nextTasks.length > 0 ? (
@@ -278,7 +309,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+          <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Cronograma" title="Próximas etapas" actionLabel="Ver cronograma" onAction={() => onAction("timeline")} />
             <div className="mt-4 space-y-3">
               {nextTimelineItems.length > 0 ? (
@@ -289,14 +320,14 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+          <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Fornecedores" title="Contratos e status" actionLabel="Ver fornecedores" onAction={() => onAction("suppliers")} />
             <div className="mt-4 space-y-4">
               <ProgressRow label="Contratos anexados" value={supplierOverview.contractRate} helper={`${supplierOverview.withContracts}/${supplierOverview.total || 0}`} />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid min-w-0 grid-cols-2 gap-2">
                 {Object.entries(supplierOverview.byStatus).map(([status, count]) => (
-                  <div key={status} className="rounded-xl border border-border bg-secondary/20 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{statusLabel[status as keyof typeof statusLabel]}</p>
+                  <div key={status} className="min-w-0 rounded-xl border border-border bg-secondary/20 p-3">
+                    <p className="truncate text-[10px] font-black uppercase tracking-[0.08em] text-muted-foreground sm:tracking-widest">{statusLabel[status as keyof typeof statusLabel]}</p>
                     <p className="mt-1 text-xl font-black text-foreground">{count}</p>
                   </div>
                 ))}
@@ -305,13 +336,13 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
           </Card>
         </div>
 
-        <aside className="space-y-6">
-          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+        <aside className="min-w-0 space-y-6">
+          <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Convidados" title="Status da lista" actionLabel="Ver lista" onAction={() => onAction("guests")} />
             <div className="mt-4 space-y-4">
               <ProgressRow label="Convites enviados" value={guestStats.inviteRate} helper={`${guestStats.invited}/${guestStats.totalGuests}`} />
               <ProgressRow label="Confirmações" value={guestStats.confirmationRate} helper={`${guestStats.confirmedPeople} pessoas`} />
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid min-w-0 grid-cols-3 gap-2">
                 <SmallStat label="Confirmadas" value={guestStats.confirmedPeople} tone="success" />
                 <SmallStat label="Pendentes" value={guestStats.pendingPeople} tone="warning" />
                 <SmallStat label="Recusadas" value={guestStats.declinedPeople} tone="danger" />
@@ -319,7 +350,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
             </div>
           </Card>
 
-          <Card className="border-border bg-card p-4 shadow-sm sm:p-5">
+          <Card className="min-w-0 border-border bg-card p-4 shadow-sm sm:p-5">
             <SectionHeader eyebrow="Orçamento" title="Maiores categorias" actionLabel="Contratos" onAction={() => onAction("contracts")} />
             <div className="mt-4 space-y-3">
               {categorySpend.length > 0 ? (
@@ -327,7 +358,7 @@ export const Dashboard = ({ data, stats, weddingDate, onAction }: DashboardProps
                   const percent = stats.totalContratado > 0 ? Math.round((item.value / stats.totalContratado) * 100) : 0;
                   return (
                     <div key={item.name} className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <span className="truncate text-sm font-black text-foreground">{item.name}</span>
                         <span className="shrink-0 text-xs font-black text-muted-foreground">{formatCurrency(item.value)}</span>
                       </div>
@@ -360,7 +391,7 @@ const QuickAction = ({ label, icon: Icon, onClick }: { label: string; icon: Reac
   <button
     type="button"
     onClick={onClick}
-    className="flex h-12 items-center justify-between gap-3 rounded-xl border border-border bg-secondary/20 px-3 text-left text-sm font-black text-foreground transition hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+    className="flex h-12 min-w-0 items-center justify-between gap-2 rounded-xl border border-border bg-secondary/20 px-3 text-left text-sm font-black text-foreground transition hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
   >
     <span className="flex min-w-0 items-center gap-2">
       <Icon size={16} className="shrink-0" />
@@ -395,7 +426,7 @@ const InsightCard = ({
   <button
     type="button"
     onClick={onClick}
-    className="rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg sm:p-5"
+    className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg sm:p-5"
   >
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
@@ -421,10 +452,10 @@ const SectionHeader = ({
   actionLabel: string;
   onAction: () => void;
 }) => (
-  <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+  <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between">
     <div className="min-w-0">
       <p className="text-[10px] font-black uppercase tracking-widest text-primary">{eyebrow}</p>
-      <h3 className="mt-1 text-lg font-black text-foreground">{title}</h3>
+      <h3 className="mt-1 truncate text-lg font-black text-foreground">{title}</h3>
     </div>
     <button
       type="button"
@@ -442,17 +473,17 @@ const PaymentItem = ({ item }: { item: FinancialStats["proximosVencimentos"][num
   const isLate = days !== null && days < 0;
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl font-black", isLate ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500")}>
         {parseDate(item.data)?.getDate() || "-"}
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-black text-foreground">{item.fornecedor}</p>
-        <p className="text-xs font-semibold text-muted-foreground">
+        <p className="truncate text-xs font-semibold text-muted-foreground">
           Parcela {item.parcela}/{item.totalParcelas} · {formatDate(item.data)}
         </p>
       </div>
-      <div className="col-span-2 text-left sm:col-span-1 sm:text-right">
+      <div className="col-span-2 min-w-0 text-left sm:col-span-1 sm:text-right">
         <p className="text-sm font-black text-foreground">{formatCurrency(item.valor)}</p>
         <p className={cn("text-[10px] font-black uppercase tracking-wide", isLate ? "text-red-500" : "text-amber-500")}>
           {isLate ? `${Math.abs(days || 0)}d atraso` : days === 0 ? "Hoje" : `${days}d`}
@@ -467,13 +498,13 @@ const TaskItem = ({ task }: { task: Task }) => {
   const isLate = days !== null && days < 0;
 
   return (
-    <div className="rounded-xl border border-border bg-secondary/20 p-3">
+    <div className="min-w-0 rounded-xl border border-border bg-secondary/20 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-black text-foreground">{task.titulo}</p>
-          <p className="mt-1 text-xs font-semibold text-muted-foreground">{task.categoria} · {formatDate(task.dataLimite)}</p>
+          <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">{task.categoria} · {formatDate(task.dataLimite)}</p>
         </div>
-        <Badge className="max-w-full" variant={isLate ? "error" : task.status === "em_progresso" ? "warning" : "outline"}>
+        <Badge className="min-w-0 max-w-[48%] shrink whitespace-normal leading-3" variant={isLate ? "error" : task.status === "em_progresso" ? "warning" : "outline"}>
           {taskStatusLabel[task.status]}
         </Badge>
       </div>
@@ -485,13 +516,13 @@ const TimelineDashboardItem = ({ item }: { item: TimelineEntry }) => {
   const days = daysFromToday(item.data);
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.category.cor }} />
       <div className="min-w-0">
         <p className="truncate text-sm font-black text-foreground">{item.titulo}</p>
-        <p className="text-xs font-semibold text-muted-foreground">{item.category.nome} · {formatDate(item.data)}</p>
+        <p className="truncate text-xs font-semibold text-muted-foreground">{item.category.nome} · {formatDate(item.data)}</p>
       </div>
-      <span className="col-span-2 w-fit rounded-lg bg-background px-2 py-1 text-[10px] font-black uppercase text-muted-foreground sm:col-span-1">
+      <span className="col-span-2 w-fit max-w-full rounded-lg bg-background px-2 py-1 text-[10px] font-black uppercase text-muted-foreground sm:col-span-1">
         {days === null ? "Sem data" : days < 0 ? `${Math.abs(days)}d atraso` : days === 0 ? "Hoje" : `${days}d`}
       </span>
     </div>
@@ -500,8 +531,8 @@ const TimelineDashboardItem = ({ item }: { item: TimelineEntry }) => {
 
 const ProgressRow = ({ label, value, helper }: { label: string; value: number; helper: string }) => (
   <div className="space-y-2">
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm font-black text-foreground">{label}</span>
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <span className="min-w-0 truncate text-sm font-black text-foreground">{label}</span>
       <span className="shrink-0 text-xs font-bold text-muted-foreground">{helper}</span>
     </div>
     <ProgressBar value={value} />
@@ -515,8 +546,8 @@ const ProgressBar = ({ value }: { value: number }) => (
 );
 
 const SmallStat = ({ label, value, tone }: { label: string; value: number; tone: keyof typeof toneStyles }) => (
-  <div className={cn("rounded-xl p-3 text-center", toneStyles[tone])}>
-    <p className="text-[10px] font-black uppercase tracking-wide">{label}</p>
+  <div className={cn("min-w-0 rounded-xl p-2 text-center sm:p-3", toneStyles[tone])}>
+    <p className="truncate text-[9px] font-black uppercase tracking-normal sm:text-[10px] sm:tracking-wide">{label}</p>
     <p className="mt-1 text-xl font-black">{value}</p>
   </div>
 );

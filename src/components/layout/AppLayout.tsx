@@ -48,7 +48,7 @@ export const AppLayout = ({
 
   return (
     <div className={cn(
-      "wedplan-app min-h-screen transition-colors duration-500 flex flex-col lg:flex-row", 
+      "wedplan-app min-h-screen overflow-x-clip transition-colors duration-500 flex flex-col lg:flex-row", 
       isDark ? "dark text-foreground" : "text-foreground"
     )}>
       <Sidebar
@@ -68,10 +68,10 @@ export const AppLayout = ({
       )}
 
       <main className={cn(
-        "flex-1 min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",
+        "min-w-0 flex-1 overflow-x-clip min-h-screen pb-24 lg:pb-10 transition-all duration-500 ease-in-out",
         isSidebarCollapsed ? "lg:ml-24" : "lg:ml-80"
       )} ref={mainRef}>
-        <div className="max-w-[1500px] mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] min-w-0 p-3 sm:p-6 lg:p-8">
           <Header title={pageTitle} isDark={isDark} toggleTheme={toggleTheme} />
           {children}
         </div>

@@ -26,7 +26,7 @@ export const AuthLayout = ({
   return (
     <div className={cn(
       "min-h-screen w-full flex items-center justify-center bg-background p-4 relative overflow-hidden",
-      compact && "items-stretch p-2 sm:p-3 lg:p-4"
+      compact && "items-stretch overflow-x-hidden overflow-y-auto p-2 sm:p-3 lg:p-4"
     )}>
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">

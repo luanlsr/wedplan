@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { LandingPage } from './components/layout/LandingPage';
 import { CookieConsent } from './components/layout/CookieConsent';
@@ -21,8 +21,20 @@ const PageFallback = () => <LoadingScreen label="Preparando sua experiência" />
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const hasToken = new URLSearchParams(window.location.search).has('token');
+  const landingPage = (
+    <LandingPage
+      onGetStarted={(options) => {
+        const params = new URLSearchParams();
+        if (options?.plan) params.set('plan', options.plan);
+        if (options?.billing) params.set('billing', options.billing);
+        navigate(`/checkout/dados-pessoais${params.toString() ? `?${params.toString()}` : ''}`);
+      }}
+      onLogin={() => navigate('/login')}
+    />
+  );
 
   if (loading) {
     return <LoadingScreen label="Verificando sua sessão" />;
@@ -31,19 +43,6 @@ function AppRoutes() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>
-        <Route path="/" element={
-          (user || hasToken) ? <MainApp /> :
-          <LandingPage
-            onGetStarted={(options) => {
-              const params = new URLSearchParams();
-              if (options?.plan) params.set('plan', options.plan);
-              if (options?.billing) params.set('billing', options.billing);
-              navigate(`/checkout/dados-pessoais${params.toString() ? `?${params.toString()}` : ''}`);
-            }}
-            onLogin={() => navigate('/login')}
-          />
-        } />
-
         <Route path="/casamento/:slug" element={<WeddingSitePublic />} />
         <Route path="/casamento/:slug/presentes" element={<WeddingGiftsPublic />} />
         {!user && <Route path="/ferramentas" element={<FreeWeddingTools />} />}
@@ -82,12 +81,9 @@ function AppRoutes() {
           />
         } />
 
-        {/* Rota para o check-in direto via token */}
-        {hasToken && <Route path="/checkin" element={<MainApp />} />}
-
-        {/* Rota catch-all: Se logado ou com token, vai pro MainApp. Se não, volta pro Início */}
+        {/* Rota catch-all: mantém o MainApp sob /* para suportar rotas internas. */}
         <Route path="/*" element={
-          (user || hasToken) ? <MainApp /> : <Navigate to="/" replace />
+          (user || hasToken) ? <MainApp /> : location.pathname === '/' ? landingPage : <Navigate to="/" replace />
         } />
       </Routes>
     </Suspense>

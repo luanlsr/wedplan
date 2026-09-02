@@ -10,6 +10,22 @@ interface LoginFormProps {
   onNavigateToForgot: () => void;
 }
 
+const getLoginErrorMessage = (message: string) => {
+  if (message === 'SESSION_NOT_READY') {
+    return 'Não foi possível confirmar sua sessão. Tente novamente em instantes.';
+  }
+
+  if (message === 'Invalid login credentials') {
+    return 'E-mail ou senha incorretos.';
+  }
+
+  if (message.toLowerCase().includes('fetch')) {
+    return 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.';
+  }
+
+  return message;
+};
+
 export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,16 +37,26 @@ export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }:
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (error) {
-      setError(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message);
+      if (error) throw error;
+
+      if (!data.session) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!sessionData.session) throw new Error('SESSION_NOT_READY');
+      }
+
+      onSuccess?.();
+      if (!onSuccess) setLoading(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Falha ao entrar. Tente novamente.';
+      setError(getLoginErrorMessage(message));
       setLoading(false);
-    } else {
-      if (onSuccess) onSuccess();
     }
   };
 
@@ -50,6 +76,7 @@ export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }:
               className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
           </div>
@@ -74,6 +101,7 @@ export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }:
               className="pl-12 h-14 bg-secondary/50 border-white/5 focus:border-primary/50 transition-all rounded-2xl"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
           </div>
@@ -87,7 +115,7 @@ export const LoginForm = ({ onSuccess, onNavigateToSignUp, onNavigateToForgot }:
 
         <Button 
           type="submit" 
-          disabled={loading}
+          disabled={loading || !email.trim() || !password}
           className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 group"
         >
           {loading ? (

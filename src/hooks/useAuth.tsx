@@ -28,12 +28,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session
+    let mounted = true;
+
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (!mounted) return;
+
       if (error) {
         console.warn('[Auth] Sessão local inválida. Limpando autenticação local:', error.message);
         logError('auth.session.invalid', error);
         await supabase.auth.signOut({ scope: 'local' });
+        if (!mounted) return;
         setSession(null);
         setUser(null);
       } else {
@@ -46,26 +50,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user?.id !== user?.id || event === 'SIGNED_OUT') {
-        setSession(session);
-        setUser(session?.user ?? null);
-        void logEvent({
-          eventName: `auth.${event.toLowerCase()}`,
-          metadata: {
-            hasUser: Boolean(session?.user),
-            provider: session?.user?.app_metadata?.provider || null,
-          },
-        });
-      }
+      if (!mounted) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      void logEvent({
+        eventName: `auth.${event.toLowerCase()}`,
+        metadata: {
+          hasUser: Boolean(session?.user),
+          provider: session?.user?.app_metadata?.provider || null,
+        },
+      });
       setLoading(false);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [user?.id]);
+  }, []);
 
   const signOut = async () => {
     const result = await supabase.auth.signOut();

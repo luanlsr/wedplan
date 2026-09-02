@@ -320,18 +320,18 @@ export function MainApp() {
           ) : location.pathname.startsWith('/ferramentas') ? (
             <LoggedWeddingTools data={data} />
           ) : (
-            <div className="space-y-6">
+            <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
               {notifications.length > 0 && (
-                <div className="space-y-3">
+                <div className="min-w-0 space-y-3">
                   {notifications.map((n, i) => (
                     <div key={i} className={cn(
-                      "flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-top-4 duration-500",
+                      "flex min-w-0 items-center gap-3 rounded-2xl border p-4 animate-in slide-in-from-top-4 duration-500 sm:gap-4",
                       n.type === 'warning' ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
                     )}>
-                      <AlertTriangle size={20} />
-                      <div className="flex-1">
+                      <AlertTriangle size={20} className="shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <span className="font-black uppercase text-[10px] block leading-none mb-1">Alerta de Quitação</span>
-                        <p className="text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
+                        <p className="break-words text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
                       </div>
                     </div>
                   ))}
