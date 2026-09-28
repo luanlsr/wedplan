@@ -274,7 +274,7 @@ const wasGuestManuallyReviewed = (guest: Record<string, unknown>) => {
   const updatedAt = typeof guest.updated_at === 'string' ? new Date(guest.updated_at).getTime() : Number.NaN;
   if (Number.isNaN(updatedAt) || updatedAt < RSVP_CONFIRMATION_START_TIME) return false;
 
-  return guest.status === 'recusado';
+  return ['confirmado', 'pendente', 'recusado'].includes(String(guest.status || ''));
 };
 
 const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] => {
@@ -672,7 +672,7 @@ export const useWeddingData = () => {
 
       const reconciledGuests = sourceGuests.map((guest: any) => {
         const confirmedByRsvp = validConfirmations.some((confirmation: any) => doesConfirmationMatchGuestRecord(confirmation, guest));
-        if (wasGuestManuallyReviewed(guest)) return guest;
+        if (wasGuestManuallyReviewed(guest) || guest.status !== 'pendente') return guest;
 
         return {
           ...guest,
@@ -683,16 +683,10 @@ export const useWeddingData = () => {
       const guestIdsToConfirm = reconciledGuests
         .filter((guest: any) => guest.status === 'confirmado' && guest.status !== sourceGuests.find((original: any) => original.id === guest.id)?.status)
         .map((guest: any) => guest.id);
-      const guestIdsToKeepPending = reconciledGuests
-        .filter((guest: any) => guest.status === 'pendente' && guest.status !== sourceGuests.find((original: any) => original.id === guest.id)?.status)
-        .map((guest: any) => guest.id);
 
       const guestStatusSyncResults = await Promise.allSettled([
         guestIdsToConfirm.length > 0
           ? supabase.from('guests').update({ status: 'confirmado' }).in('id', guestIdsToConfirm).eq('wedding_id', weddingId)
-          : Promise.resolve({ error: null }),
-        guestIdsToKeepPending.length > 0
-          ? supabase.from('guests').update({ status: 'pendente' }).in('id', guestIdsToKeepPending).eq('wedding_id', weddingId)
           : Promise.resolve({ error: null }),
       ]);
       guestStatusSyncResults.forEach((result) => {
@@ -1177,19 +1171,27 @@ export const useWeddingData = () => {
       if (updated.observacoes !== undefined) payload.observacoes = updated.observacoes;
       if (updated.is_present !== undefined) payload.is_present = updated.is_present;
       if (updated.invitation_sent !== undefined) payload.invitation_sent = updated.invitation_sent;
-      const updateResult = publicToken
+      let updateResult = publicToken
         ? await supabase.rpc('public_toggle_guest_presence', {
             p_token: publicToken,
             p_guest_id: id,
             p_is_present: Boolean(updated.is_present)
           })
-        : await supabase
-            .from('guests')
-            .update(payload)
-            .eq('id', id)
-            .eq('wedding_id', data.id)
-            .select('*')
-            .maybeSingle();
+        : await supabase.rpc('update_guest_details', {
+            p_guest_id: id,
+            p_updates: payload,
+          });
+
+      if (!publicToken && (updateResult.error?.code === 'PGRST202' || updateResult.error?.code === '42883')) {
+        updateResult = await supabase
+          .from('guests')
+          .update(payload)
+          .eq('id', id)
+          .eq('wedding_id', data.id)
+          .select('*')
+          .maybeSingle();
+      }
+
       if (updateResult.error) throw updateResult.error;
       if (!publicToken) {
         const savedGuest = updateResult.data;
