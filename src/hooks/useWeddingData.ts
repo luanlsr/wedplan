@@ -218,6 +218,31 @@ const doesConfirmationMatchGuestRecord = (confirmation: Record<string, unknown>,
   return confirmationNames.some((confirmationName) => doesConfirmationMatchGuest(confirmationName, String(guest.nome || '')));
 };
 
+const getPrimaryConfirmedGuestName = (confirmation: Record<string, unknown>) =>
+  getConfirmedGuestNames(confirmation)[0] || '';
+
+const buildGuestFromConfirmation = (confirmation: Record<string, unknown>, weddingId: string) => {
+  const name = getPrimaryConfirmedGuestName(confirmation);
+  if (!name) return null;
+
+  const phone = getConfirmedGuestPhones(confirmation)[0] || '';
+  const email = getConfirmedGuestEmails(confirmation)[0] || '';
+
+  return {
+    wedding_id: weddingId,
+    nome: name,
+    categoria: 'Outros',
+    status: 'confirmado',
+    adultos: 1,
+    criancas: 0,
+    children_names: '',
+    telefone: phone,
+    observacoes: email ? `E-mail confirmado: ${email}` : '',
+    is_present: false,
+    invitation_sent: true,
+  };
+};
+
 const getConfirmedGuestDate = (confirmation: Record<string, unknown>) => {
   const candidates = [
     confirmation.created_at,
@@ -301,6 +326,21 @@ const fetchProfileWithAccessState = async (userId: string) => {
   return result;
 };
 
+const ensureWeddingMembership = async (userId: string, weddingId: string) => {
+  const { error } = await supabase
+    .from('wedding_members')
+    .upsert(
+      {
+        wedding_id: weddingId,
+        user_id: userId,
+        role: 'owner',
+      },
+      { onConflict: 'wedding_id,user_id' }
+    );
+
+  if (error) throw error;
+};
+
 export const useWeddingData = () => {
   const { user } = useAuth();
   const [data, setData] = useState<WeddingData>(INITIAL_DATA);
@@ -335,6 +375,7 @@ export const useWeddingData = () => {
 
       if (ownedWedding) {
         await supabase.from('profiles').update({ wedding_id: ownedWedding.id }).eq('id', userId);
+        await ensureWeddingMembership(userId, ownedWedding.id);
         return ownedWedding.id;
       }
 
@@ -353,6 +394,7 @@ export const useWeddingData = () => {
 
       if (wError) throw wError;
       await supabase.from('profiles').update({ wedding_id: wedding.id }).eq('id', userId);
+      await ensureWeddingMembership(userId, wedding.id);
       return wedding.id;
     } catch (err) {
       console.error('Falha crítica na gestão de vínculo do casamento:', err);
@@ -494,6 +536,13 @@ export const useWeddingData = () => {
             weddingId = profile?.wedding_id;
           } else {
             weddingId = await ensureWeddingExists(user.id);
+            if (weddingId) {
+              try {
+                await ensureWeddingMembership(user.id, weddingId);
+              } catch (membershipError) {
+                logError('wedding_membership.ensure.error', membershipError, { weddingId, userId: user.id });
+              }
+            }
           }
         } else if (publicToken) {
           const { data: publicData, error: publicError } = await supabase
@@ -597,7 +646,31 @@ export const useWeddingData = () => {
 
       const validConfirmations = (confirmationsData || [])
         .filter((confirmation: any) => isConfirmedAfterStartDate(confirmation));
-      const reconciledGuests = (guestsData || []).map((guest: any) => {
+      let sourceGuests = guestsData || [];
+      const newConfirmedGuests = validConfirmations.reduce<NonNullable<ReturnType<typeof buildGuestFromConfirmation>>[]>((guestsToInsert, confirmation: any) => {
+        const alreadyExists = sourceGuests.some((guest: any) => doesConfirmationMatchGuestRecord(confirmation, guest))
+          || guestsToInsert.some((guest) => doesConfirmationMatchGuestRecord(confirmation, guest));
+        if (alreadyExists) return guestsToInsert;
+
+        const guest = buildGuestFromConfirmation(confirmation, weddingId);
+        if (guest) guestsToInsert.push(guest);
+        return guestsToInsert;
+      }, []);
+
+      if (newConfirmedGuests.length > 0) {
+        const { data: insertedGuests, error: insertConfirmedGuestsError } = await supabase
+          .from('guests')
+          .insert(newConfirmedGuests)
+          .select('*');
+
+        if (insertConfirmedGuestsError) {
+          logError('confirmed_guests.sync_insert.error', insertConfirmedGuestsError, { weddingId, count: newConfirmedGuests.length });
+        } else {
+          sourceGuests = [...sourceGuests, ...(insertedGuests || [])].sort((a: any, b: any) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        }
+      }
+
+      const reconciledGuests = sourceGuests.map((guest: any) => {
         const confirmedByRsvp = validConfirmations.some((confirmation: any) => doesConfirmationMatchGuestRecord(confirmation, guest));
         if (wasGuestManuallyReviewed(guest)) return guest;
 
@@ -608,10 +681,10 @@ export const useWeddingData = () => {
       });
 
       const guestIdsToConfirm = reconciledGuests
-        .filter((guest: any) => guest.status === 'confirmado' && guest.status !== (guestsData || []).find((original: any) => original.id === guest.id)?.status)
+        .filter((guest: any) => guest.status === 'confirmado' && guest.status !== sourceGuests.find((original: any) => original.id === guest.id)?.status)
         .map((guest: any) => guest.id);
       const guestIdsToKeepPending = reconciledGuests
-        .filter((guest: any) => guest.status === 'pendente' && guest.status !== (guestsData || []).find((original: any) => original.id === guest.id)?.status)
+        .filter((guest: any) => guest.status === 'pendente' && guest.status !== sourceGuests.find((original: any) => original.id === guest.id)?.status)
         .map((guest: any) => guest.id);
 
       const guestStatusSyncResults = await Promise.allSettled([
@@ -768,6 +841,30 @@ export const useWeddingData = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!user || !data.id) return;
+
+    const channel = supabase
+      .channel(`confirmed-guests-sync-${data.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'convidados_confirmados',
+          filter: `wedding_id=eq.${data.id}`,
+        },
+        () => {
+          void loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [data.id, loadData, user]);
 
   // Restoring CRUD methods
   const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
@@ -1080,7 +1177,7 @@ export const useWeddingData = () => {
       if (updated.observacoes !== undefined) payload.observacoes = updated.observacoes;
       if (updated.is_present !== undefined) payload.is_present = updated.is_present;
       if (updated.invitation_sent !== undefined) payload.invitation_sent = updated.invitation_sent;
-      const { error } = publicToken
+      const updateResult = publicToken
         ? await supabase.rpc('public_toggle_guest_presence', {
             p_token: publicToken,
             p_guest_id: id,
@@ -1090,17 +1187,12 @@ export const useWeddingData = () => {
             .from('guests')
             .update(payload)
             .eq('id', id)
+            .eq('wedding_id', data.id)
             .select('*')
-            .single();
-      if (error) throw error;
+            .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
       if (!publicToken) {
-        const { data: savedGuest, error: savedGuestError } = await supabase
-          .from('guests')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (savedGuestError) throw savedGuestError;
+        const savedGuest = updateResult.data;
         if (!savedGuest) throw new Error('Nenhum convidado foi atualizado. Verifique as permissões do casamento.');
 
         setData(prev => ({

@@ -8,7 +8,7 @@ import { sortTextPtBr } from '../../utils/sorting';
 interface GuestCardProps {
   guest: Guest;
   onEdit: (guest: Guest) => void;
-  onUpdate: (id: string, guest: Partial<Guest>) => void;
+  onUpdate: (id: string, guest: Partial<Guest>) => void | Promise<void>;
   onDelete: (id: string) => void | Promise<void>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
@@ -20,8 +20,21 @@ const guestStatusOptions = [
 ].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
-  const { toast } = useConfirm();
+  const { alert: customAlert, toast } = useConfirm();
   const [showActions, setShowActions] = useState(false);
+  const handleUpdate = async (updates: Partial<Guest>) => {
+    try {
+      await onUpdate(guest.id, updates);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar o convidado.';
+      await customAlert({
+        title: 'Não foi possível salvar',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
+    }
+  };
 
   const getStatusColor = () => {
     switch (guest.status) {
@@ -69,7 +82,7 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
           <div className="relative group hidden sm:block">
             <select
               value={guest.status}
-              onChange={(e) => onUpdate(guest.id, { status: e.target.value as Guest['status'] })}
+              onChange={(e) => void handleUpdate({ status: e.target.value as Guest['status'] })}
               className={cn(
                 "h-10 pl-3 pr-8 rounded-2xl border font-black text-[10px] uppercase tracking-widest appearance-none transition-all cursor-pointer outline-none focus:ring-2 focus:ring-primary/20 shadow-sm",
                 getStatusColor()
@@ -101,7 +114,7 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
                   
                   <button 
                     onClick={() => {
-                      onUpdate(guest.id, { invitation_sent: !guest.invitation_sent });
+                      void handleUpdate({ invitation_sent: !guest.invitation_sent });
                       setShowActions(false);
                     }}
                     className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"

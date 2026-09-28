@@ -7,7 +7,7 @@ import { sortTextPtBr } from '../../utils/sorting';
 interface GuestRowProps {
   guest: Guest;
   onEdit: (guest: Guest) => void;
-  onUpdate: (id: string, guest: Partial<Guest>) => void;
+  onUpdate: (id: string, guest: Partial<Guest>) => void | Promise<void>;
   onDelete: (id: string) => void | Promise<void>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
@@ -19,7 +19,20 @@ const guestStatusOptions = [
 ].sort((a, b) => sortTextPtBr(a.label, b.label));
 
 export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRowProps) => {
-  const { toast } = useConfirm();
+  const { alert: customAlert, toast } = useConfirm();
+  const handleUpdate = async (updates: Partial<Guest>) => {
+    try {
+      await onUpdate(guest.id, updates);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar o convidado.';
+      await customAlert({
+        title: 'Não foi possível salvar',
+        description: message,
+        type: 'danger',
+        confirmLabel: 'Entendi',
+      });
+    }
+  };
   const getStatusColor = () => {
     switch (guest.status) {
       case 'confirmado': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
@@ -50,7 +63,7 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
         <div className="relative w-fit">
           <select
             value={guest.status}
-            onChange={(e) => onUpdate(guest.id, { status: e.target.value as Guest['status'] })}
+            onChange={(e) => void handleUpdate({ status: e.target.value as Guest['status'] })}
             className={cn(
               "h-9 pl-3 pr-9 rounded-lg border font-extrabold text-[11px] uppercase tracking-wide shadow-sm appearance-none cursor-pointer outline-none transition-all active:scale-95",
               getStatusColor()
@@ -65,7 +78,7 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
       </td>
       <td className="px-6 py-4">
         <button
-          onClick={() => onUpdate(guest.id, { invitation_sent: !guest.invitation_sent })}
+          onClick={() => void handleUpdate({ invitation_sent: !guest.invitation_sent })}
           className={cn(
             "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all active:scale-95",
             guest.invitation_sent ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted/30 border-border text-muted-foreground"
