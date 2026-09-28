@@ -218,31 +218,6 @@ const doesConfirmationMatchGuestRecord = (confirmation: Record<string, unknown>,
   return confirmationNames.some((confirmationName) => doesConfirmationMatchGuest(confirmationName, String(guest.nome || '')));
 };
 
-const getPrimaryConfirmedGuestName = (confirmation: Record<string, unknown>) =>
-  getConfirmedGuestNames(confirmation)[0] || '';
-
-const buildGuestFromConfirmation = (confirmation: Record<string, unknown>, weddingId: string) => {
-  const name = getPrimaryConfirmedGuestName(confirmation);
-  if (!name) return null;
-
-  const phone = getConfirmedGuestPhones(confirmation)[0] || '';
-  const email = getConfirmedGuestEmails(confirmation)[0] || '';
-
-  return {
-    wedding_id: weddingId,
-    nome: name,
-    categoria: 'Outros',
-    status: 'confirmado',
-    adultos: 1,
-    criancas: 0,
-    children_names: '',
-    telefone: phone,
-    observacoes: email ? `E-mail confirmado: ${email}` : '',
-    is_present: false,
-    invitation_sent: true,
-  };
-};
-
 const getConfirmedGuestDate = (confirmation: Record<string, unknown>) => {
   const candidates = [
     confirmation.created_at,
@@ -268,13 +243,6 @@ const isConfirmedAfterStartDate = (confirmation: Record<string, unknown>) => {
   if (Number.isNaN(confirmationTime)) return normalizedDate >= RSVP_CONFIRMATION_START_DATE;
 
   return confirmationTime >= RSVP_CONFIRMATION_START_TIME;
-};
-
-const wasGuestManuallyReviewed = (guest: Record<string, unknown>) => {
-  const updatedAt = typeof guest.updated_at === 'string' ? new Date(guest.updated_at).getTime() : Number.NaN;
-  if (Number.isNaN(updatedAt) || updatedAt < RSVP_CONFIRMATION_START_TIME) return false;
-
-  return ['confirmado', 'pendente', 'recusado'].includes(String(guest.status || ''));
 };
 
 const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] => {
@@ -646,59 +614,28 @@ export const useWeddingData = () => {
 
       const validConfirmations = (confirmationsData || [])
         .filter((confirmation: any) => isConfirmedAfterStartDate(confirmation));
-      let sourceGuests = guestsData || [];
-      const newConfirmedGuests = validConfirmations.reduce<NonNullable<ReturnType<typeof buildGuestFromConfirmation>>[]>((guestsToInsert, confirmation: any) => {
-        const alreadyExists = sourceGuests.some((guest: any) => doesConfirmationMatchGuestRecord(confirmation, guest))
-          || guestsToInsert.some((guest) => doesConfirmationMatchGuestRecord(confirmation, guest));
-        if (alreadyExists) return guestsToInsert;
-
-        const guest = buildGuestFromConfirmation(confirmation, weddingId);
-        if (guest) guestsToInsert.push(guest);
-        return guestsToInsert;
-      }, []);
-
-      if (newConfirmedGuests.length > 0) {
-        const { data: insertedGuests, error: insertConfirmedGuestsError } = await supabase
-          .from('guests')
-          .insert(newConfirmedGuests)
-          .select('*');
-
-        if (insertConfirmedGuestsError) {
-          logError('confirmed_guests.sync_insert.error', insertConfirmedGuestsError, { weddingId, count: newConfirmedGuests.length });
-        } else {
-          sourceGuests = [...sourceGuests, ...(insertedGuests || [])].sort((a: any, b: any) => String(a.nome || '').localeCompare(String(b.nome || '')));
-        }
-      }
-
+      const sourceGuests = guestsData || [];
       const reconciledGuests = sourceGuests.map((guest: any) => {
-        const confirmedByRsvp = validConfirmations.some((confirmation: any) => doesConfirmationMatchGuestRecord(confirmation, guest));
-        if (wasGuestManuallyReviewed(guest) || guest.status !== 'pendente') return guest;
+        const confirmedBySource = guest.status === 'pendente'
+          && validConfirmations.some((confirmation: any) => doesConfirmationMatchGuestRecord(confirmation, guest));
 
-        return {
-          ...guest,
-          status: confirmedByRsvp ? 'confirmado' : 'pendente',
-        };
+        return confirmedBySource ? { ...guest, status: 'confirmado' } : guest;
       });
-
       const guestIdsToConfirm = reconciledGuests
         .filter((guest: any) => guest.status === 'confirmado' && guest.status !== sourceGuests.find((original: any) => original.id === guest.id)?.status)
         .map((guest: any) => guest.id);
 
-      const guestStatusSyncResults = await Promise.allSettled([
-        guestIdsToConfirm.length > 0
-          ? supabase.from('guests').update({ status: 'confirmado' }).in('id', guestIdsToConfirm).eq('wedding_id', weddingId)
-          : Promise.resolve({ error: null }),
-      ]);
-      guestStatusSyncResults.forEach((result) => {
-        if (result.status === 'rejected') {
-          logError('guest_status_reconciliation.persist.error', result.reason, { weddingId });
-          return;
-        }
+      if (guestIdsToConfirm.length > 0) {
+        const { error: confirmExistingGuestsError } = await supabase
+          .from('guests')
+          .update({ status: 'confirmado' })
+          .in('id', guestIdsToConfirm)
+          .eq('wedding_id', weddingId);
 
-        if (result.value?.error) {
-          logError('guest_status_reconciliation.persist.error', result.value.error, { weddingId });
+        if (confirmExistingGuestsError) {
+          logError('confirmed_guests.sync_existing.error', confirmExistingGuestsError, { weddingId, count: guestIdsToConfirm.length });
         }
-      });
+      }
 
       const cronograma = await loadTimelineData(weddingId);
       let guestCategories: GuestCategory[] = [];
