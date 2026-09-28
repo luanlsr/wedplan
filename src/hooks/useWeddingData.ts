@@ -37,32 +37,185 @@ const createDefaultTimelineCategories = (weddingId?: string): TimelineCategory[]
 const RSVP_CONFIRMATION_START_DATE = '2026-09-23';
 const RSVP_CONFIRMATION_START_TIME = new Date(`${RSVP_CONFIRMATION_START_DATE}T00:00:00`).getTime();
 
-const normalizeGuestName = (name: string) =>
-  name
+const normalizeText = (value: string) =>
+  value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .trim();
+
+const normalizeGuestName = (name: string) =>
+  normalizeText(name)
+    .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+const getNameTokens = (name: string) =>
+  normalizeGuestName(name)
+    .split(' ')
+    .filter((token) => token.length > 1 && !['da', 'de', 'do', 'das', 'dos', 'e'].includes(token));
 
 const doesConfirmationMatchGuest = (confirmationName: string, guestName: string) => {
   const confirmation = normalizeGuestName(confirmationName);
   const guest = normalizeGuestName(guestName);
 
-  return confirmation === guest || confirmation.startsWith(`${guest} `);
+  if (!confirmation || !guest) return false;
+  if (confirmation === guest) return true;
+  if (confirmation.startsWith(`${guest} `) || guest.startsWith(`${confirmation} `)) return true;
+  if (confirmation.includes(` ${guest} `) || guest.includes(` ${confirmation} `)) return true;
+
+  const confirmationTokens = new Set(getNameTokens(confirmationName));
+  const guestTokens = getNameTokens(guestName);
+  const confirmationTokenList = [...confirmationTokens];
+
+  if (guestTokens.length > 1 && guestTokens.every((token) => confirmationTokens.has(token))) return true;
+  if (confirmationTokenList.length > 1 && confirmationTokenList.every((token) => guestTokens.includes(token))) return true;
+
+  const sharedTokens = guestTokens.filter((token) => confirmationTokens.has(token));
+  return sharedTokens.length >= Math.min(guestTokens.length, confirmationTokenList.length, 2);
 };
 
-const getConfirmedGuestName = (confirmation: Record<string, unknown>) => {
-  const candidates = [
-    confirmation.nome,
-    confirmation.name,
-    confirmation.full_name,
-    confirmation.nome_completo,
-    confirmation.convidado,
-    confirmation.guest_name,
-  ];
+const normalizeRecordKey = (key: string) => normalizeText(key).replace(/[^a-z0-9]/g, '');
 
-  return candidates.find((value): value is string => typeof value === 'string' && value.trim().length > 0) || '';
+const collectStringValues = (value: unknown): string[] => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+      try {
+        return collectStringValues(JSON.parse(trimmed));
+      } catch {
+        return [trimmed];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  if (Array.isArray(value)) return value.flatMap(collectStringValues);
+
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).flatMap(collectStringValues);
+  }
+
+  if (typeof value === 'number') return [String(value)];
+
+  return [];
+};
+
+const collectNameValues = (value: unknown): string[] => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+      try {
+        return collectNameValues(JSON.parse(trimmed));
+      } catch {
+        return [trimmed];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  if (Array.isArray(value)) return value.flatMap(collectNameValues);
+
+  if (value && typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => {
+        const normalizedKey = normalizeRecordKey(key);
+        return normalizedKey.includes('nome') || normalizedKey.includes('name');
+      })
+      .flatMap(([, nestedValue]) => collectNameValues(nestedValue));
+  }
+
+  return [];
+};
+
+const getValuesByKeyFragments = (record: Record<string, unknown>, fragments: string[]) =>
+  Object.entries(record)
+    .filter(([key]) => {
+      const normalizedKey = normalizeRecordKey(key);
+      return fragments.some((fragment) => normalizedKey.includes(fragment));
+    })
+    .flatMap(([, value]) => collectStringValues(value));
+
+const getConfirmedGuestNames = (confirmation: Record<string, unknown>) => {
+  const explicitNameKeys = new Set([
+    'nome',
+    'name',
+    'fullname',
+    'nomecompleto',
+    'convidado',
+    'guestname',
+    'acompanhante',
+    'acompanhantes',
+    'crianca',
+    'criancas',
+    'children',
+  ]);
+  const ignoredKeys = ['email', 'phone', 'telefone', 'whatsapp', 'data', 'date', 'status', 'createdat', 'updatedat'];
+
+  return Object.entries(confirmation)
+    .filter(([key]) => {
+      const normalizedKey = normalizeRecordKey(key);
+      if (ignoredKeys.some((ignoredKey) => normalizedKey.includes(ignoredKey))) return false;
+      return (
+        explicitNameKeys.has(normalizedKey) ||
+        normalizedKey.includes('nome') ||
+        normalizedKey.includes('name') ||
+        normalizedKey.includes('convidado') ||
+        normalizedKey.includes('acompanhante') ||
+        normalizedKey.includes('crianca') ||
+        normalizedKey.includes('children')
+      );
+    })
+    .flatMap(([, value]) => collectNameValues(value))
+    .filter((name, index, names) => names.findIndex((candidate) => normalizeGuestName(candidate) === normalizeGuestName(name)) === index);
+};
+
+const normalizePhone = (value: string) => value.replace(/\D/g, '');
+
+const doPhonesMatch = (left: string, right: string) => {
+  const leftDigits = normalizePhone(left);
+  const rightDigits = normalizePhone(right);
+
+  if (leftDigits.length < 8 || rightDigits.length < 8) return false;
+
+  return leftDigits === rightDigits || leftDigits.endsWith(rightDigits) || rightDigits.endsWith(leftDigits);
+};
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const getConfirmedGuestPhones = (confirmation: Record<string, unknown>) =>
+  getValuesByKeyFragments(confirmation, ['telefone', 'phone', 'whatsapp', 'celular', 'mobile'])
+    .map(normalizePhone)
+    .filter((phone) => phone.length >= 8);
+
+const getConfirmedGuestEmails = (confirmation: Record<string, unknown>) =>
+  getValuesByKeyFragments(confirmation, ['email', 'mail'])
+    .map(normalizeEmail)
+    .filter((email) => email.includes('@'));
+
+const getGuestEmails = (guest: Record<string, unknown>) =>
+  collectStringValues(guest.email)
+    .concat(collectStringValues(guest.observacoes))
+    .map(normalizeEmail)
+    .filter((value) => value.includes('@'));
+
+const doesConfirmationMatchGuestRecord = (confirmation: Record<string, unknown>, guest: Record<string, unknown>) => {
+  const guestPhone = typeof guest.telefone === 'string' ? guest.telefone : '';
+  const confirmationPhones = getConfirmedGuestPhones(confirmation);
+  if (guestPhone && confirmationPhones.some((phone) => doPhonesMatch(phone, guestPhone))) return true;
+
+  const guestEmails = getGuestEmails(guest);
+  const confirmationEmails = getConfirmedGuestEmails(confirmation);
+  if (guestEmails.length > 0 && confirmationEmails.some((email) => guestEmails.includes(email))) return true;
+
+  const confirmationNames = getConfirmedGuestNames(confirmation);
+  return confirmationNames.some((confirmationName) => doesConfirmationMatchGuest(confirmationName, String(guest.nome || '')));
 };
 
 const getConfirmedGuestDate = (confirmation: Record<string, unknown>) => {
@@ -435,12 +588,10 @@ export const useWeddingData = () => {
         logError('confirmed_guests.load.error', confirmationsError, { weddingId });
       }
 
-      const confirmationNames = (confirmationsData || [])
-        .filter((confirmation: any) => isConfirmedAfterStartDate(confirmation))
-        .map((confirmation: any) => getConfirmedGuestName(confirmation))
-        .filter(Boolean);
+      const validConfirmations = (confirmationsData || [])
+        .filter((confirmation: any) => isConfirmedAfterStartDate(confirmation));
       const reconciledGuests = (guestsData || []).map((guest: any) => {
-        const confirmedByRsvp = confirmationNames.some((confirmationName: string) => doesConfirmationMatchGuest(confirmationName, guest.nome));
+        const confirmedByRsvp = validConfirmations.some((confirmation: any) => doesConfirmationMatchGuestRecord(confirmation, guest));
         return {
           ...guest,
           status: confirmedByRsvp ? 'confirmado' : 'pendente',
