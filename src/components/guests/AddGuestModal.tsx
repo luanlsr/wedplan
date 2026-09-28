@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import type { Guest } from "../../types";
-import { Card, Button, Input } from "../ui";
+import { Card, Button, Input, useConfirm } from "../ui";
 import { X, Users, Phone, Tag, MessageSquare, Baby, UserPlus, Plus, Trash2, ChevronDown } from "lucide-react";
 
 import { maskPhone } from "../../utils/masks";
@@ -8,14 +8,16 @@ import { sortTextPtBr } from "../../utils/sorting";
 
 interface AddGuestModalProps {
   onClose: () => void;
-  onAdd: (guest: Omit<Guest, 'id'>) => void;
-  onUpdate?: (id: string, guest: Partial<Guest>) => void;
+  onAdd: (guest: Omit<Guest, 'id'>) => void | Promise<void>;
+  onUpdate?: (id: string, guest: Partial<Guest>) => void | Promise<void>;
   editGuest?: Guest | null;
   categories?: string[];
 }
 
 export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories = [] }: AddGuestModalProps) => {
+  const { alert: customAlert } = useConfirm();
   const isEditing = !!editGuest;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -90,8 +92,9 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories 
       []
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
         // Limpar nomes vazios antes de salvar
         const validNames = childList.filter(name => name.trim() !== "");
         const guestData = {
@@ -100,12 +103,24 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories 
             criancas: formData.criancas > 0 ? validNames.length : 0
         };
 
-    if (isEditing && onUpdate) {
-      onUpdate(editGuest!.id, guestData);
-    } else {
-      onAdd(guestData);
+    try {
+      if (isEditing && onUpdate) {
+        await onUpdate(editGuest!.id, guestData);
+      } else {
+        await onAdd(guestData);
+      }
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível salvar o convidado.";
+      await customAlert({
+        title: "Não foi possível salvar",
+        description: message,
+        type: "danger",
+        confirmLabel: "Entendi",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -285,8 +300,8 @@ export const AddGuestModal = ({ onClose, onAdd, onUpdate, editGuest, categories 
             <Button type="button" variant="outline" className="flex-1 h-14" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-[2] h-14 text-lg shadow-lg shadow-primary/20">
-              {isEditing ? "Salvar Alterações" : "Adicionar à Lista"}
+            <Button type="submit" className="flex-[2] h-14 text-lg shadow-lg shadow-primary/20" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : isEditing ? "Salvar Alterações" : "Adicionar à Lista"}
             </Button>
           </div>
         </form>

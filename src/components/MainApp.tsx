@@ -78,6 +78,10 @@ export function MainApp() {
     () => supplierToEdit ? data.fornecedores.find((supplier) => supplier.id === supplierToEdit.id) || supplierToEdit : null,
     [data.fornecedores, supplierToEdit]
   );
+  const currentGuestToEdit = useMemo(
+    () => guestToEdit ? (data.convidados || []).find((guest) => guest.id === guestToEdit.id) || guestToEdit : null,
+    [data.convidados, guestToEdit]
+  );
   const isNewWedding = useMemo(() => {
     if (loading || !data.casal || data.role === 'master') return false;
     return !data.casal.nome1 && !data.casal.nome2;
@@ -493,7 +497,7 @@ export function MainApp() {
         addSupplier={addSupplier}
         updateSupplier={updateSupplier}
         isGuestModalOpen={isGuestModalOpen}
-        guestToEdit={guestToEdit}
+        guestToEdit={currentGuestToEdit}
         guestCategories={guestCategoryNames}
         addGuest={addGuest}
         updateGuest={updateGuest}

@@ -59,6 +59,7 @@ export interface Guest {
   observacoes?: string;
   is_present?: boolean;
   invitation_sent?: boolean;
+  updated_at?: string;
 }
 
 export interface GuestCategory {

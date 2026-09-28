@@ -245,6 +245,13 @@ const isConfirmedAfterStartDate = (confirmation: Record<string, unknown>) => {
   return confirmationTime >= RSVP_CONFIRMATION_START_TIME;
 };
 
+const wasGuestManuallyReviewed = (guest: Record<string, unknown>) => {
+  const updatedAt = typeof guest.updated_at === 'string' ? new Date(guest.updated_at).getTime() : Number.NaN;
+  if (Number.isNaN(updatedAt) || updatedAt < RSVP_CONFIRMATION_START_TIME) return false;
+
+  return guest.status === 'recusado';
+};
+
 const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] => {
   if (parcelas.length === 0) return "pendente";
 
@@ -592,6 +599,8 @@ export const useWeddingData = () => {
         .filter((confirmation: any) => isConfirmedAfterStartDate(confirmation));
       const reconciledGuests = (guestsData || []).map((guest: any) => {
         const confirmedByRsvp = validConfirmations.some((confirmation: any) => doesConfirmationMatchGuestRecord(confirmation, guest));
+        if (wasGuestManuallyReviewed(guest)) return guest;
+
         return {
           ...guest,
           status: confirmedByRsvp ? 'confirmado' : 'pendente',
@@ -721,7 +730,8 @@ export const useWeddingData = () => {
           telefone: g.telefone,
           observacoes: g.observacoes,
           is_present: g.is_present,
-          invitation_sent: g.invitation_sent
+          invitation_sent: g.invitation_sent,
+          updated_at: g.updated_at
         })),
         guestCategories,
         tarefas: (tasksData || []).map((t: any) => ({
@@ -1076,8 +1086,45 @@ export const useWeddingData = () => {
             p_guest_id: id,
             p_is_present: Boolean(updated.is_present)
           })
-        : await supabase.from('guests').update(payload).eq('id', id);
+        : await supabase
+            .from('guests')
+            .update(payload)
+            .eq('id', id)
+            .select('*')
+            .single();
       if (error) throw error;
+      if (!publicToken) {
+        const { data: savedGuest, error: savedGuestError } = await supabase
+          .from('guests')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (savedGuestError) throw savedGuestError;
+        if (!savedGuest) throw new Error('Nenhum convidado foi atualizado. Verifique as permissões do casamento.');
+
+        setData(prev => ({
+          ...prev,
+          convidados: (prev.convidados || []).map((guest) =>
+            guest.id === id
+              ? {
+                  id: savedGuest.id,
+                  nome: savedGuest.nome,
+                  categoria: savedGuest.categoria,
+                  status: savedGuest.status,
+                  adultos: savedGuest.adultos,
+                  criancas: savedGuest.criancas,
+                  children_names: savedGuest.children_names,
+                  telefone: savedGuest.telefone,
+                  observacoes: savedGuest.observacoes,
+                  is_present: savedGuest.is_present,
+                  invitation_sent: savedGuest.invitation_sent,
+                  updated_at: savedGuest.updated_at,
+                }
+              : guest
+          )
+        }));
+      }
       void logEvent({
         eventName: publicToken ? 'guest.public_presence_updated' : 'guest.updated',
         entityType: 'guest',
@@ -1103,6 +1150,7 @@ export const useWeddingData = () => {
           )
         }));
       }
+      throw err;
     }
   };
 
