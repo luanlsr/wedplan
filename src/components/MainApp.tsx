@@ -60,7 +60,7 @@ export function MainApp() {
   } = useWeddingData();
   
   const { user } = useAuth();
-  const { confirm, alert: customAlert } = useConfirm();
+  const { confirm, alert: customAlert, toast } = useConfirm();
   const {
     isModalOpen, setIsModalOpen, supplierToEdit, handleEditSupplier,
     isGuestModalOpen, setIsGuestModalOpen, guestToEdit, handleEditGuest,
@@ -74,6 +74,10 @@ export function MainApp() {
     [data.convidados, data.guestCategories]
   );
   const isDark = data.configuracoes.tema === 'dark';
+  const currentSupplierToEdit = useMemo(
+    () => supplierToEdit ? data.fornecedores.find((supplier) => supplier.id === supplierToEdit.id) || supplierToEdit : null,
+    [data.fornecedores, supplierToEdit]
+  );
   const isNewWedding = useMemo(() => {
     if (loading || !data.casal || data.role === 'master') return false;
     return !data.casal.nome1 && !data.casal.nome2;
@@ -211,6 +215,25 @@ export function MainApp() {
         }
       }
     }
+  };
+
+  const handleDeleteSupplierFromList = async (supplier: typeof data.fornecedores[number]) => {
+    const isConfirmed = await confirm({
+      title: "Excluir Fornecedor?",
+      description: `Tem certeza que deseja excluir "${supplier.fornecedor}"? Isso removerá todos os dados e parcelas associadas permanentemente.`,
+      type: "danger",
+      confirmLabel: "Sim, Excluir",
+      cancelLabel: "Cancelar",
+    });
+
+    if (!isConfirmed) return;
+
+    await deleteSupplier(supplier.id);
+    toast({
+      title: 'Fornecedor removido',
+      description: `${supplier.fornecedor} foi excluído do planejamento.`,
+      type: 'success',
+    });
   };
 
   const handleDashboardAction = (action: DashboardAction) => {
@@ -354,6 +377,8 @@ export function MainApp() {
             suppliers={data.fornecedores}
             onAdd={() => setIsModalOpen(true)}
             onSelect={(s) => navigate(`/fornecedores/${s.id}`)}
+            onEdit={handleEditSupplier}
+            onDelete={handleDeleteSupplierFromList}
             onReorder={reorderSuppliers}
           />
         } />
@@ -462,7 +487,7 @@ export function MainApp() {
 
       <GlobalModals
         isModalOpen={isModalOpen}
-        supplierToEdit={supplierToEdit}
+        supplierToEdit={currentSupplierToEdit}
         weddingDate={data.casal.data}
         weddingId={data.id}
         addSupplier={addSupplier}

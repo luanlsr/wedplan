@@ -34,6 +34,64 @@ const createDefaultTimelineCategories = (weddingId?: string): TimelineCategory[]
     itens: [],
   }));
 
+const RSVP_CONFIRMATION_START_DATE = '2026-09-23';
+const RSVP_CONFIRMATION_START_TIME = new Date(`${RSVP_CONFIRMATION_START_DATE}T00:00:00`).getTime();
+
+const normalizeGuestName = (name: string) =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const doesConfirmationMatchGuest = (confirmationName: string, guestName: string) => {
+  const confirmation = normalizeGuestName(confirmationName);
+  const guest = normalizeGuestName(guestName);
+
+  return confirmation === guest || confirmation.startsWith(`${guest} `);
+};
+
+const getConfirmedGuestName = (confirmation: Record<string, unknown>) => {
+  const candidates = [
+    confirmation.nome,
+    confirmation.name,
+    confirmation.full_name,
+    confirmation.nome_completo,
+    confirmation.convidado,
+    confirmation.guest_name,
+  ];
+
+  return candidates.find((value): value is string => typeof value === 'string' && value.trim().length > 0) || '';
+};
+
+const getConfirmedGuestDate = (confirmation: Record<string, unknown>) => {
+  const candidates = [
+    confirmation.created_at,
+    confirmation.data_confirmacao,
+    confirmation.confirmed_at,
+    confirmation.confirmado_em,
+    confirmation.updated_at,
+  ];
+
+  return candidates.find((value): value is string => typeof value === 'string' && value.trim().length > 0) || '';
+};
+
+const isConfirmedAfterStartDate = (confirmation: Record<string, unknown>) => {
+  const date = getConfirmedGuestDate(confirmation);
+  if (!date) return true;
+
+  const brazilianDateMatch = date.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  const normalizedDate = brazilianDateMatch
+    ? `${brazilianDateMatch[3]}-${brazilianDateMatch[2]}-${brazilianDateMatch[1]}`
+    : date;
+  const confirmationTime = new Date(normalizedDate).getTime();
+
+  if (Number.isNaN(confirmationTime)) return normalizedDate >= RSVP_CONFIRMATION_START_DATE;
+
+  return confirmationTime >= RSVP_CONFIRMATION_START_TIME;
+};
+
 const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] => {
   if (parcelas.length === 0) return "pendente";
 
@@ -47,6 +105,22 @@ const calculateSupplierStatus = (parcelas: Installment[]): Supplier["status"] =>
   if (someOverdue) return "atrasado";
   if (somePaid) return "parcial";
   return "pendente";
+};
+
+const areInstallmentsEquivalent = (current: Installment[], next?: Installment[]) => {
+  if (!next || current.length !== next.length) return false;
+
+  return current.every((installment, index) => {
+    const nextInstallment = next[index];
+    return (
+      installment.id === nextInstallment.id &&
+      installment.numero === nextInstallment.numero &&
+      installment.valor === nextInstallment.valor &&
+      installment.dataVencimento === nextInstallment.dataVencimento &&
+      installment.dataPagamento === nextInstallment.dataPagamento &&
+      installment.status === nextInstallment.status
+    );
+  });
 };
 
 const fetchProfileWithAccessState = async (userId: string) => {
@@ -341,6 +415,64 @@ export const useWeddingData = () => {
 
       if (!wedding) throw new Error('Casamento não encontrado');
 
+      let { data: confirmationsData, error: confirmationsError } = await supabase
+        .from('convidados_confirmados')
+        .select('*')
+        .eq('wedding_id', weddingId)
+        .gte('created_at', RSVP_CONFIRMATION_START_DATE);
+
+      if (confirmationsError?.code === '42703') {
+        const fallbackResult = await supabase
+          .from('convidados_confirmados')
+          .select('*')
+          .eq('wedding_id', weddingId);
+
+        confirmationsData = fallbackResult.data;
+        confirmationsError = fallbackResult.error;
+      }
+
+      if (confirmationsError && !isMissingSupabaseRelationError(confirmationsError)) {
+        logError('confirmed_guests.load.error', confirmationsError, { weddingId });
+      }
+
+      const confirmationNames = (confirmationsData || [])
+        .filter((confirmation: any) => isConfirmedAfterStartDate(confirmation))
+        .map((confirmation: any) => getConfirmedGuestName(confirmation))
+        .filter(Boolean);
+      const reconciledGuests = (guestsData || []).map((guest: any) => {
+        const confirmedByRsvp = confirmationNames.some((confirmationName: string) => doesConfirmationMatchGuest(confirmationName, guest.nome));
+        return {
+          ...guest,
+          status: confirmedByRsvp ? 'confirmado' : 'pendente',
+        };
+      });
+
+      const guestIdsToConfirm = reconciledGuests
+        .filter((guest: any) => guest.status === 'confirmado' && guest.status !== (guestsData || []).find((original: any) => original.id === guest.id)?.status)
+        .map((guest: any) => guest.id);
+      const guestIdsToKeepPending = reconciledGuests
+        .filter((guest: any) => guest.status === 'pendente' && guest.status !== (guestsData || []).find((original: any) => original.id === guest.id)?.status)
+        .map((guest: any) => guest.id);
+
+      const guestStatusSyncResults = await Promise.allSettled([
+        guestIdsToConfirm.length > 0
+          ? supabase.from('guests').update({ status: 'confirmado' }).in('id', guestIdsToConfirm).eq('wedding_id', weddingId)
+          : Promise.resolve({ error: null }),
+        guestIdsToKeepPending.length > 0
+          ? supabase.from('guests').update({ status: 'pendente' }).in('id', guestIdsToKeepPending).eq('wedding_id', weddingId)
+          : Promise.resolve({ error: null }),
+      ]);
+      guestStatusSyncResults.forEach((result) => {
+        if (result.status === 'rejected') {
+          logError('guest_status_reconciliation.persist.error', result.reason, { weddingId });
+          return;
+        }
+
+        if (result.value?.error) {
+          logError('guest_status_reconciliation.persist.error', result.value.error, { weddingId });
+        }
+      });
+
       const cronograma = await loadTimelineData(weddingId);
       let guestCategories: GuestCategory[] = [];
 
@@ -427,7 +559,7 @@ export const useWeddingData = () => {
             parcelas: parcelasFormatadas
           };
         }),
-        convidados: (guestsData || []).map((g: any) => ({
+        convidados: reconciledGuests.map((g: any) => ({
           id: g.id,
           nome: g.nome,
           categoria: g.categoria,
@@ -552,6 +684,12 @@ export const useWeddingData = () => {
 
   const updateSupplier = async (id: string, updated: Partial<Supplier>) => {
     if (!user) return;
+    const currentSupplier = data.fornecedores.find((supplier) => supplier.id === id);
+    const shouldReplaceInstallments = Boolean(
+      updated.parcelas &&
+      currentSupplier &&
+      !areInstallmentsEquivalent(currentSupplier.parcelas, updated.parcelas)
+    );
     const { parcelas: _parcelas, status: _status, ...localUpdated } = updated;
     try {
       const payload: any = {};
@@ -575,10 +713,53 @@ export const useWeddingData = () => {
       if (updated.contract_uploaded_at !== undefined) payload.contract_uploaded_at = updated.contract_uploaded_at;
       const { error } = await supabase.from('suppliers').update(payload).eq('id', id);
       if (error) throw error;
+
+      let nextInstallments = currentSupplier?.parcelas || [];
+      if (shouldReplaceInstallments && updated.parcelas) {
+        const { error: deleteInstallmentsError } = await supabase
+          .from('installments')
+          .delete()
+          .eq('supplier_id', id);
+
+        if (deleteInstallmentsError) throw deleteInstallmentsError;
+
+        const installmentsPayload = updated.parcelas.map((installment) => ({
+          supplier_id: id,
+          wedding_id: data.id,
+          numero: installment.numero,
+          data_vencimento: installment.dataVencimento,
+          data_pagamento: installment.dataPagamento || null,
+          valor: installment.valor,
+          status: installment.status,
+        }));
+
+        const { data: installmentData, error: insertInstallmentsError } = await supabase
+          .from('installments')
+          .insert(installmentsPayload)
+          .select();
+
+        if (insertInstallmentsError) throw insertInstallmentsError;
+
+        nextInstallments = (installmentData || []).map((installment: any) => ({
+          id: installment.id,
+          numero: installment.numero,
+          dataVencimento: installment.data_venc_original || installment.data_vencimento,
+          dataPagamento: installment.data_pagamento,
+          valor: parseFloat(installment.valor),
+          status: installment.status,
+        })).sort((a: Installment, b: Installment) => a.numero - b.numero);
+      }
+
       setData(prev => ({
         ...prev,
         fornecedores: prev.fornecedores.map((supplier) =>
-          supplier.id === id ? { ...supplier, ...localUpdated } : supplier
+          supplier.id === id
+            ? {
+                ...supplier,
+                ...localUpdated,
+                ...(shouldReplaceInstallments ? { parcelas: nextInstallments, status: calculateSupplierStatus(nextInstallments) } : {}),
+              }
+            : supplier
         )
       }));
       void logEvent({
@@ -588,6 +769,7 @@ export const useWeddingData = () => {
         metadata: {
           weddingId: data.id,
           fields: Object.keys(payload),
+          installmentsReplaced: shouldReplaceInstallments,
         },
       });
     } catch (err) {

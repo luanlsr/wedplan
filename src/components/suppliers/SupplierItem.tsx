@@ -13,10 +13,12 @@ import { useState } from "react";
 interface SupplierItemProps {
     supplier: Supplier;
     onSelect: (supplier: Supplier) => void;
+    onEdit: (supplier: Supplier) => void;
+    onDelete: (supplier: Supplier) => void;
     isManual: boolean;
 }
 
-export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps) => {
+export const SupplierItem = ({ supplier, onSelect, onEdit, onDelete, isManual }: SupplierItemProps) => {
     const dragControls = useDragControls();
     const [showActions, setShowActions] = useState(false);
     const paidValue = supplier.parcelas.reduce((acc: number, p: any) => p.status === 'pago' ? acc + p.valor : acc, 0);
@@ -135,7 +137,7 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
                                         
                                         <button 
                                             onClick={() => {
-                                                onSelect(supplier);
+                                                onEdit(supplier);
                                                 setShowActions(false);
                                             }}
                                             className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
@@ -158,6 +160,10 @@ export const SupplierItem = ({ supplier, onSelect, isManual }: SupplierItemProps
                                         <div className="h-px bg-border/50 my-1 mx-2" />
 
                                         <button 
+                                            onClick={() => {
+                                                onDelete(supplier);
+                                                setShowActions(false);
+                                            }}
                                             className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
                                         >
                                             <Trash2 size={16} />

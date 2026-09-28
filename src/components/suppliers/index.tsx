@@ -16,6 +16,8 @@ interface SuppliersListProps {
   suppliers: Supplier[];
   onAdd: () => void;
   onSelect: (supplier: Supplier) => void;
+  onEdit: (supplier: Supplier) => void;
+  onDelete: (supplier: Supplier) => void;
   onReorder: (suppliers: Supplier[]) => void;
 }
 
@@ -77,7 +79,7 @@ const SortBtn = ({ active, onClick, icon, label, direction }: SortBtnProps) => (
     </button>
 );
 
-export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: SuppliersListProps) => {
+export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, onReorder }: SuppliersListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Todas");
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -230,6 +232,8 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onReorder }: Supplie
                 key={s.id}
                 supplier={s}
                 onSelect={onSelect}
+                onEdit={onEdit}
+                onDelete={onDelete}
                 isManual={sortBy === 'manual'}
               />
             ))}
