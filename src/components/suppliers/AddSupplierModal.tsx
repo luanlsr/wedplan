@@ -203,7 +203,9 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
       config.numInstallments = parseInt(formData.numParcelas);
     }
 
-    const installments = generateInstallments(weddingDate, total, formData.tipoPagamento, config);
+    const installments = isEditing && editSupplier
+      ? editSupplier.parcelas
+      : generateInstallments(weddingDate, total, formData.tipoPagamento, config);
 
     let contractUrl = formData.contract_url;
     let contractStoragePath = formData.contract_storage_path || null;
@@ -757,7 +759,7 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
                 )}
               </div>
               {isEditing && (
-                <p className="text-[10px] text-amber-500 font-bold mt-4 uppercase">* Editar o plano de pagamento irá regenerar as parcelas e resetar os status de pagamento deste fornecedor.</p>
+                <p className="text-[10px] text-muted-foreground font-bold mt-4 uppercase">* As parcelas e pagamentos já registrados serão preservados nesta edição.</p>
               )}
             </div>
           )}
