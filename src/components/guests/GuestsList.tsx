@@ -1,4 +1,4 @@
-import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, X, Tags, Plus, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Search, ArrowUp, ArrowDown, ChevronDown, Filter, X, Tags, Plus, Trash2, FileDown } from 'lucide-react';
 import { Card, Button, Input, PaginationBar, useConfirm } from '../ui';
 import type { Guest, GuestCategory } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
@@ -44,6 +44,7 @@ export const GuestsList = ({
   const [showCategories, setShowCategories] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [savingCategory, setSavingCategory] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: GuestSortKey, direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,6 +129,16 @@ export const GuestsList = ({
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const { generateGuestsPdf } = await import('../../utils/pdfGenerator');
+      generateGuestsPdf(sortedAndFilteredGuests);
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   useEffect(() => {
@@ -278,6 +289,15 @@ export const GuestsList = ({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto mt-2 xl:mt-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleExportPdf()}
+                  disabled={sortedAndFilteredGuests.length === 0 || exportingPdf}
+                  className="h-11 flex-1 sm:flex-none px-5 rounded-xl font-extrabold gap-2 whitespace-nowrap text-sm"
+                >
+                  <FileDown size={18} className="shrink-0" /> {exportingPdf ? 'Gerando...' : 'Exportar PDF'}
+                </Button>
                 <Button onClick={onAdd} className="h-11 flex-1 sm:flex-none px-5 rounded-xl font-extrabold gap-2 whitespace-nowrap text-sm">
                   <UserPlus size={18} className="shrink-0" /> Adicionar Convidado
                 </Button>

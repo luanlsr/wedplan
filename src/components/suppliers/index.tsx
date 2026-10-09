@@ -4,7 +4,7 @@ import {
   Search, Plus, ArrowUpDown, 
   ChevronDown, Filter, ArrowUp, ArrowDown, 
   DollarSign as DollarIcon, CheckCircle2, 
-  X
+  X, FileDown
 } from "lucide-react";
 import type { Supplier } from "../../types";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
@@ -86,6 +86,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, on
   const [sortBy, setSortBy] = useState<SortOption>("alphabetical");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -110,6 +111,16 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, on
     } else {
       setSortBy(option);
       setSortDirection("asc");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const { generateSuppliersPdf } = await import("../../utils/pdfGenerator");
+      generateSuppliersPdf(sortedSuppliers);
+    } finally {
+      setExportingPdf(false);
     }
   };
 
@@ -201,10 +212,22 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, on
             </div>
           </div>
 
-          <Button onClick={onAdd} size="lg" className="h-11 px-5 rounded-xl font-extrabold group w-full xl:w-auto text-sm">
-            <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
-            Adicionar Fornecedor
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleExportPdf()}
+              disabled={sortedSuppliers.length === 0 || exportingPdf}
+              className="h-11 px-5 rounded-xl font-extrabold gap-2 w-full sm:w-auto text-sm"
+            >
+              <FileDown size={18} />
+              {exportingPdf ? 'Gerando...' : 'Exportar PDF'}
+            </Button>
+            <Button onClick={onAdd} size="lg" className="h-11 px-5 rounded-xl font-extrabold group w-full sm:w-auto text-sm">
+              <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
+              Adicionar Fornecedor
+            </Button>
+          </div>
         </div>
 
         <div className={cn(
