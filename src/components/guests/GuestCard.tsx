@@ -1,4 +1,5 @@
 import { MoreVertical, Users, Send, Edit2, Trash2, ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
 import { cn } from '../../lib/utils';
@@ -64,6 +65,53 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
     }
   };
 
+  const actionsMenu = showActions
+    ? createPortal(
+        <>
+          <div className="fixed inset-0 z-[120] bg-black/10 backdrop-blur-[1px]" onClick={closeActions} />
+          <div className="fixed inset-x-0 bottom-4 z-[130] mx-auto w-[calc(100vw-2rem)] max-w-md bg-card border border-border shadow-[0_20px_70px_rgba(0,0,0,0.35)] rounded-2xl p-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <div className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 py-2">Administrar</div>
+            
+            <button 
+              onClick={() => {
+                void handleUpdate({ invitation_sent: !guest.invitation_sent });
+                closeActions();
+              }}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Send size={16} className={guest.invitation_sent ? "text-primary" : "text-muted-foreground"} />
+                <span>{guest.invitation_sent ? 'Enviado' : 'Enviar'}</span>
+              </div>
+              {guest.invitation_sent && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+            </button>
+
+            <button 
+              onClick={() => {
+                onEdit(guest);
+                closeActions();
+              }}
+              className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
+            >
+              <Edit2 size={16} className="text-primary" />
+              Editar Convidado
+            </button>
+
+            <div className="h-px bg-border/50 my-1 mx-2" />
+
+            <button 
+              onClick={() => void handleDelete()}
+              className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
+            >
+              <Trash2 size={16} />
+              Excluir
+            </button>
+          </div>
+        </>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="relative border-b border-border/40 bg-transparent py-4 px-2 last:border-0">
       <div className="flex items-center gap-3 relative">
@@ -125,50 +173,7 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
             >
               <MoreVertical size={20} />
             </Button>
-
-            {showActions && (
-              <>
-                <div className="fixed inset-0 z-[120] bg-black/10 backdrop-blur-[1px]" onClick={closeActions} />
-                <div className="fixed bottom-4 left-4 right-4 z-[130] bg-card border border-border shadow-[0_20px_70px_rgba(0,0,0,0.35)] rounded-2xl p-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
-                  <div className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 py-2">Administrar</div>
-                  
-                  <button 
-                    onClick={() => {
-                      void handleUpdate({ invitation_sent: !guest.invitation_sent });
-                      setShowActions(false);
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Send size={16} className={guest.invitation_sent ? "text-primary" : "text-muted-foreground"} />
-                      <span>{guest.invitation_sent ? 'Enviado' : 'Enviar'}</span>
-                    </div>
-                    {guest.invitation_sent && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      onEdit(guest);
-                      setShowActions(false);
-                    }}
-                    className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors"
-                  >
-                    <Edit2 size={16} className="text-primary" />
-                    Editar Convidado
-                  </button>
-
-                  <div className="h-px bg-border/50 my-1 mx-2" />
-
-                  <button 
-                    onClick={() => void handleDelete()}
-                    className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                  >
-                    <Trash2 size={16} />
-                    Excluir
-                  </button>
-                </div>
-              </>
-            )}
+            {actionsMenu}
           </div>
         </div>
       </div>
