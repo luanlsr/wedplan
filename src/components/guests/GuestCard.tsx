@@ -22,6 +22,9 @@ const guestStatusOptions = [
 export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
   const { alert: customAlert, toast } = useConfirm();
   const [showActions, setShowActions] = useState(false);
+
+  const closeActions = () => setShowActions(false);
+
   const handleUpdate = async (updates: Partial<Guest>) => {
     try {
       await onUpdate(guest.id, updates);
@@ -41,6 +44,23 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
       case 'confirmado': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
       case 'recusado': return 'text-red-500 bg-red-500/10 border-red-500/20';
       default: return 'text-amber-600 bg-amber-500/10 border-amber-500/20';
+    }
+  };
+
+  const handleDelete = async () => {
+    closeActions();
+    const isConfirmed = await confirm({
+      title: "Excluir?",
+      description: `Remover ${guest.nome}?`,
+      type: "danger",
+    });
+    if (isConfirmed) {
+      await onDelete(guest.id);
+      toast({
+        title: 'Convidado removido',
+        description: `${guest.nome} saiu da lista.`,
+        type: 'success',
+      });
     }
   };
 
@@ -108,8 +128,8 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
 
             {showActions && (
               <>
-                <div className="fixed inset-0 z-[60]" onClick={() => setShowActions(false)} />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-[0_10px_40px_rgba(0,0,0,0.3)] rounded-[1.5rem] p-2 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                <div className="fixed inset-0 z-[120] bg-black/10 backdrop-blur-[1px]" onClick={closeActions} />
+                <div className="fixed bottom-4 left-4 right-4 z-[130] bg-card border border-border shadow-[0_20px_70px_rgba(0,0,0,0.35)] rounded-2xl p-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
                   <div className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-3 py-2">Administrar</div>
                   
                   <button 
@@ -140,22 +160,7 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
                   <div className="h-px bg-border/50 my-1 mx-2" />
 
                   <button 
-                    onClick={async () => {
-                      setShowActions(false);
-                      const isConfirmed = await confirm({
-                        title: "Excluir?",
-                        description: `Remover ${guest.nome}?`,
-                        type: "danger",
-                      });
-                      if (isConfirmed) {
-                        await onDelete(guest.id);
-                        toast({
-                          title: 'Convidado removido',
-                          description: `${guest.nome} saiu da lista.`,
-                          type: 'success',
-                        });
-                      }
-                    }}
+                    onClick={() => void handleDelete()}
                     className="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors"
                   >
                     <Trash2 size={16} />
