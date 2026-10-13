@@ -4,6 +4,7 @@ import type { Guest, GuestCategory } from '../../types';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { sortTextPtBr, uniqueSortedTextPtBr } from '../../utils/sorting';
+import { formatCurrency } from '../../utils/calculations';
 import { GuestStats } from './GuestStats';
 import { GuestRow } from './GuestRow';
 import { GuestCard } from './GuestCard';
@@ -225,6 +226,9 @@ export const GuestsList = ({
       pendentes: nonStaffGuests
         .filter((guest) => guest.status === 'pendente')
         .reduce((total, guest) => total + peopleCount(guest), 0),
+      recusados: nonStaffGuests
+        .filter((guest) => guest.status === 'recusado')
+        .reduce((total, guest) => total + peopleCount(guest), 0),
       convidados: nonStaffGuests.reduce((total, guest) => total + (guest.adultos || 0), 0),
       adultos: guests.reduce((total, guest) => total + (guest.adultos || 0), 0),
       criancas: guests.reduce((total, guest) => total + (guest.criancas || 0), 0),
@@ -236,8 +240,51 @@ export const GuestsList = ({
     };
   }, [guests]);
 
+  const buffetTotals = useMemo(() => {
+    const isStaff = (guest: Guest) => guest.categoria.trim().toLowerCase() === 'staff';
+    const adultsFullPrice = guests
+      .filter((guest) => !isStaff(guest))
+      .reduce((total, guest) => total + (guest.adultos || 0), 0);
+    const staffHalfPrice = guests
+      .filter(isStaff)
+      .reduce((total, guest) => total + (guest.adultos || 0), 0);
+    const childrenHalfPrice = guests.reduce((total, guest) => total + (guest.criancas || 0), 0);
+    const fullPrice = 130;
+    const halfPrice = fullPrice / 2;
+
+    return {
+      adultsFullPrice,
+      staffHalfPrice,
+      childrenHalfPrice,
+      fullPrice,
+      halfPrice,
+      total: adultsFullPrice * fullPrice + (staffHalfPrice + childrenHalfPrice) * halfPrice,
+    };
+  }, [guests]);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <Card className="border-primary/20 bg-primary/5 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Estimativa atualizada do buffet</p>
+            <p className="mt-1 text-2xl font-black text-foreground">{formatCurrency(buffetTotals.total)}</p>
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
+              Adultos convidados: {buffetTotals.adultsFullPrice} × {formatCurrency(buffetTotals.fullPrice)} · Meia: {buffetTotals.staffHalfPrice + buffetTotals.childrenHalfPrice} × {formatCurrency(buffetTotals.halfPrice)}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-[260px]">
+            <div className="rounded-xl bg-card/80 p-3">
+              <p className="font-bold text-muted-foreground">Staff meia</p>
+              <p className="mt-1 text-lg font-black text-foreground">{buffetTotals.staffHalfPrice}</p>
+            </div>
+            <div className="rounded-xl bg-card/80 p-3">
+              <p className="font-bold text-muted-foreground">Crianças meia</p>
+              <p className="mt-1 text-lg font-black text-foreground">{buffetTotals.childrenHalfPrice}</p>
+            </div>
+          </div>
+        </div>
+      </Card>
       <div>
         <div className="flex items-center justify-between mb-4 sm:hidden px-1">
           <div className="flex items-center gap-2">

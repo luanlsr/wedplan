@@ -6,6 +6,7 @@ interface GuestStatsProps {
     grupos: number;
     confirmados: number;
     pendentes: number;
+    recusados: number;
     convidados: number;
     adultos: number;
     criancas: number;
@@ -18,26 +19,32 @@ interface GuestStatsProps {
 
 export const GuestStats = ({ totals }: GuestStatsProps) => {
   return (
-    <div className="flex items-stretch overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 lg:grid-cols-9 gap-3 sm:gap-4 no-scrollbar scroll-smooth snap-x">
+    <div className="flex items-stretch overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 lg:grid-cols-10 gap-3 sm:gap-4 no-scrollbar scroll-smooth snap-x">
       <div className="min-w-[120px] sm:min-w-0 snap-start h-full">
         <Card className="p-3 bg-primary/10 border-primary/20 flex h-full min-h-20 flex-col justify-between">
-          <p className="text-[10px] font-extrabold text-primary uppercase tracking-wide">Total</p>
+          <p className="text-[10px] font-extrabold text-primary uppercase tracking-wide">Total geral</p>
           <div>
             <p className="text-lg sm:text-xl font-extrabold leading-none">{totals.total}</p>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wide mt-1">{totals.grupos} grupos</p>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wide mt-1">pessoas · {totals.grupos} grupos</p>
           </div>
         </Card>
       </div>
       <div className="min-w-[120px] sm:min-w-0 snap-start h-full">
         <Card className="p-3 bg-emerald-500/10 border-emerald-500/20 flex h-full min-h-20 flex-col justify-between">
-          <p className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wide">Confirm.</p>
+          <p className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wide">Conf. convidados</p>
           <p className="text-lg sm:text-xl font-extrabold leading-none">{totals.confirmados}</p>
         </Card>
       </div>
       <div className="min-w-[120px] sm:min-w-0 snap-start h-full">
         <Card className="p-3 bg-amber-500/10 border-amber-500/20 flex h-full min-h-20 flex-col justify-between">
-          <p className="text-[10px] font-extrabold text-amber-600 uppercase tracking-wide">Pendente</p>
+          <p className="text-[10px] font-extrabold text-amber-600 uppercase tracking-wide">Pend. convidados</p>
           <p className="text-lg sm:text-xl font-extrabold leading-none">{totals.pendentes}</p>
+        </Card>
+      </div>
+      <div className="min-w-[120px] sm:min-w-0 snap-start h-full">
+        <Card className="p-3 bg-red-500/10 border-red-500/20 flex h-full min-h-20 flex-col justify-between">
+          <p className="text-[10px] font-extrabold text-red-600 uppercase tracking-wide">Recus. convidados</p>
+          <p className="text-lg sm:text-xl font-extrabold leading-none">{totals.recusados}</p>
         </Card>
       </div>
       <div className="min-w-[120px] sm:min-w-0 snap-start h-full">
