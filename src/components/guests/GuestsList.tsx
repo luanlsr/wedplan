@@ -211,21 +211,30 @@ export const GuestsList = ({
     currentPage * itemsPerPage
   );
 
-  const totals = useMemo(() => ({
-    total: guests.length,
-    confirmados: guests.filter(g => g.status === 'confirmado').length,
-    pendentes: guests.filter(g => g.status === 'pendente').length,
-    convidados: guests.reduce((acc, g) => g.categoria.trim().toLowerCase() !== 'staff' ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
-    adultos: guests.reduce((acc, g) => acc + (g.adultos || 0), 0),
-    criancas: guests.reduce((acc, g) => acc + (g.criancas || 0), 0),
-    noiva: guests.reduce((acc, g) => g.categoria.includes('Noiva') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
-    noivo: guests.reduce((acc, g) => g.categoria.includes('Noivo') ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
-    staff: guests.reduce((acc, g) => g.categoria.trim().toLowerCase() === 'staff' ? acc + (g.adultos || 0) + (g.criancas || 0) : acc, 0),
-    meia: guests.reduce((acc, g) => {
-      const isStaff = g.categoria.trim().toLowerCase() === 'staff';
-      return acc + (isStaff ? (g.adultos || 0) + (g.criancas || 0) : 0) + (g.criancas || 0);
-    }, 0),
-  }), [guests]);
+  const totals = useMemo(() => {
+    const isStaff = (guest: Guest) => guest.categoria.trim().toLowerCase() === 'staff';
+    const nonStaffGuests = guests.filter((guest) => !isStaff(guest));
+    const peopleCount = (guest: Guest) => (guest.adultos || 0) + (guest.criancas || 0);
+
+    return {
+      total: guests.reduce((total, guest) => total + peopleCount(guest), 0),
+      grupos: guests.length,
+      confirmados: nonStaffGuests
+        .filter((guest) => guest.status === 'confirmado')
+        .reduce((total, guest) => total + peopleCount(guest), 0),
+      pendentes: nonStaffGuests
+        .filter((guest) => guest.status === 'pendente')
+        .reduce((total, guest) => total + peopleCount(guest), 0),
+      convidados: nonStaffGuests.reduce((total, guest) => total + (guest.adultos || 0), 0),
+      adultos: guests.reduce((total, guest) => total + (guest.adultos || 0), 0),
+      criancas: guests.reduce((total, guest) => total + (guest.criancas || 0), 0),
+      noiva: guests.reduce((total, guest) => guest.categoria.includes('Noiva') ? total + peopleCount(guest) : total, 0),
+      noivo: guests.reduce((total, guest) => guest.categoria.includes('Noivo') ? total + peopleCount(guest) : total, 0),
+      staff: guests.filter(isStaff).reduce((total, guest) => total + (guest.adultos || 0), 0),
+      meia: guests.filter(isStaff).reduce((total, guest) => total + (guest.adultos || 0), 0)
+        + guests.reduce((total, guest) => total + (guest.criancas || 0), 0),
+    };
+  }, [guests]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
