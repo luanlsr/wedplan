@@ -43,7 +43,7 @@ const FilterSelect = ({ value, onChange, options, icon, isStatus = false }: Filt
     >
       {options.map((o: string) => (
         <option key={o} value={o}>
-          {isStatus && o !== "Todos" ? (o === "pago" ? "Pagos" : o === "pendente" ? "Pendentes" : o === "parcial" ? "Parciais" : "Atrasados") : o}
+          {isStatus && o !== "Todos" ? getSupplierStatusLabel(o) : o}
         </option>
       ))}
     </select>
@@ -96,7 +96,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, on
     [suppliers]
   );
   const statuses = useMemo(
-    () => ["Todos", ...["atrasado", "pago", "parcial", "pendente"].sort((a, b) => sortTextPtBr(getSupplierStatusLabel(a), getSupplierStatusLabel(b)))],
+    () => ["Todos", ...["atrasado", "pago", "parcial", "pendente", "nao_pago"].sort((a, b) => sortTextPtBr(getSupplierStatusLabel(a), getSupplierStatusLabel(b)))],
     []
   );
 
@@ -150,7 +150,8 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, on
       const matchesSearch = s.fornecedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.servico.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = categoryFilter === "Todas" || s.categoria === categoryFilter;
-      const matchesStatus = statusFilter === "Todos" || s.status === statusFilter;
+      const matchesStatus = statusFilter === "Todos"
+        || (statusFilter === "nao_pago" ? s.status !== "pago" : s.status === statusFilter);
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [suppliers, searchTerm, categoryFilter, statusFilter, sortBy, sortDirection]);
@@ -295,6 +296,7 @@ export const SuppliersList = ({ suppliers, onAdd, onSelect, onEdit, onDelete, on
 const getSupplierStatusLabel = (status: string) => {
   if (status === "atrasado") return "Atrasados";
   if (status === "pago") return "Pagos";
+  if (status === "nao_pago") return "Não pagos";
   if (status === "parcial") return "Parciais";
   if (status === "pendente") return "Pendentes";
   return status;
