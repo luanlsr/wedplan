@@ -86,6 +86,16 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
 
   useEffect(() => {
     if (editSupplier) {
+      const entryInstallments = editSupplier.tipoPagamento === "entrada_quitacao"
+        ? Math.max(editSupplier.parcelas.length - 1, 1)
+        : 1;
+      const remainingInstallments = editSupplier.tipoPagamento === "entrada_parcelas"
+        ? Math.max(editSupplier.parcelas.length - entryInstallments, 1)
+        : editSupplier.parcelas.length;
+      const inferredEntryValue = editSupplier.tipoPagamento === "entrada_parcelas" || editSupplier.tipoPagamento === "entrada_quitacao"
+        ? editSupplier.parcelas.slice(0, entryInstallments).reduce((total, installment) => total + installment.valor, 0)
+        : 0;
+
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         fornecedor: editSupplier.fornecedor,
@@ -93,10 +103,10 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
         categoria: editSupplier.categoria,
         valorTotal: maskCurrency(editSupplier.valorTotal),
         tipoPagamento: editSupplier.tipoPagamento,
-        numParcelas: editSupplier.parcelas.length.toString(),
-        entryPercentage: editSupplier.porcentagemEntrada?.toString() || "30",
-        entryValue: editSupplier.valorEntrada ? maskCurrency(editSupplier.valorEntrada) : "",
-        entryInInstallments: editSupplier.entradaEmParcelas?.toString() || "1",
+        numParcelas: (editSupplier.numeroParcelas || remainingInstallments).toString(),
+        entryPercentage: editSupplier.porcentagemEntrada?.toString() || (inferredEntryValue > 0 ? ((inferredEntryValue / editSupplier.valorTotal) * 100).toFixed(2) : "30"),
+        entryValue: editSupplier.valorEntrada ? maskCurrency(editSupplier.valorEntrada) : inferredEntryValue > 0 ? maskCurrency(inferredEntryValue) : "",
+        entryInInstallments: editSupplier.entradaEmParcelas?.toString() || entryInstallments.toString(),
         dataContrato: editSupplier.dataContrato,
         finalPaymentDaysBeforeWedding: editSupplier.diasPagamentoFinalAntesCasamento?.toString() || "15",
         observacoes: editSupplier.observacoes || "",
@@ -203,9 +213,25 @@ export const SupplierModal = ({ onClose, onAdd, onUpdate, weddingDate, weddingId
       config.numInstallments = parseInt(formData.numParcelas);
     }
 
-    const installments = isEditing && editSupplier
+    const generatedInstallments = generateInstallments(weddingDate, total, formData.tipoPagamento, config);
+    const paymentPlanChanged = isEditing && editSupplier
+      ? generatedInstallments.length !== editSupplier.parcelas.length
+        || generatedInstallments.some((installment, index) => {
+          const current = editSupplier.parcelas[index];
+          return !current
+            || current.numero !== installment.numero
+            || Math.abs(current.valor - installment.valor) > 0.01
+            || current.dataVencimento !== installment.dataVencimento;
+        })
+      : true;
+    const installments = isEditing && editSupplier && !paymentPlanChanged
       ? editSupplier.parcelas
-      : generateInstallments(weddingDate, total, formData.tipoPagamento, config);
+      : generatedInstallments.map((installment) => {
+          const previous = editSupplier?.parcelas.find((current) => current.numero === installment.numero);
+          return previous?.status === "pago"
+            ? { ...installment, status: previous.status, dataPagamento: previous.dataPagamento || null }
+            : installment;
+        });
 
     let contractUrl = formData.contract_url;
     let contractStoragePath = formData.contract_storage_path || null;
