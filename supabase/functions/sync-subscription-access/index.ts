@@ -9,6 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin, Access-Control-Request-Headers',
 }
 
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3'
@@ -75,7 +76,7 @@ const refreshFromDatabase = async (adminClient: any, accountId: string) => {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+    return new Response(null, { headers: corsHeaders, status: 200 })
   }
 
   if (req.method !== 'POST') {

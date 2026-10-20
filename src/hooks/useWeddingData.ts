@@ -297,16 +297,17 @@ const fetchProfileWithAccessState = async (userId: string) => {
 const ensureWeddingMembership = async (userId: string, weddingId: string) => {
   const { error } = await supabase
     .from('wedding_members')
-    .upsert(
+    .insert(
       {
         wedding_id: weddingId,
         user_id: userId,
         role: 'owner',
-      },
-      { onConflict: 'wedding_id,user_id' }
+      }
     );
 
-  if (error) throw error;
+  // A membership existente já garante o vínculo. Evitamos upsert porque
+  // ele exige permissão de UPDATE na tabela protegida por RLS.
+  if (error && error.code !== '23505') throw error;
 };
 
 export const useWeddingData = () => {
