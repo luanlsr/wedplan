@@ -1,9 +1,9 @@
-import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard, Globe2, Bug, Calculator, CalendarClock, FileText, Armchair } from "lucide-react";
+import { LayoutDashboard, Briefcase, DollarSign, Settings, Moon, Sun, TrendingUp, LogOut, Heart, CheckCircle2, Menu, X, UserCheck, ChevronLeft, ChevronRight, Users, CreditCard, Globe2, Bug, Calculator, CalendarClock, FileText, Armchair, Bell, AlertTriangle, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, NavLink } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { WeddingSwitcher } from "./WeddingSwitcher";
 import { BrandLogo } from "./BrandLogo";
 
@@ -438,7 +438,46 @@ export const BottomNav = ({ userRole = 'couple', isPublicMode = false, userName 
   );
 };
 
-export const Header = ({ title, isDark, toggleTheme }: { title: string; isDark: boolean; toggleTheme?: () => void }) => (
+export interface HeaderNotification {
+  id: string;
+  kind: 'alerta' | 'lembrete';
+  title: string;
+  message: string;
+  path: string;
+}
+
+export const Header = ({
+  title,
+  isDark,
+  toggleTheme,
+  notifications = [],
+  onNotificationClick,
+}: {
+  title: string;
+  isDark: boolean;
+  toggleTheme?: () => void;
+  notifications?: HeaderNotification[];
+  onNotificationClick?: (notification: HeaderNotification) => void;
+}) => {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!notificationsRef.current?.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, []);
+
+  const handleNotificationClick = (notification: HeaderNotification) => {
+    onNotificationClick?.(notification);
+    setIsNotificationsOpen(false);
+  };
+
+  return (
   <header className="mb-6 sm:mb-8 flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-card/80 px-4 py-4 shadow-sm backdrop-blur-xl sm:px-5">
     <div className="flex min-w-0 items-center gap-3">
       <BrandLogo variant="mark" size="sm" />
@@ -450,14 +489,88 @@ export const Header = ({ title, isDark, toggleTheme }: { title: string; isDark: 
       </div>
     </div>
 
-    {toggleTheme && (
-      <button 
-        onClick={toggleTheme}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/60 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
-        aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-      >
-        {isDark ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-primary" />}
-      </button>
-    )}
+    <div className="flex shrink-0 items-center gap-2">
+      <div className="relative" ref={notificationsRef}>
+        <button
+          onClick={() => setIsNotificationsOpen((open) => !open)}
+          className={cn(
+            "relative flex h-10 items-center gap-1.5 rounded-xl border px-3 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95",
+            isNotificationsOpen ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-secondary/60"
+          )}
+          aria-label={`${notifications.length} notificações`}
+          aria-expanded={isNotificationsOpen}
+          aria-haspopup="menu"
+        >
+          <Bell size={18} />
+          {notifications.length > 0 && (
+            <span className="absolute -right-1.5 -top-2 flex min-w-5 h-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white shadow-sm">
+              {notifications.length > 99 ? '99+' : notifications.length}
+            </span>
+          )}
+          <ChevronDown size={14} className={cn("transition-transform", isNotificationsOpen && "rotate-180")} />
+        </button>
+
+        <AnimatePresence>
+          {isNotificationsOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.16 }}
+              className="absolute right-0 top-12 z-[90] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+              role="menu"
+            >
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-black">Notificações</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Alertas e lembretes</p>
+                </div>
+                <span className="rounded-full bg-red-500/10 px-2 py-1 text-[10px] font-black text-red-500">{notifications.length}</span>
+              </div>
+              <div className="max-h-[min(24rem,60vh)] overflow-y-auto p-2">
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bell size={24} className="mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="text-sm font-semibold text-muted-foreground">Tudo em dia por aqui.</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-accent"
+                      role="menuitem"
+                    >
+                      <span className={cn(
+                        "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                        notification.kind === 'alerta' ? "bg-amber-500/10 text-amber-600" : "bg-blue-500/10 text-blue-600"
+                      )}>
+                        {notification.kind === 'alerta' ? <AlertTriangle size={16} /> : <CalendarClock size={16} />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[10px] font-black uppercase tracking-wide text-muted-foreground">{notification.kind}</span>
+                        <span className="block truncate text-sm font-bold">{notification.title}</span>
+                        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{notification.message}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {toggleTheme && (
+        <button 
+          onClick={toggleTheme}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/60 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
+          aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+        >
+          {isDark ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-primary" />}
+        </button>
+      )}
+    </div>
   </header>
-);
+  );
+};

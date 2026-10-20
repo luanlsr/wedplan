@@ -5,6 +5,7 @@ import { parseISO, differenceInDays } from "date-fns";
 import { AlertTriangle } from 'lucide-react';
 
 import { AppLayout } from './layout/AppLayout';
+import type { HeaderNotification } from './layout';
 import { GlobalModals } from './layout/GlobalModals';
 import { GuidedTour } from './layout/GuidedTour';
 import { LoadingScreen } from './layout/LoadingScreen';
@@ -35,7 +36,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useConfirm } from './ui';
 import { useAppModals } from '../hooks/useAppModals';
 import { calculateStats, formatDate } from '../utils/calculations';
-import { cn } from '../lib/utils';
 import { logError, logEvent, setObservabilityContext } from '../utils/observability';
 import { getAccountAccessTitle, isAccountAccessBlocked } from '../services/subscriptionAccess';
 import type { Installment } from '../types';
@@ -142,9 +142,9 @@ export function MainApp() {
     }
   };
 
-  const notifications = useMemo(() => {
+  const notifications = useMemo<HeaderNotification[]>(() => {
     const today = new Date();
-    const alerts: { type: 'warning' | 'info', message: string, supplier: string }[] = [];
+    const alerts: HeaderNotification[] = [];
 
     data.fornecedores.forEach(s => {
       if (s.status === 'pago') return;
@@ -154,9 +154,39 @@ export function MainApp() {
       const daysDiff = differenceInDays(dueDate, today);
 
       if (daysDiff > 0 && daysDiff <= 15) {
-        alerts.push({ type: 'warning', message: `Quitação final em ${daysDiff} dias (${formatDate(lastInstallment.dataVencimento)})!`, supplier: s.fornecedor });
+        alerts.push({
+          id: `supplier-${s.id}-${lastInstallment.id}`,
+          kind: 'alerta',
+          title: s.fornecedor,
+          message: `Quitação final em ${daysDiff} dias (${formatDate(lastInstallment.dataVencimento)})!`,
+          path: `/fornecedores/${s.id}`,
+        });
       } else if (daysDiff > 15 && daysDiff <= 30) {
-        alerts.push({ type: 'info', message: `Quitação final em aproximadamente 1 mês (${formatDate(lastInstallment.dataVencimento)}).`, supplier: s.fornecedor });
+        alerts.push({
+          id: `supplier-${s.id}-${lastInstallment.id}`,
+          kind: 'alerta',
+          title: s.fornecedor,
+          message: `Quitação final em aproximadamente 1 mês (${formatDate(lastInstallment.dataVencimento)}).`,
+          path: `/fornecedores/${s.id}`,
+        });
+      }
+    });
+
+    (data.tarefas || []).forEach((task) => {
+      if (task.status === 'concluido' || !task.dataLimite) return;
+      const daysDiff = differenceInDays(parseISO(task.dataLimite), today);
+      if (daysDiff < 0 || daysDiff <= 7) {
+        alerts.push({
+          id: `task-${task.id}`,
+          kind: 'lembrete',
+          title: task.titulo,
+          message: daysDiff < 0
+            ? `Tarefa atrasada desde ${formatDate(task.dataLimite)}.`
+            : daysDiff === 0
+              ? 'O prazo termina hoje.'
+              : `Prazo em ${daysDiff} ${daysDiff === 1 ? 'dia' : 'dias'} (${formatDate(task.dataLimite)}).`,
+          path: '/tarefas',
+        });
       }
     });
 
@@ -334,6 +364,8 @@ export function MainApp() {
       weddingId={data.id}
       userName={data.userName}
       onWeddingSwitch={refreshData}
+        notifications={data.role === 'couple' && !isPublicMode ? notifications : []}
+        onNotificationClick={(notification) => navigate(notification.path)}
     >
       <Routes>
         <Route index element={
@@ -348,22 +380,6 @@ export function MainApp() {
             <LoggedWeddingTools data={data} />
           ) : (
             <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
-              {notifications.length > 0 && (
-                <div className="min-w-0 space-y-3">
-                  {notifications.map((n, i) => (
-                    <div key={i} className={cn(
-                      "flex min-w-0 items-center gap-3 rounded-2xl border p-4 animate-in slide-in-from-top-4 duration-500 sm:gap-4",
-                      n.type === 'warning' ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
-                    )}>
-                      <AlertTriangle size={20} className="shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <span className="font-black uppercase text-[10px] block leading-none mb-1">Alerta de Quitação</span>
-                        <p className="break-words text-sm font-bold"><strong>{n.supplier}</strong>: {n.message}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               <Dashboard data={data} stats={stats} weddingDate={data.casal.data} onAction={handleDashboardAction} />
             </div>
           )

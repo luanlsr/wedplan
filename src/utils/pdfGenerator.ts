@@ -17,17 +17,29 @@ const getSupplierStatusLabel = (status: Supplier['status']) => {
 
 export const generateGuestsPdf = (guests: Guest[]) => {
   const doc = new jsPDF();
-  
-  const groupedGuests = guests.reduce((groups, guest) => {
-    const cat = guest.categoria || 'Outros';
-    if (!groups[cat]) {
-      groups[cat] = [];
+
+  const getGuestGroup = (guest: Guest) => {
+    const category = (guest.categoria || '').trim().toLocaleLowerCase('pt-BR');
+
+    if (category.includes('staff')) return 'Staff';
+    if (category.includes('padrinh')) return 'Padrinhos';
+    if (category.includes('fam') && category.includes('noiv')) {
+      return category.includes('noiva') ? 'Família da Noiva' : 'Família do Noivo';
     }
-    groups[cat].push(guest);
+    return 'Convidados';
+  };
+
+  const groupedGuests = guests.reduce((groups, guest) => {
+    const group = getGuestGroup(guest);
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(guest);
     return groups;
   }, {} as Record<string, Guest[]>);
 
-  const categories = Object.keys(groupedGuests).sort(sortTextPtBr);
+  const categories = ['Família da Noiva', 'Família do Noivo', 'Padrinhos', 'Convidados', 'Staff']
+    .filter((category) => groupedGuests[category]?.length);
 
   // Title
   doc.setFontSize(22);
@@ -94,7 +106,7 @@ export const generateGuestsPdf = (guests: Guest[]) => {
       columnStyles: {
         0: { cellWidth: 'auto' },
         1: { cellWidth: 28, halign: 'center' },
-        2: { cellWidth: 25, halign: 'center', fontStyle: 'bold' },
+        2: { cellWidth: 32, halign: 'center', fontStyle: 'bold', overflow: 'ellipsize' },
         3: { cellWidth: 25, halign: 'center' },
       },
       didParseCell: function (data) {

@@ -35,6 +35,7 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
   const [form, setForm] = useState<TableForm>(emptyForm);
   const [editingTableId, setEditingTableId] = useState<string | null>(null);
   const [selectedGuestByTable, setSelectedGuestByTable] = useState<Record<string, string>>({});
+  const [guestSearchByTable, setGuestSearchByTable] = useState<Record<string, string>>({});
 
   const guestsById = useMemo(
     () => new Map(guests.map((guest) => [guest.id, guest])),
@@ -306,6 +307,7 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
     }
 
     setSelectedGuestByTable((current) => ({ ...current, [table.id]: '' }));
+    setGuestSearchByTable((current) => ({ ...current, [table.id]: '' }));
     await loadTables();
   };
 
@@ -478,6 +480,12 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
             const remainingSeats = table.chair_count - occupiedPeople;
             const isFull = remainingSeats === 0;
             const isOver = remainingSeats < 0;
+            const guestSearchTerm = (guestSearchByTable[table.id] || '').trim().toLowerCase();
+            const tableAvailableGuests = availableGuests.filter((guest) => (
+              !guestSearchTerm
+              || guest.nome.toLowerCase().includes(guestSearchTerm)
+              || guest.categoria.toLowerCase().includes(guestSearchTerm)
+            ));
 
             return (
               <Card key={table.id} className="overflow-hidden border-border bg-card p-0 shadow-sm">
@@ -532,18 +540,42 @@ export const WeddingDayView = ({ weddingId, guests }: { weddingId?: string; gues
 
                   <div className="rounded-xl border border-border bg-secondary/20 p-4">
                     <p className="mb-3 text-xs font-black uppercase tracking-widest text-muted-foreground">Adicionar integrante</p>
-                    <select
-                      value={selectedGuestByTable[table.id] || ''}
-                      onChange={(event) => setSelectedGuestByTable((current) => ({ ...current, [table.id]: event.target.value }))}
-                      className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-bold text-foreground outline-none focus:border-primary/40"
-                    >
-                      <option value="">Selecione...</option>
-                      {availableGuests.map((guest) => (
-                        <option key={guest.id} value={guest.id}>
-                          {guest.nome} - {peopleCount(guest)} pessoa(s)
-                        </option>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                      <Input
+                        value={guestSearchByTable[table.id] || ''}
+                        onChange={(event) => {
+                          setGuestSearchByTable((current) => ({ ...current, [table.id]: event.target.value }));
+                          setSelectedGuestByTable((current) => ({ ...current, [table.id]: '' }));
+                        }}
+                        placeholder="Pesquisar integrante..."
+                        className="h-11 rounded-xl bg-background pl-9 text-sm"
+                        aria-label={`Pesquisar integrante para ${table.name}`}
+                      />
+                    </div>
+                    <div className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border border-border bg-background p-1 custom-scrollbar">
+                      {tableAvailableGuests.length === 0 ? (
+                        <p className="p-3 text-center text-xs font-bold text-muted-foreground">
+                          Nenhum integrante encontrado.
+                        </p>
+                      ) : tableAvailableGuests.map((guest) => (
+                        <button
+                          key={guest.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGuestByTable((current) => ({ ...current, [table.id]: guest.id }));
+                            setGuestSearchByTable((current) => ({ ...current, [table.id]: guest.nome }));
+                          }}
+                          className={cn(
+                            'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent',
+                            selectedGuestByTable[table.id] === guest.id && 'bg-primary/10 text-primary'
+                          )}
+                        >
+                          <span className="min-w-0 truncate text-sm font-bold">{guest.nome}</span>
+                          <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">{peopleCount(guest)} pessoa(s)</span>
+                        </button>
                       ))}
-                    </select>
+                    </div>
                     <Button
                       type="button"
                       className="mt-3 h-10 w-full rounded-xl font-black"

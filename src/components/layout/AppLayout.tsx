@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Sidebar, Header, BottomNav } from './index';
+import { Sidebar, Header, BottomNav, type HeaderNotification } from './index';
 import { Onboarding } from './Onboarding';
 import { cn } from '../../lib/utils';
 import type { UserRole } from '../../types';
@@ -19,6 +19,8 @@ interface AppLayoutProps {
   weddingId?: string;
   userName?: string;
   onWeddingSwitch?: () => void | Promise<void>;
+  notifications?: HeaderNotification[];
+  onNotificationClick?: (notification: HeaderNotification) => void;
 }
 
 export const AppLayout = ({
@@ -34,7 +36,9 @@ export const AppLayout = ({
   isPublicMode = false,
   weddingId,
   userName,
-  onWeddingSwitch
+  onWeddingSwitch,
+  notifications = [],
+  onNotificationClick
 }: AppLayoutProps) => {
   const location = useLocation();
   const mainRef = React.useRef<HTMLElement>(null);
@@ -72,7 +76,13 @@ export const AppLayout = ({
         isSidebarCollapsed ? "lg:ml-24" : "lg:ml-80"
       )} ref={mainRef}>
         <div className="mx-auto w-full max-w-[1500px] min-w-0 p-3 sm:p-6 lg:p-8">
-          <Header title={pageTitle} isDark={isDark} toggleTheme={toggleTheme} />
+          <Header
+            title={pageTitle}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            notifications={notifications}
+            onNotificationClick={onNotificationClick}
+          />
           {children}
         </div>
       </main>
