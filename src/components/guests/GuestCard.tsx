@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
 import { cn } from '../../lib/utils';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { sortTextPtBr } from '../../utils/sorting';
 
 interface GuestCardProps {
@@ -20,7 +20,7 @@ const guestStatusOptions = [
   { value: 'pendente' as const, label: 'Pendente' },
 ].sort((a, b) => sortTextPtBr(a.label, b.label));
 
-export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
+export const GuestCard = memo(({ guest, onEdit, onUpdate, onDelete, confirm }: GuestCardProps) => {
   const { alert: customAlert, toast } = useConfirm();
   const [showActions, setShowActions] = useState(false);
 
@@ -179,4 +179,4 @@ export const GuestCard = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestC
       </div>
     </div>
   );
-};
+}, (previous, next) => previous.guest === next.guest);

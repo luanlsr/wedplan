@@ -49,7 +49,6 @@ export const GuestsList = ({
   const [sortConfig, setSortConfig] = useState<{ key: GuestSortKey, direction: 'asc' | 'desc' } | null>({ key: 'nome', direction: 'asc' });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const itemsPerPage = 15;
 
   const filterCategories = useMemo(() => [
@@ -193,18 +192,10 @@ export const GuestsList = ({
     return items;
   }, [guests, searchTerm, filterCategory, filterStatus, sortConfig]);
 
-  // Effect to update orderedIds only when criteria change OR guests are added/removed
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOrderedIds(sortedAndFilteredGuests.map(g => g.id));
-  }, [sortedAndFilteredGuests]);
-
-  // The actual guests to display, in the frozen order, with latest data
-  const displayGuests = useMemo(() => {
-    return orderedIds
-      .map(id => guests.find(g => g.id === id))
-      .filter((g): g is Guest => !!g);
-  }, [orderedIds, guests]);
+  // A inclusão/edição atualiza somente o estado local. A lista exibida deriva
+  // diretamente dos dados filtrados, evitando uma segunda renderização para
+  // sincronizar uma ordem intermediária.
+  const displayGuests = sortedAndFilteredGuests;
 
   const totalPages = Math.ceil(displayGuests.length / itemsPerPage);
   const paginatedItems = displayGuests.slice(

@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils';
 import { Button, Badge, useConfirm, type ConfirmOptions } from '../ui';
 import type { Guest } from '../../types';
 import { sortTextPtBr } from '../../utils/sorting';
+import { memo } from 'react';
 
 interface GuestRowProps {
   guest: Guest;
@@ -18,7 +19,7 @@ const guestStatusOptions = [
   { value: 'pendente' as const, label: 'Pendente' },
 ].sort((a, b) => sortTextPtBr(a.label, b.label));
 
-export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRowProps) => {
+export const GuestRow = memo(({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRowProps) => {
   const { alert: customAlert, toast } = useConfirm();
   const handleUpdate = async (updates: Partial<Guest>) => {
     try {
@@ -115,4 +116,4 @@ export const GuestRow = ({ guest, onEdit, onUpdate, onDelete, confirm }: GuestRo
       </td>
     </tr>
   );
-};
+}, (previous, next) => previous.guest === next.guest);
